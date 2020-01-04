@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     # define the model
     neurons = [64, 32, 32, 8]
-    model = CAE(input_shape=x.shape[1:], neurons=neurons)
+    model = AE(input_shape=x.shape[1:], neurons=neurons)
     plot_model(model, to_file=args.save_dir + '/%s-pretrain-model.png' % args.dataset, show_shapes=True)
     model.summary()
 
