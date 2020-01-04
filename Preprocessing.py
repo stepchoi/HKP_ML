@@ -71,12 +71,6 @@ del fillna_rolling_average(df, col):
     df[col] = df.apply(lambda x: x.fillna(x.rolling(12, center=True, min_periods=1).mean())).filter(col)
     return df
 
-def industry_average(df):
-    ff48 = pd.read_sql("SELECT group_no, sic_beg, sic_end FROM industry_ff48_sic", engine)
-    ff48_arr =
-    df['ff_sic'] = df.sic.
-
-
 def check_correlation(df, threshold=0.9):
 
     # find high correlated items -> excel
