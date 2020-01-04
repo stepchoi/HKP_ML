@@ -25,6 +25,7 @@ def AE(input_shape=(69), neurons=[64, 32, 16, 8]):
     model.summary()
     return model
 
+"""
 def random_forest(x, y):
 
     from sklearn.model_selection import train_test_split, GridSearchCV
@@ -48,7 +49,7 @@ def random_forest(x, y):
     print('Best Parameters: ', gridRF.best_params_)
 
     return(gridRF.score(x_test, y_test))
-
+"""
 
 
 if __name__ == "__main__":
