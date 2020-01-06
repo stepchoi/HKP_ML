@@ -239,6 +239,8 @@ if __name__ == "__main__":
     # import engine, select variables, import raw database
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
+
+    # trial read -> (psycopg2.OperationalError) could not translate host name to address: nodename nor servname provided, or not known
     format_map = pd.read_sql("SELECT * FROM format_map", engine)
     print(format_map)
 
