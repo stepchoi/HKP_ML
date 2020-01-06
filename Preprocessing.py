@@ -1,76 +1,5 @@
-def select_variable():
 
-    # select numeric variables -> dict
-    # select label variables -> list
-    # set 1 fillna classification -> dict
-
-    format_map = pd.read_sql("SELECT * FROM format_map", engine)
-
-    numeric_dict = {}
-    for name, g in format_map.groupby('format'):
-        numeric_dict[name] = g['abbreviation'].dropna().to_list()
-
-    fillna1_dict = {}
-    for name, g in format_map.groupby('fillna'):
-        fillna1_dict[name] = g['abbreviation'].dropna().to_list()
-
-    label_lst = ['gvkey', 'datacqtr', 'sic', 'cquarter', 'cyear', 'gvkeydatafqtr','datacqtr_no']
-
-    return numeric_dict, label_lst, fillna1_dict
-
-def convert_format(df, dict = numeric_dict, label = label_lst):
-
-    # convert raw dataset to desired formats (YoY, QoQ, Log)
-    # groupby 'gvkey'
-
-    C1 = df.filter(label)
-    C2 = df.groupby('gvkey').apply(lambda x: x[dict['QoQ']].div(x[dict['QoQ']].shift(1)).sub(1))
-    C3 = df.groupby('gvkey').apply(lambda x: x[dict['YoY']].div(x[dict['YoY']].shift(4)).sub(1))
-    C4 = np.log(df[dict['Log']]+1)
-
-    df_1 = pd.concat([C1, C2, C3, C4], axis = 1)
-    df_1 = df_1.replace([np.inf, -np.inf], np.nan)
-    return df_1
-
-def drop_seq(df):
-    cqtr = pd.DataFrame(set(df['datacqtr']),
-                        columns=['datacqtr']).sort_values(by=['datacqtr']).reset_index(drop=True)
-    cqtr.columns = ['datacqtr_no', 'datacqtr']
-    df_1 = pd.merge(df, cqtr, on=['datacqtr'], how='left')
-    df_1 = df_1.sort_values(by=['gvkey', 'datacqtr'])
-    df_1['index_seq'] = df_1.groupby('gvkey').apply(lambda x: (x['datacqtr_no'].shift(-1) - x['datacqtr_no'])).to_list()
-    df_1['index_seq'] = df_1['index_seq'].fillna(1).astype(int)
-    del_gvkey = set(df_1.loc[df_1['index_seq']!=1,'gvkey'])
-    df_1 = df_1.loc[~df['gvkey'].isin(del_gvkey)]
-    del df_1['index_seq']
-    return df_1
-
-# fillna methods
-
-def fillna_0(df, col):
-    df = df.copy(1)
-    df[col] = df[col].fillna(0)
-    return df
-
-def fillna_forward(df, col):
-    df = df.copy(1)
-    groups = []
-    for name, g in df.groupby('gvkey'):
-        groups.append(g[col].apply(lambda series: series.loc[ :series.last_valid_index()].ffill())])
-    return pd.concat(groups, axis = 0)
-
-def fillna_individual(df, dict):
-    df = df.copy(1)
-    df[dict[0]] = df[dict[0]].fillna(0)
-    for i in fillna_dict['epspxq']:
-        df[i] = df[i].fillna(df['epspxq'])
-    return df
-
-del fillna_rolling_average(df, col):
-    df = df.copy(1)
-    df[col] = df.apply(lambda x: x.fillna(x.rolling(12, center=True, min_periods=1).mean())).filter(col)
-    return df
-
+'''
 def check_correlation(df, threshold=0.9):
 
     # find high correlated items -> excel
@@ -138,11 +67,6 @@ def cut_train_test(df, testing_cqtr):
 class preprocessing_class:
 
      # import engine, select variables, import raw database
-
-    from sqlalchemy import create_engine
-    import pandas as pd
-    import numpy as np
-
     db_string = 'postgres://postgres:DLvalue123@hkpolyu-dl-value.c1lrltigx0e7.us-east-1.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
@@ -176,13 +100,167 @@ class preprocessing_class:
         pca_dict['train'] = {}
         pca_dict['test'] = {}
 
-        for i in range(111, )
-            pca_dict['train']
+        for i in range(111):
+            pass
 
 
+def eda_hist(df,name='temp'):
+    from matplotlib import pyplot as plt
+    import math
+
+    fig = plt.figure(figsize=(50, 50), dpi=80)
+    plt.rcParams.update({'font.size': 6})
+    k=1
+    for col in df.columns.to_list():
+        n = math.ceil(len(df.columns)**0.5)
+        axis1 = fig.add_subplot(n,n,k)
+        axis1.hist(df.loc[df[col].notnull(),col],density = True, bins=50)
+        axis1.set_title(col, fontsize = 60)
+        print(col,k)
+        k += 1
+    fig.tight_layout()
+    fig.savefig(name+'.png')
+'''
+
+def select_variable():
+
+    # create dictionary for all selected variables by different formats(yoy, qoq, nom, log), features
+
+    format_map = pd.read_sql("SELECT * FROM format_map", engine)
+
+    select = {}
+    select['all'] = format_map['name'].to_list()
+    select['label'] = ['gvkey', 'datacqtr', 'sic', 'cquarter', 'cyear', 'gvkeydatafqtr']
+
+    for col in format_map.columns[2:-1]:
+        select[col] = format_map.loc[format_map[col]==1, 'name'].to_list()
+
+    select.update(format_map.loc[format_map['special'].notnull()].filter(['name','special']).set_index('name').to_dict())
+
+    return select
+
+def drop_nonseq(df):
+
+    # drop samples with non-sequential order during sampling period
+    # add datacqtr_no to main dataset
+
+    cqtr = pd.DataFrame(set(df['datacqtr']), columns=['datacqtr']).sort_values(by=['datacqtr']).reset_index(drop = True).reset_index(drop = False).set_index('datacqtr')
+    df['datacqtr_no'] = df.datacqtr.map(cqtr['index'])
+    df = df.sort_values(by=['gvkey', 'datacqtr'])
+
+    df['index_seq'] = df.groupby('gvkey').apply(lambda x: (x['datacqtr_no'].shift(-1) - x['datacqtr_no'])).to_list()
+    df['index_seq'] = df['index_seq'].fillna(1).astype(int)
+    del_gvkey = set(df.loc[df['index_seq']!=1,'gvkey'])
+    df = df.loc[~df['gvkey'].isin(del_gvkey)]
+    del df['index_seq']
+
+    return df
+
+def convert_format(df, dic):
+
+    # convert raw dataset to desired formats (YoY, QoQ, Log)
+    # groupby 'gvkey'
+
+    convert_select = {}
+
+    for k in ['yoy','qoq','log']:
+        convert_select[k] = [x + '_' + k for x in dic[k]]
+
+    label_nom = df.filter(dic['label'] + dic['nom'])
+
+    # convert dividend to rolling 4 period sum
+    df['dvy_q'] = df.groupby('gvkey').apply(lambda x: x['dvy_q'].rolling(4, min_periods=1).sum()).to_list()
+
+    qoq_col = dic['qoq']
+    qoq = df.groupby('gvkey').apply(lambda x: x[qoq_col].div(x[qoq_col].shift(1)).sub(1))
+    qoq.columns = convert_select['qoq']
+
+    yoy_col = dic['yoy']
+    yoy = df.groupby('gvkey').apply(lambda x: x[yoy_col].div(x[yoy_col].shift(4)).sub(1))
+    yoy.columns = convert_select['yoy']
+
+    log_col = dic['log']
+    log = np.log(df[log_col].div(df['atq']).add(1).replace([np.inf, -np.inf], np.nan))
+    log.columns = convert_select['log']
+
+    dic.update(convert_select)
+
+    df_1 = pd.concat([label_nom, yoy, qoq, log], axis = 1)
+    df_1 = df_1.replace([np.inf, -np.inf], np.nan)
+
+    return df_1, dic
+
+# fillna methods
+class fillna:
+
+    def __init__(self, df, dic):
+
+        # 1.1: fill YoY, QoQ -> 0
+        col1 = dic['yoy'] + dic['qoq']
+        df[col1] = df[col1].fillna(0)
+
+        # 1.2: fill more than 8 period
+        self.col = set(dic['abs'] + dic['log']) - set(dic['delete_row'])
+
+        def after_8(series):
+
+            index_nan = [item for sublist in np.argwhere(np.isnan(series)) for item in sublist]
+
+            index_nan_df = pd.DataFrame(index_nan)
+            index_nan_df['sub'] = index_nan_df[0].sub(index_nan_df[0].shift(1))
+            begin_nan = index_nan_df.loc[index_nan_df['sub'] != 1, 0].values
+
+            for i in range(8):
+                begin_nan_8 = []
+                begin_nan_8.extend(begin_nan + i)
+            fill0_nan = list(set(index_nan) - set(begin_nan_8))
+            series[fill0_nan] = 0
+
+        df[self.col] = df[self.col].apply(after_8)
+        self.df = df
+
+    def forward(self):
+        self.df[self.col] = self.df.groupby('gvkey').apply(lambda x: x[self.col].ffill(limit = 8))
+        df[self.col] = df[self.col].fillna(0)
+        return self.df
+
+    def rolling(self):
+        self.df[self.col] = self.df.apply(lambda x: x.fillna(x[self.col].rolling(12, min_periods=1).mean()))
+        df[self.col] = df[self.col].fillna(0)
+        return self.df
 
 
+if __name__ == "__main__":
+
+    from sqlalchemy import create_engine
+    import pandas as pd
+    import numpy as np
+
+    # import engine, select variables, import raw database
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
+    format_map = pd.read_sql("SELECT * FROM format_map", engine)
+    print(format_map)
 
 
-        main = main.dropna(subset=dict['delete rows'], how='any', axis=0)
+    select = select_variable() # dictionary with variables based on selection criteria
+    all_col = select['all'] + select['label']
+    raw = pd.read_sql_table('raw', engine, columns = all_col)
+    raw[select['all']] = raw[select['all']].astype(float)
+
+    raw = drop_nonseq(raw)
+    raw.to_sql('select_raw', engine)
+
+    select = select_variable() # dictionary with variables based on selection criteria
+    select.update({'label': (select['label'] + ['datacqtr_no'])})
+
+    main, select = convert_format(raw, select)
+
+    main = fillna(main, select).fillna_forward()
+    import missingno as msno
+    print(msno.bar(main))
+    # main.to_sql('main_forward')
+
+    # main = fillna(main, select).forward()
+    # main.to_sql('main_forward')
 
