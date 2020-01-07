@@ -121,16 +121,16 @@ def eda_hist(df,name='temp'):
     fig.tight_layout()
     fig.savefig(name+'.png')
 '''
+def select_variable(engine):
 
-def select_variable():
-
+    import pandas as pd
     # create dictionary for all selected variables by different formats(yoy, qoq, nom, log), features
 
     format_map = pd.read_sql("SELECT * FROM format_map", engine)
 
     select = {}
     select['all'] = format_map['name'].to_list()
-    select['label'] = ['gvkey', 'datacqtr', 'sic', 'cquarter', 'cyear', 'gvkeydatafqtr']
+    select['label'] = ['gvkey', 'datacqtr']
 
     for col in format_map.columns[2:-1]:
         select[col] = format_map.loc[format_map[col]==1, 'name'].to_list()
@@ -139,22 +139,6 @@ def select_variable():
 
     return select
 
-def drop_nonseq(df):
-
-    # drop samples with non-sequential order during sampling period
-    # add datacqtr_no to main dataset
-
-    cqtr = pd.DataFrame(set(df['datacqtr']), columns=['datacqtr']).sort_values(by=['datacqtr']).reset_index(drop = True).reset_index(drop = False).set_index('datacqtr')
-    df['datacqtr_no'] = df.datacqtr.map(cqtr['index'])
-    df = df.sort_values(by=['gvkey', 'datacqtr'])
-
-    df['index_seq'] = df.groupby('gvkey').apply(lambda x: (x['datacqtr_no'].shift(-1) - x['datacqtr_no'])).to_list()
-    df['index_seq'] = df['index_seq'].fillna(1).astype(int)
-    del_gvkey = set(df.loc[df['index_seq']!=1,'gvkey'])
-    df = df.loc[~df['gvkey'].isin(del_gvkey)]
-    del df['index_seq']
-
-    return df
 
 def convert_format(df, dic):
 
@@ -240,30 +224,29 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
+    select = select_variable(engine) # dictionary with variables based on selection criteria
+    all_col =  select['label'] + select['all']
+    pd.DataFrame(all_col).to_csv('all_col.csv', index = False)
 
-    format_map = pd.read_sql("SELECT * FROM format_map", engine)  # trial read -> (psycopg2.OperationalError)
-                                                                  # could not translate host name to address:
-                                                                  # nodename nor servname provided, or not known
+    # raw = pd.read_sql_table('raw', engine, columns = all_col)
+    # raw = pd.merge(raw, sic, on=['gvkey','datacqtr'], how = 'left')
+    # print(raw.isnull().sum().sort_values())
 
-
-    select = select_variable() # dictionary with variables based on selection criteria
-    all_col = select['all'] + select['label']
-    raw = pd.read_sql_table('raw', engine, columns = all_col)
-    raw[select['all']] = raw[select['all']].astype(float)
-
-    raw = drop_nonseq(raw)
-    raw.to_sql('select_raw', engine)
-
-    select = select_variable() # dictionary with variables based on selection criteria
-    select.update({'label': (select['label'] + ['datacqtr_no'])})
-
-    main, select = convert_format(raw, select)
-
-    main = fillna(main, select).fillna_forward()
-    import missingno as msno
-    print(msno.bar(main))
-    # main.to_sql('main_forward')
-
-    # main = fillna(main, select).forward()
-    # main.to_sql('main_forward')
+    # raw[select['all']] = raw[select['all']].astype(float)
+    #
+    # raw = drop_nonseq(raw)
+    # raw.to_sql('select_raw', engine)
+    #
+    # select = select_variable() # dictionary with variables based on selection criteria
+    # select.update({'label': (select['label'] + ['datacqtr_no'])})
+    #
+    # main, select = convert_format(raw, select)
+    #
+    # main = fillna(main, select).fillna_forward()
+    # import missingno as msno
+    # print(msno.bar(main))
+    # # main.to_sql('main_forward')
+    #
+    # # main = fillna(main, select).forward()
+    # # main.to_sql('main_forward')
 
