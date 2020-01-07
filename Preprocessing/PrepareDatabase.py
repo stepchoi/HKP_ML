@@ -39,7 +39,7 @@ if __name__ == '__main__':
     from sqlalchemy import create_engine
     import pandas as pd
     import numpy as np
-    from Preprocessing import select_variable
+    from ConvertDatabase import select_variable
 
     # import engine, select variables, import raw database
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'

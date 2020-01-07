@@ -3,6 +3,7 @@ if __name__ == '__main__':
     from sqlalchemy import create_engine
     import pandas as pd
     from PrepareDatabase import drop_nonseq
+    import numpy as np
 
     # import engine, select variables, import raw database
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
@@ -17,5 +18,7 @@ if __name__ == '__main__':
     dep['next4_abs'] = dep.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list() # rolling next 4 quarter
     dep['epspxq_yoy'] = dep['next4_abs'].div(dep['past4_abs']).sub(1) # T4/T0
     del dep['datacqtr_no']
+    dep = dep.replace([np.inf, -np.inf], np.nan)
+
     print(dep)
     dep.to_csv('epspxq.csv', index=False)

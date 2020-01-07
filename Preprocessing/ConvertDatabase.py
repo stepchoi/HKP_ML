@@ -130,7 +130,7 @@ def select_variable(engine):
 
     select = {}
     select['all'] = format_map['name'].to_list()
-    select['label'] = ['gvkey', 'datacqtr']
+    select['label'] = ['gvkey', 'datacqtr', 'sic']
 
     for col in format_map.columns[2:-1]:
         select[col] = format_map.loc[format_map[col]==1, 'name'].to_list()
@@ -228,25 +228,25 @@ if __name__ == "__main__":
     all_col =  select['label'] + select['all']
     pd.DataFrame(all_col).to_csv('all_col.csv', index = False)
 
-    # raw = pd.read_sql_table('raw', engine, columns = all_col)
-    # raw = pd.merge(raw, sic, on=['gvkey','datacqtr'], how = 'left')
-    # print(raw.isnull().sum().sort_values())
+    raw = pd.read_sql_table('raw', engine, columns = all_col)
+    raw = pd.merge(raw, sic, on=['gvkey','datacqtr'], how = 'left')
+    print(raw.isnull().sum().sort_values())
 
-    # raw[select['all']] = raw[select['all']].astype(float)
-    #
-    # raw = drop_nonseq(raw)
-    # raw.to_sql('select_raw', engine)
-    #
-    # select = select_variable() # dictionary with variables based on selection criteria
-    # select.update({'label': (select['label'] + ['datacqtr_no'])})
-    #
-    # main, select = convert_format(raw, select)
-    #
-    # main = fillna(main, select).fillna_forward()
-    # import missingno as msno
-    # print(msno.bar(main))
-    # # main.to_sql('main_forward')
-    #
-    # # main = fillna(main, select).forward()
-    # # main.to_sql('main_forward')
+    raw[select['all']] = raw[select['all']].astype(float)
+
+    raw = drop_nonseq(raw)
+    raw.to_sql('select_raw', engine)
+
+    select = select_variable() # dictionary with variables based on selection criteria
+    select.update({'label': (select['label'] + ['datacqtr_no'])})
+
+    main, select = convert_format(raw, select)
+
+    main = fillna(main, select).fillna_forward()
+    import missingno as msno
+    print(msno.bar(main))
+    # main.to_sql('main_forward')
+
+    # main = fillna(main, select).forward()
+    # main.to_sql('main_forward')
 
