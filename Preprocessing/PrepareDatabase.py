@@ -1,3 +1,8 @@
+from sqlalchemy import create_engine
+import pandas as pd
+import numpy as np
+from ConvertDatabase import select_variable
+
 def whole_print(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         print(df)
@@ -36,11 +41,6 @@ def drop_nonseq(df):
 
 if __name__ == '__main__':
 
-    from sqlalchemy import create_engine
-    import pandas as pd
-    import numpy as np
-    from ConvertDatabase import select_variable
-
     # import engine, select variables, import raw database
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
@@ -50,7 +50,12 @@ if __name__ == '__main__':
     other_col = [x for x in select['all'] if not ('_' in x)]
     all_col = ytd_col + other_col + select['label'] + ['fqtr']
 
-    df = pd.read_csv('raw.csv', usecols = all_col)
+    try:
+        df = pd.read_csv('raw.csv', usecols = all_col)
+        print('local version running')
+    except:
+        raw = pd.read_sql('SELECT * FROM raw', engine, usecols = all_col)
+
     df = drop_nonseq(df)
 
     df_ytd = convert_ytd(df, ytd_col)

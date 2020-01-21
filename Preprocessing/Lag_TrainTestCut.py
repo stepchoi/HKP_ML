@@ -1,3 +1,6 @@
+from sqlalchemy import create_engine
+import pandas as pd
+
 def check_correlation(df, threshold=0.9):
     # find high correlated items -> excel
 
@@ -69,21 +72,21 @@ def cut_train_test(df, testing_cqtr):
 
 if __name__ == "__main__":
 
-    import pandas as pd
 
     # import engine, select variables, import raw database
     try:
-        main = pd.read_csv('main_forward.csv')
+        main = pd.read_csv('main_rolling.csv') # change forward/rolling for two different fillna version
         engine = None
         print('local version running')
     except:
-        from sqlalchemy import create_engine
-
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
-        main = pd.read_sql('SELECT * FROM main_forward', engine)
+        main = pd.read_sql('SELECT * FROM main_forward', engine) # change forward/rolling for two different fillna version
 
-    # check_correlation(main.iloc[:,2:])
+    print(main.isnull().sum().sum())
+    print(main.shape)
+    check_correlation(main.iloc[:,2:])
+
     del_corr = ['xsgaq_qoq', 'gdwlq_log', 'cogsq_qoq']  # same for both forward & rolling version
     main = main.drop(main[del_corr], axis=1)
 

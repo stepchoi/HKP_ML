@@ -1,10 +1,13 @@
+from sqlalchemy import create_engine
+import pandas as pd
+import numpy as np
+
 def whole_print(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         print(df)
         
 def select_variable(engine):
 
-    import pandas as pd
     # create dictionary for all selected variables by different formats(yoy, qoq, nom, log), features
     try:
         format_map = pd.read_csv('format_map.csv')
@@ -30,10 +33,11 @@ def convert_format(df, dic):
 
     convert_select = {}
 
-    for k in ['yoy','qoq','log']:
+    for k in ['yoy','qoq','atq','revtq']:
         convert_select[k] = [x + '_' + k for x in dic[k]]
 
     label_nom = df.filter(dic['label'] + dic['nom'])
+    print('------ start conversion -------')
 
     # special: convert dividend to rolling 4 period sum
     df['dvy_q'] = df.groupby('gvkey').apply(lambda x: x['dvy_q'].rolling(4, min_periods=1).sum()).reset_index(drop = True)
@@ -47,16 +51,30 @@ def convert_format(df, dic):
     yoy.columns = convert_select['yoy']
     print('finish yoy conversion')
 
-    log = np.log(df[dic['log']].apply(lambda x: x.div(df['atq']).add(1).replace([np.inf, -np.inf], np.nan)))
-    log.columns = convert_select['log']
-    print('finish log conversion')
+    atq = np.log(df[dic['atq']].apply(lambda x: x.div(df['atq']).add(1).replace([np.inf, -np.inf], np.nan)))
+    atq.columns = convert_select['atq']
+    print('finish atq conversion')
+
+    revtq = np.log(df[dic['revtq']].apply(lambda x: x.div(df['revtq']).add(1).replace([np.inf, -np.inf], np.nan)))
+    revtq.columns = convert_select['revtq']
+    print('finish revtq conversion')
 
     dic.update(convert_select)
 
-    df_1 = pd.concat([label_nom, log, qoq, yoy], axis = 1)
+    df_1 = pd.concat([label_nom, qoq, yoy, atq, revtq], axis = 1)
     df_1 = df_1.replace([np.inf, -np.inf], np.nan)
-    main.to_csv('main_convert.csv', index=False)
 
+    def missing_count(df):
+        df = pd.DataFrame(df.isnull().sum(), columns = ['missing']).reset_index(drop = False)
+        sp = pd.DataFrame([x.rsplit('_', 1) for x in df['index']])
+        df[['name', 'format']] = sp
+        df.to_csv('df_missing.csv')
+        print('export df_missing.csv')
+
+    # missing_count(df_1)
+    # df_1.to_csv('main_convert.csv', index=False)
+
+    print(df_1.shape)
     return df_1, dic
 
 # fillna methods
@@ -80,11 +98,13 @@ class fillna:
     def __init__(self, df, dic):
 
         # 1.1: fill YoY, QoQ -> 0
+        print('------ start fillna -------')
         col1 = dic['yoy'] + dic['qoq']
         df[col1] = df[col1].fillna(0)
 
         # 1.2: fill more than 8 period
-        self.col = list(set(dic['log']) - set([x+'_log' for x in dic['delete_row']]))
+        delete_row = [x+'_atq' for x in dic['delete_row']] + [x+'_revtq' for x in dic['delete_row']]
+        self.col = list(set(dic['atq'] + dic['revtq']) - set(delete_row))
         df[self.col] = df[self.col].apply(after_8)
         self.df = df
 
@@ -92,6 +112,7 @@ class fillna:
         self.df[self.col] = self.df.groupby('gvkey').apply(lambda x: x[self.col].ffill(limit = 8))
         self.df[self.col] = self.df[self.col].fillna(0)
         print('finish fillna forward')
+
         return self.df
 
     def rolling(self):
@@ -101,10 +122,6 @@ class fillna:
         return self.df
 
 if __name__ == "__main__":
-
-    from sqlalchemy import create_engine
-    import pandas as pd
-    import numpy as np
 
     # import engine, select variables, import raw database
     try:
@@ -118,12 +135,19 @@ if __name__ == "__main__":
 
     select = select_variable(engine) # dictionary with variables based on selection criteria
     all_col = select['label'] + select['all']  # all means all numeric variables selected
-    whole_print(raw.isnull().sum().sort_values())
+    # whole_print(raw.isnull().sum().sort_values())
+
 
     main, select = convert_format(raw, select)
 
-    main = fillna(main, select).forward() # change here forward / rolling deciding the last steps
-    whole_print(main.isnull().sum().sort_values())
+    # rolling = fillna(main, select).rolling()
+    # whole_print(rolling.isnull().sum().sort_values())
+    # print('rolling left missing: ' + str(rolling.isnull().sum().sum()))
+    # main.to_csv('main_rolling.csv', index=False)
+
+    forward = fillna(main, select).forward()
+    whole_print(forward.isnull().sum().sort_values())
+    print('forward left missing: ' + str(forward.isnull().sum().sum()))
     main.to_csv('main_forward.csv', index=False)
 
     # main.to_sql('main_forward', engine)
