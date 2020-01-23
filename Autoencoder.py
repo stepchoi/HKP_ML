@@ -3,6 +3,14 @@ from keras.models import Sequential, Model
 from keras.utils.vis_utils import plot_model
 import numpy as np
 
+def timestamp():
+
+
+    text = '1997Q4'
+    a = time_stamp(text)
+
+    return text
+
 
 def AE(input_shape=(69), neurons=[64, 32, 16, 8]):
 

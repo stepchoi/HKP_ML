@@ -2,6 +2,10 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
+def Timestamp(text):
+
+    return pd.Period(text, freq='Q-DEC').to_timestamp(how='end')
+
 def unstack_selection():
 
 
@@ -53,4 +57,8 @@ def check_correlation_delete(df, threshold=0.9):
     high_corr_df = high_corr(df)
     print(high_corr_df)
 
+
+
 if __name__ == "__main__":
+
+    print(Timestamp('1997Q3'))
