@@ -1,9 +1,10 @@
+from sqlalchemy import create_engine
+import pandas as pd
+from PrepareDatabase import drop_nonseq
+import numpy as np
+
 if __name__ == '__main__':
 
-    from sqlalchemy import create_engine
-    import pandas as pd
-    from PrepareDatabase import drop_nonseq
-    import numpy as np
 
     # import engine, select variables, import raw database
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
