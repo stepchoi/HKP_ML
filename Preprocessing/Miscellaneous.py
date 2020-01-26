@@ -1,15 +1,55 @@
+import json
+
 import pandas as pd
 from sqlalchemy import create_engine
 
 
-def unstack_selection():
+def whole_print(df):
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(df)
 
+def eda_hist(df, name='temp'):
+    from matplotlib import pyplot as plt
+    import math
+    fig = plt.figure(figsize=(50, 50), dpi=80)
+    plt.rcParams.update({'font.size': 6})
+    k = 1
+    for col in df.columns.to_list():
+        n = math.ceil(len(df.columns) ** 0.5)
+        axis1 = fig.add_subplot(n, n, k)
+        axis1.hist(df.loc[df[col].notnull(), col], density=True, bins=50)
+        axis1.set_title(col, fontsize=60)
+        print(col, k)
+        k += 1
+    fig.tight_layout()
+    fig.savefig(name + '.png')
+
+
+def unstack_selection():
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
+
     format_map = pd.read_sql('SELECT name, yoy, qoq, log, nom FROM format_map', engine, index_col=['name'])
     format_map_df = format_map.unstack().reset_index()
     format_map_df.columns = ['format', 'name', 'selection']
     format_map_df.to_csv('format_map_selection.csv')
+
+def Timestamp(df):
+    df['datacqtr'] = df['datacqtr'].apply(lambda x: pd.Period(x, freq='Q-DEC').to_timestamp(how='end').strftime('%Y-%m-%d'))
+    return df
+
+def save_load_select(type, data = None):
+
+    if type == 'save':
+        with open('select.json', 'w') as fp:
+            json.dump(data, fp)
+
+    elif type == 'load':
+        with open('select.json', 'r') as fp:
+            data = json.load(fp)
+            return data
+    else:
+        print('ERROR: No dictionary found')
 
 def check_correlation_delete(df, threshold=0.9):
     # find high correlated items -> excel
