@@ -1,3 +1,5 @@
+from collections import Counter
+
 import pandas as pd
 from sqlalchemy import create_engine
 from tqdm import tqdm
@@ -17,6 +19,36 @@ def check_correlation(df, threshold=0.9):
 
     high_corr_df = high_corr(df)
     print(high_corr_df)
+
+def delete_high_zero_row(df):
+    # print(df.isnull().sum().sum())
+    df_zero = df.mask(df==0).isnull().sum(axis = 1)
+    print(df_zero.sum())
+
+    def print_csv():
+        c = Counter(df_zero)
+        csum = 0
+        missing_below_threshold = {}
+        for missing, count in sorted(c.items()):
+            csum += count
+            missing_below_threshold[missing] = csum
+        pd.DataFrame.from_dict(missing_below_threshold,orient = 'index', columns = ['count'])\
+            .to_csv('missing_below_threshold.csv')
+
+    # print_csv()
+    df = df.loc[df_zero<144]
+    df.to_csv('main_del_row.csv')
+    print(df.shape)
+    return df
+
+def delete_high_zero_columns(df):
+    # print(df.isnull().sum().sum())
+    df_zero = df.mask(df==0).isnull().sum(axis = 0).sort_values()
+    low_zero_col = df_zero[df_zero<318310].index.to_list()
+    df = df.filter(low_zero_col)
+    return df
+    # pd.DataFrame(df_zero, columns = ['count']).to_csv('missing_below_threshold_columns.csv')
+
 
 def add_lag(df):
     print('----- adding lag -----')
@@ -66,17 +98,18 @@ def cut_test_train(df):
 
     return test_train_dict
 
+
 def full_running_cut():
 
     # import engine, select variables, import raw database
     try:
-        main = pd.read_csv('main_rolling.csv') # change forward/rolling for two different fillna version
+        main = pd.read_csv('main.csv') # change forward/rolling for two different fillna version
         engine = None
         print('local version running')
     except:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
-        main = pd.read_sql('SELECT * FROM main_forward', engine) # change forward/rolling for two different fillna version
+        main = pd.read_sql('SELECT * FROM main', engine) # change forward/rolling for two different fillna version
 
     # check_correlation(main.iloc[:,2:])
 
@@ -99,5 +132,12 @@ def full_running_cut():
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    full_running_cut()
+    main = pd.read_csv('main.csv')
+    print(main.describe().transpose())
 
+    # 1. delete high correlation items
+    # del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
+    # main = main.drop(main[del_corr], axis=1)
+    #
+    # # main_del_col = delete_high_zero_columns(main)
+    # main_del_row = delete_high_zero_row(main)

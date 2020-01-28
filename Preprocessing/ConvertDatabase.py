@@ -96,11 +96,11 @@ def optimal_rolling_period(df):
 
     diff_dict = {}
     for p in tqdm([1,4,8,12,16,20]):
-        df_rolling = df.groupby('gvkey').apply(lambda x: x.rolling(p, min_periods=p).mean().shift(1))
+        df_rolling = df.groupby('gvkey').apply(lambda x: x.rolling(p, min_periods=1).mean().shift(1))
         diff_dict[p] = df_rolling.sub(df).pow(2).mean(axis=0)
 
     rolling_period_series = pd.DataFrame.from_dict(diff_dict, orient='index').idxmin()
-    pd.DataFrame(rolling_period_series).to_csv('rolling_period.csv')
+    pd.DataFrame(rolling_period_series).to_csv('rolling_period_1.csv')
 
     return rolling_period_series
 
@@ -156,7 +156,6 @@ def fillna(df, rolling_period):
 
     return df
 
-
 if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
@@ -170,14 +169,14 @@ if __name__ == "__main__":
         main = convert()
 
     # 2: pre_fillna -> decide rolling periods
-    try:
-        rolling_period = pd.read_csv('rolling_period.csv',index_col='Unnamed: 0')['0']
-        print('local version running - rolling_period')
-    except:
-        rolling_period = optimal_rolling_period(main)
+    # try:
+    #     rolling_period = pd.read_csv('rolling_period.csv',index_col='Unnamed: 0')['0']
+    #     print('local version running - rolling_period')
+    # except:
+    rolling_period = optimal_rolling_period(main)
 
-    # 3: fillna
-    main_final = fillna(main, rolling_period)
-    main.to_csv('main.csv', index=False)
+    # # 3: fillna
+    # main_final = fillna(main, rolling_period)
+    # main.to_csv('main.csv', index=False)
 
     # main.to_sql('main_forward', engine)
