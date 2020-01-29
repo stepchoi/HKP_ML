@@ -4,7 +4,6 @@ from PrepareDatabase import select_variable
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-
 # 1: convert
 def convert():
 
