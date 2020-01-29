@@ -1,5 +1,6 @@
 import datetime as dt
 from collections import Counter
+from timeit import timeit
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -55,7 +56,10 @@ def delete_high_zero_row(missing_dict):
     return df
 
 def add_lag(df):
+
     print('----- adding lag -----')
+    start = timeit()
+
     col = df.columns[3:]
     lag_df = []
     lag_df.append(df)
@@ -63,7 +67,7 @@ def add_lag(df):
     missing_dict = []
     missing_dict.append(df.mask(df == 0).isnull().sum(axis=1))
 
-    for i in tqdm(range(1)): # change to 19
+    for i in tqdm(range(19)): # change to 19
         df_temp = df.groupby('gvkey').shift(i + 1)[col]
         df_temp.columns = ['{}_lag{}'.format(k, str(i+1).zfill(2)) for k in col]
         lag_df.append(df_temp)
@@ -71,9 +75,11 @@ def add_lag(df):
 
     # delete_high_zero_row(missing_dict)
 
-    df_lag = pd.concat(lag_df, axis = 1)
+    df_lag = pd.concat(lag_df, axis = 1).dropna(how='any', axis=0)
     print(df_lag.shape)
 
+    end = timeit()
+    print('adding lag running time: {}'.format(end - start))
     return df_lag
 
 
@@ -82,13 +88,17 @@ def merge_dep_macro(df):
     engine = create_engine(db_string)
 
     print('----- adding macro & dependent variable -----')
+    start = timeit()
+
     # macro = pd.read_sql("SELECT * FROM macro_clean", engine)
     dep = pd.read_sql('SELECT * FROM niq', engine)
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
 
     # df_macro = pd.merge(df, macro, on=['datacqtr'], how='left')
     df_macro_dep = pd.merge(df, dep, on=['gvkey', 'datacqtr'], how='left')  # change to df_macro
-    print(df_macro_dep)
+
+    end = timeit()
+    print('adding macro & dependent variable running time: {}'.format(end - start))
 
     return df_macro_dep
 
@@ -111,8 +121,8 @@ def div_x_y(set_dict):
     # 3: qcut
     for y in ['qoq', 'yoy']:
         set_dict['train_' + y], cut_bins = pd.qcut(set_dict['train_' + y], q=3, labels=[0,1,2], retbins=True)
-        print('bins for {} is {}'.format(y, cut_bins))
         set_dict['test_' + y] = pd.cut(set_dict['test_' + y], bins=cut_bins, labels=[0,1,2])
+        print('bins for {} is {}'.format(y, cut_bins))
 
     set_dict['test'] = None
     set_dict['train'] = None
@@ -120,12 +130,15 @@ def div_x_y(set_dict):
 
 def cut_test_train(df):
 
-    print('----- start cutting testing/training set -----')
+    print('----- cutting testing/training set -----')
+    start = timeit()
+
     dict = {}
     set_no = 1
     testing_period = dt.datetime(2008, 3, 31)
 
-    for i in range(2): # -> 40
+    for i in range(3): # -> 40
+        start_set = timeit()
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         end = testing_period + i*relativedelta(months=3)
@@ -137,7 +150,14 @@ def cut_test_train(df):
         dict[set_no]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
         dict[set_no] = div_x_y(dict[set_no])
+        pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
         set_no += 1
+
+        end_set = timeit()
+        print('subset {} running time: {}'.format(i, end_set - start_set))
+
+    end = timeit()
+    print('cutting testing/training set running time: {}'.format(end - start))
 
     return dict
 
@@ -157,8 +177,7 @@ def full_running_cut():
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
 
     # 1. add 20 lagging factors for each variable
-    main_lag = add_lag(main).dropna(how='any', axis=0)
-    print(main_lag.shape)
+    main_lag = add_lag(main)
 
     # 2. add dependent variable & macro variables to main
     main_macro_dep = merge_dep_macro(main_lag)
