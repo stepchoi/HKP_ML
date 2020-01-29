@@ -1,24 +1,10 @@
 from collections import Counter
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-
-def check_correlation(df, threshold=0.9):
-    # find high correlated items -> excel
-
-    def high_corr(df, threshold=0.9):
-        corr = df.corr().abs()
-        so = corr.unstack().reset_index()
-        print(so)
-        # so = so.sort_values(kind="quicksort", ascending=False).to_frame().reset_index()
-        so.columns = ['v1', 'v2', 'corr']
-        so = so.loc[(so['v1'] != so['v2']) & (so['corr'] > threshold)].drop_duplicates(subset=['v1', 'v2'])
-        return so
-
-    high_corr_df = high_corr(df)
-    print(high_corr_df)
 
 def delete_high_zero_row(df):
     # print(df.isnull().sum().sum())
@@ -32,23 +18,22 @@ def delete_high_zero_row(df):
         for missing, count in sorted(c.items()):
             csum += count
             missing_below_threshold[missing] = csum
-        pd.DataFrame.from_dict(missing_below_threshold,orient = 'index', columns = ['count'])\
-            .to_csv('missing_below_threshold.csv')
+        df = pd.DataFrame.from_dict(missing_below_threshold,orient = 'index', columns = ['count'])
+        df['%_count'] = df['count']/333325
+        df['changes'] = df['%_count'].sub(df['%_count'].shift(1))
+        plt.plot(df[['%_count','changes']])
+        plt.show()
 
-    # print_csv()
+        df.to_csv('missing_below_threshold.csv')
+        return df.loc[df['%_count'] < 0.9].sort_values(by = ['%_count']).tail(1).index
+
+    id = print_csv()
+    print(id)
     df = df.loc[df_zero<144]
-    df.to_csv('main_del_row.csv')
+    # df.to_csv('main_del_row.csv')
     print(df.shape)
-    return df
 
-def delete_high_zero_columns(df):
-    # print(df.isnull().sum().sum())
-    df_zero = df.mask(df==0).isnull().sum(axis = 0).sort_values()
-    low_zero_col = df_zero[df_zero<318310].index.to_list()
-    df = df.filter(low_zero_col)
     return df
-    # pd.DataFrame(df_zero, columns = ['count']).to_csv('missing_below_threshold_columns.csv')
-
 
 def add_lag(df):
     print('----- adding lag -----')
@@ -83,14 +68,10 @@ def merge_dep_macro(df, dependent_variable='next1_abs'): #dependent variables in
 
 def cut_test_train(df):
 
-    def datacqtr_to_no(df):
-        cqtr = pd.DataFrame(['{}Q{}'.format(y,q) for y in range(1979, 2020) for q in range(1,5)]).reset_index().set_index(0)
-        df['datacqtr_no'] = df.datacqtr.map(cqtr['index'])
-        return df
-
     print('----- start cutting testing/training set -----')
     df = datacqtr_to_no(df)
     test_train_dict = {}
+    training_ends = '2007-12-31'
     for testing_cqtr in tqdm(range(116, 157)): # datacqtr_no for 2008Q1 = 116 ~ (2018Q4 = 156 + 1)
         test_train_dict[testing_cqtr - 116] = {}
         test_train_dict[testing_cqtr - 116]['test'] = df.loc[df['datacqtr_no'] == testing_cqtr]
@@ -105,39 +86,28 @@ def full_running_cut():
     try:
         main = pd.read_csv('main.csv') # change forward/rolling for two different fillna version
         engine = None
-        print('local version running')
+        print('local version running - main')
     except:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine) # change forward/rolling for two different fillna version
 
-    # check_correlation(main.iloc[:,2:])
-
-    # 1. delete high correlation items
-    del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
-    main = main.drop(main[del_corr], axis=1)
 
     # 2. add 20 lagging factors for each variable
     main_lag = add_lag(main).dropna(how='any', axis=0)
+    main_lag = delete_high_zero_row(main_lag)
+    print(main_lag.shape)
 
-    # 3. add dependent variable & macro variables to main
-    main, macro_lst = merge_dep_macro(main_lag)
-
-    # 4. cut training, testing set
-    test_train_dict = cut_test_train(main)
-    print(test_train_dict)
-
-    return test_train_dict
+    # # 3. add dependent variable & macro variables to main
+    # main, macro_lst = merge_dep_macro(main_lag)
+    #
+    # # 4. cut training, testing set
+    # test_train_dict = cut_test_train(main)
+    # print(test_train_dict)
+    #
+    # return test_train_dict
 
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    main = pd.read_csv('main.csv')
-    print(main.describe().transpose())
-
-    # 1. delete high correlation items
-    # del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
-    # main = main.drop(main[del_corr], axis=1)
-    #
-    # # main_del_col = delete_high_zero_columns(main)
-    # main_del_row = delete_high_zero_row(main)
+    full_running_cut()
