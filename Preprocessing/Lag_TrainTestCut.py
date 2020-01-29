@@ -1,8 +1,6 @@
 import datetime as dt
-from collections import Counter
-from timeit import timeit
+import time
 
-import matplotlib.pyplot as plt
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import create_engine
@@ -10,11 +8,11 @@ from tqdm import tqdm
 
 
 def delete_high_zero_row(missing_dict):
-
     df_zero_series = pd.concat(missing_dict, axis = 1).sum(axis=1)
     print(df_zero_series)
 
     def print_csv(df_zero_series):
+        from collections import Counter
 
         c = Counter(df_zero_series)
         csum = 0
@@ -30,6 +28,7 @@ def delete_high_zero_row(missing_dict):
         def double_plot(df, axis1, axis2):
 
             # plot dataframe by two columns, axis1 = 'red', axis2 = 'blue'
+            import matplotlib.pyplot as plt
 
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
@@ -57,15 +56,15 @@ def delete_high_zero_row(missing_dict):
 
 def add_lag(df):
 
-    print('----- adding lag -----')
-    start = timeit()
+    print('------------- adding lag -------------')
+    start = time.time()
 
     col = df.columns[3:]
     lag_df = []
     lag_df.append(df)
 
-    missing_dict = []
-    missing_dict.append(df.mask(df == 0).isnull().sum(axis=1))
+    # missing_dict = []
+    # missing_dict.append(df.mask(df == 0).isnull().sum(axis=1))
 
     for i in tqdm(range(19)): # change to 19
         df_temp = df.groupby('gvkey').shift(i + 1)[col]
@@ -74,11 +73,10 @@ def add_lag(df):
         # missing_dict.append(df_temp.mask(df_temp == 0).isnull().sum(axis=1))
 
     # delete_high_zero_row(missing_dict)
-
-    df_lag = pd.concat(lag_df, axis = 1).dropna(how='any', axis=0)
+    df_lag = pd.concat(lag_df, axis = 1)
     print(df_lag.shape)
 
-    end = timeit()
+    end = time.time()
     print('adding lag running time: {}'.format(end - start))
     return df_lag
 
@@ -87,17 +85,21 @@ def merge_dep_macro(df):
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    print('----- adding macro & dependent variable -----')
-    start = timeit()
+    print('------------- adding macro & dependent variable -------------')
+    start = time.time()
 
     # macro = pd.read_sql("SELECT * FROM macro_clean", engine)
-    dep = pd.read_sql('SELECT * FROM niq', engine)
+    if engine is None:
+        dep = pd.read_csv('niq.csv')
+    else:
+        dep = pd.read_sql('SELECT * FROM niq', engine)
+
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
 
     # df_macro = pd.merge(df, macro, on=['datacqtr'], how='left')
     df_macro_dep = pd.merge(df, dep, on=['gvkey', 'datacqtr'], how='left')  # change to df_macro
 
-    end = timeit()
+    end = time.time()
     print('adding macro & dependent variable running time: {}'.format(end - start))
 
     return df_macro_dep
@@ -111,12 +113,14 @@ def div_x_y(set_dict):
 
     set_dict['test_x'], set_dict['test_qoq'], set_dict['test_yoy']  = divide(set_dict['test'])
     set_dict['train_x'], set_dict['train_qoq'], set_dict['train_yoy'] = divide(set_dict['train'])
+    print(1)
 
     # 2: Standardization
     from sklearn.preprocessing import StandardScaler
     scaler = StandardScaler().fit(set_dict['train_x'])
     set_dict['train_x'] = scaler.transform(set_dict['train_x'])
     set_dict['test_x'] = scaler.transform(set_dict['test_x'])
+    print(1)
 
     # 3: qcut
     for y in ['qoq', 'yoy']:
@@ -130,15 +134,15 @@ def div_x_y(set_dict):
 
 def cut_test_train(df):
 
-    print('----- cutting testing/training set -----')
-    start = timeit()
+    print('------------- cutting testing/training set -------------')
+    start_total = time.time()
 
     dict = {}
     set_no = 1
     testing_period = dt.datetime(2008, 3, 31)
 
-    for i in range(3): # -> 40
-        start_set = timeit()
+    for i in range(1): # -> 40
+        start_set = time.time()
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         end = testing_period + i*relativedelta(months=3)
@@ -150,14 +154,14 @@ def cut_test_train(df):
         dict[set_no]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
         dict[set_no] = div_x_y(dict[set_no])
-        pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
+        # pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
         set_no += 1
 
-        end_set = timeit()
-        print('subset {} running time: {}'.format(i, end_set - start_set))
+        end_set = time.time()
+        print('subset {} running time: {}'.format(set_no, end_set - start_set))
 
-    end = timeit()
-    print('cutting testing/training set running time: {}'.format(end - start))
+    end_total = time.time()
+    print('cutting testing/training set running time: {}'.format(end_total - start_total))
 
     return dict
 
@@ -178,12 +182,20 @@ def full_running_cut():
 
     # 1. add 20 lagging factors for each variable
     main_lag = add_lag(main)
+    del main
 
     # 2. add dependent variable & macro variables to main
-    main_macro_dep = merge_dep_macro(main_lag)
+    main_lag = merge_dep_macro(main_lag)
+
+    start = time.time()
+    main_lag = main_lag.dropna(how='any', axis=0)
+    print(main_lag.shape)
+    end = time.time()
+    print('dropna running time: {}'.format(end - start))
+
 
     # 3. cut training, testing set
-    test_train_dict = cut_test_train(main_macro_dep)
+    test_train_dict = cut_test_train(main_lag)
     print(test_train_dict)
 
     return test_train_dict

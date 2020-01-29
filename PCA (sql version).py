@@ -1,93 +1,70 @@
 '''This program is adjusted based on dimension reduction-PCA.py for sql & rolling version'''
 
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
-# import plotly.offline as py
-# import plotly.graph_objs as go
-# import plotly.subplots as tls
-# import seaborn as sns
-# import matplotlib.image as mpimg
-# import matplotlib
 from sklearn.decomposition import PCA
 
-np.set_printoptions(threshold=np.inf) #Show full string of the result
-pd.set_option('display.max_columns', None) #Show all columns
-pd.set_option('display.max_rows', None) #Show all rows
-pd.set_option('max_colwidth',100) #Set the illustration length for the string, default=50
-py.init_notebook_mode(connected=True)
+from Preprocessing.Lag_TrainTestCut import full_running_cut
 
-def load_data():
 
-    # Load the dataset and check the dimensions
-    train = pd.read_csv('30years-Starting SP.csv',low_memory=False) #Importing
-    train_df = pd.DataFrame(train) #Convert the original dataset to dataframe form
-    print(train_df.shape)
+class myPCA:
 
-    return train
+    def __init__(self, X_std):
+        self.pca = PCA()
+        self.pca.fit(X_std)
+        self.X_std = X_std
+        self.ratio = pca.explained_variance_ratio_
+        print("pca.components_",self.pca.components_.shape)
+        print("pca_var_ratio",self.pca.explained_variance_ratio_.shape)
 
-# Calculating Eigenvectors and eigenvalues of Cov matirx
-###mean_vec = np.mean(X_std, axis=0)
-###cov_mat = np.cov(X_std.T)
-###eig_vals, eig_vecs = np.linalg.eig(cov_mat)
-# Create a list of (eigenvalue, eigenvector) tuples
-###eig_pairs = [ (np.abs(eig_vals[i]),eig_vecs[:,i]) for i in range(len(eig_vals))]
+    def primary_PCA(self):
+        return np.cumsum(self.ratio)
 
-# Sort the eigenvalue, eigenvector pair from high to low
-###eig_pairs.sort(key = lambda x: x[0], reverse= True)
+    def plot_PCA(self):
+        plt.plot([i for i in range(X.shape[1])],
+                 [np.sum(ratio[:i+1]) for i in range(X.shape[1])])
+        plt.xticks(np.arange(X.shape[1],step=5))
+        plt.yticks(np.arange(0,1.01,0.05))
+        plt.grid()
+        plt.savefig('Cumulative Explained Variance.png')
+        plt.show()
 
-# Calculation of Explained Variance from the eigenvalues
-###tot = sum(eig_vals)
-###var_exp = [(i/tot)*100 for i in sorted(eig_vals, reverse=True)] # Individual explained variance
-###cum_var_exp = np.cumsum(var_exp) # Cumulative explained variance#
+    def secondary_PCA(self):
+        pca = PCA(n_components=0.60) # Threshold for dimension reduction,float or integer
+        pca.fit(X_std)
+        res = pca.transform(X_std)
+        res_df = pd.DataFrame(res)
+        res_df.to_csv('result75.csv', index=False)
+        return res
 
-#Plot the illustration figure for the cumulative explained variance#
-
-def PCA(X_std):
-
-    pca = PCA()
-    pca.fit(X_std)
-    ratio=pca.explained_variance_ratio_
-    print("pca.components_",pca.components_.shape)
-    print("pca_var_ratio",pca.explained_variance_ratio_.shape)
-    plt.plot([i for i in range(X.shape[1])],
-             [np.sum(ratio[:i+1]) for i in range(X.shape[1])])
-    plt.xticks(np.arange(X.shape[1],step=5))
-    plt.yticks(np.arange(0,1.01,0.05))
-    plt.grid()
-    plt.savefig('Cumulative Explained Variance.png')
-    plt.show()
-
-    # PCA
-    pca = PCA(n_components=0.80) #Threshold for dimension reduction,float or integer
-    pca.fit(X_std)
-    res=pca.transform(X_std)
-
-    #Recover the weights for all original dimensions
-    X_std_df = pd.DataFrame(X_std)
-    origin=pd.DataFrame(pca.components_,columns=X_std_df.columns)
-    #invres=pca.inverse_transform(res)#
-
-    #df = pd.DataFrame(origin)
-    #df.to_csv('origin.csv', index=False)
-    res_df=pd.DataFrame(res)
-    res_df.to_csv('result75.csv',index=False)
-
-    return res
+    # Recover the weights for all original dimensions
+    def recover_original_dimension(self):
+        X_std_df = pd.DataFrame(X_std)
+        origin = pd.DataFrame(pca.components_,columns=X_std_df.columns)
+        invres=pca.inverse_transform(res)#
+        df = pd.DataFrame(origin)
+        df.to_csv('origin.csv', index=False)
 
 
 if __name__ == "__main__":
 
-    # X = load_data()
-    import timeit
-    from Preprocessing.Lag_TrainTestCut import full_running_cut
+    start = time.time()
 
-    start = timeit.timeit()
-
+    # return a dictionary contains 40 sets
+    # -> each set contain 6 arrays train_x, train_qoq, train_yoy,
+    #                              test_x, test_qoq, test_yoy (qoq & yoy two types of y - already qcut into 3 parts)
     sets = full_running_cut()
-    # X_std = standardization(sets[1]['train_x'])
-    PCA(sets[1]['train_x'])
 
-    end = timeit.timeit()
-    print('running time: {}'.format(end - start))
+    # roll over all sets's train_x array
+    exp_dict = {}
+    for set in sets.keys():
+        exp_dict[set] = myPCA(sets[set]['train_x']).primary_PCA()
+
+    print(exp_dict)
+
+    end = time.time()
+    print('PCA total running time: {}'.format(end - start))
 
