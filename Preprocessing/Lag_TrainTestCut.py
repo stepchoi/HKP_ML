@@ -1,11 +1,13 @@
 import datetime as dt
+import gc
 import time
 
 import pandas as pd
-from Preprocessing.Miscellaneous import save_load_dict
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import create_engine
 from tqdm import tqdm
+
+from Preprocessing.Miscellaneous import save_load_dict
 
 
 def delete_high_zero_row(missing_dict):
@@ -86,17 +88,17 @@ def merge_dep_macro(df):
     start = time.time()
 
     try:
-        dep = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/niq.csv')
-        macro = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/macro_main.csv')
+        dep = pd.read_csv('niq.csv')
+        macro = pd.read_csv('macro_main.csv')
         print('local version running - niq & macro_main')
     except:
         macro = pd.read_sql("SELECT * FROM macro_main", engine)
         dep = pd.read_sql('SELECT * FROM niq', engine)
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
-    macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y/%m/%d')
+    macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
 
-    dep_macro = pd.merge(dep, macro, on=['datacqtr'], how='left')
+    dep_macro = pd.merge(macro, dep, on=['datacqtr'], how='right')
     df_macro_dep = pd.merge(df, dep_macro, on=['gvkey', 'datacqtr'], how='left')  # change to df_macro
 
     end = time.time()
@@ -162,13 +164,13 @@ def cut_test_train(df, sets_no, save_csv = False):
 
     return dict
 
-def full_running_cut(sets_no):
+def full_running_cut(sets_no, save_csv):
 
     # import engine, select variables, import raw database
     print('-------- start load data into different sets (-> dictionary) --------')
 
     try:
-        main = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/main.csv')
+        main = pd.read_csv('main.csv')
         engine = None
         print('local version running - main')
     except:
@@ -182,9 +184,11 @@ def full_running_cut(sets_no):
     # 1. add 20 lagging factors for each variable
     main_lag = add_lag(main)
     del main
+    gc.collect() #####
 
     # 2. add dependent variable & macro variables to main
     main_lag = merge_dep_macro(main_lag)
+    print(main_lag.shape)
 
     start = time.time()
     main_lag = main_lag.dropna()
@@ -199,11 +203,11 @@ def full_running_cut(sets_no):
         print('save csv running time: {}'.format(end - start))
 
     # 3. cut training, testing set
-    test_train_dict = cut_test_train(main_lag, sets_no, True) #
+    test_train_dict = cut_test_train(main_lag, sets_no, save_csv)
 
     return test_train_dict
 
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    full_running_cut(2)
+    full_running_cut(1, save_csv = True)
