@@ -2,12 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
-def Timestamp(text):
-
-    return pd.Period(text, freq='Q-DEC').to_timestamp(how='end')
-
 def unstack_selection():
-
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
@@ -57,8 +52,12 @@ def check_correlation_delete(df, threshold=0.9):
     high_corr_df = high_corr(df)
     print(high_corr_df)
 
-
-
 if __name__ == "__main__":
+    ipo = pd.read_csv('ipo.csv').groupby('gvkey').head(1).filter(['gvkey','fyear'])
+    ipo.columns = ['gvkey','start_year']
 
-    print(Timestamp('1997Q3'))
+    df = pd.read_csv('main_forward.csv')
+    df = pd.merge(df, ipo, on = ['gvkey'], how = 'left')
+    df['fyear'] = [x[:4] for x in df['datacqtr']]
+    df['age'] = df['fyear'] - df['start_year']
+    print(df)
