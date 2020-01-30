@@ -103,7 +103,7 @@ def merge_dep_macro(df):
     return df_macro_dep
 
 
-def div_x_y(set_dict, sub_cut_bins):
+def divide_x_y(set_dict, sub_cut_bins):
 
     # 1: divide x and y
     def divide(df):
@@ -148,7 +148,7 @@ def cut_test_train(df):
         dict[i+1]['test'] = df.loc[df['datacqtr'] == end]
         dict[i+1]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
-        dict[i+1], cut_bins[i+1] = div_x_y(dict[i+1])
+        dict[i+1], cut_bins[i+1] = divide_x_y(dict[i+1], cut_bins[i+1])
         # pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
 
     save_load_dict('save', dict=cut_bins, name='cut_bins') # save cut_bins to dictionary
