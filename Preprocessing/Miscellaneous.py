@@ -1,5 +1,3 @@
-import json
-
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -38,14 +36,14 @@ def Timestamp(df):
     df['datacqtr'] = df['datacqtr'].apply(lambda x: pd.Period(x, freq='Q-DEC').to_timestamp(how='end').strftime('%Y-%m-%d'))
     return df
 
-def save_load_select(type, data = None):
-
+def save_load_dict(type, dict = None, name = 'temp'):
+    import json
     if type == 'save':
-        with open('select.json', 'w') as fp:
-            json.dump(data, fp)
+        with open(name + '.json', 'w') as fp:
+            json.dump(dict, fp)
 
     elif type == 'load':
-        with open('select.json', 'r') as fp:
+        with open(name + '.json', 'r') as fp:
             data = json.load(fp)
             return data
     else:

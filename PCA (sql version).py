@@ -16,9 +16,9 @@ class myPCA:
         self.pca = PCA()
         self.pca.fit(X_std)
         self.X_std = X_std
-        self.ratio = pca.explained_variance_ratio_
-        print("pca.components_",self.pca.components_.shape)
-        print("pca_var_ratio",self.pca.explained_variance_ratio_.shape)
+        self.ratio = self.pca.explained_variance_ratio_
+        # print("pca.components_",self.pca.components_.shape)
+        # print("pca_var_ratio",self.pca.explained_variance_ratio_.shape)
 
     def primary_PCA(self):
         return np.cumsum(self.ratio)
@@ -53,18 +53,31 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    # return a dictionary contains 40 sets
-    # -> each set contain 6 arrays train_x, train_qoq, train_yoy,
-    #                              test_x, test_qoq, test_yoy (qoq & yoy two types of y - already qcut into 3 parts)
+    # 1. run imported module and load date
+    '''
+    before run 'full_running_cut()' check and make sure Preprocessing.Lag_TrainTestCut Line 139 -> range(40)
+    this part will return a dictionary contains 40 sets
+                            sets
+                         /        \
+                    set[1]  ...  set[40]                   
+                /     |      \ 
+        [train_x] [train_yoy] [train_qoq]   (qoq & yoy two types of y - already qcut into 3 parts)
+        [test_x]  [test_qoq]  [test_yoy]
+            |           \         /
+      StandardScaler        qcut
+         (Arrays)         (Arrays)            
+         
+    '''
+
     sets = full_running_cut()
     print(sets.keys())
 
     # roll over all sets's train_x array
-    exp_dict = {}
+    explanation_ratio_dict = {}
     for set in sets.keys():
-        exp_dict[set] = myPCA(sets[set]['train_x']).primary_PCA()
+        explanation_ratio_dict[set] = myPCA(sets[set]['train_x']).primary_PCA()
 
-    print(exp_dict)
+    pd.DataFrame.from_dict(explanation_ratio_dict).to_csv('explanation_ratio.csv')
 
     end = time.time()
     print('PCA total running time: {}'.format(end - start))

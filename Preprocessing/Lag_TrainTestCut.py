@@ -2,6 +2,7 @@ import datetime as dt
 import time
 
 import pandas as pd
+from Miscellaneous import save_load_dict
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import create_engine
 from tqdm import tqdm
@@ -55,8 +56,7 @@ def delete_high_zero_row(missing_dict):
     return df
 
 def add_lag(df):
-
-    print('------------- adding lag -------------')
+    print('---------------------------- adding lag -----------------------------')
     start = time.time()
 
     col = df.columns[3:]
@@ -82,7 +82,7 @@ def add_lag(df):
 
 
 def merge_dep_macro(df):
-    print('------------- adding macro & dependent variable -------------')
+    print('----------------- adding macro & dependent variable -----------------')
     start = time.time()
 
     try:
@@ -103,7 +103,7 @@ def merge_dep_macro(df):
     return df_macro_dep
 
 
-def div_x_y(set_dict):
+def div_x_y(set_dict, sub_cut_bins):
 
     # 1: divide x and y
     def divide(df):
@@ -119,25 +119,25 @@ def div_x_y(set_dict):
     set_dict['test_x'] = scaler.transform(set_dict['test_x'])
 
     # 3: qcut
+    sub_cut_bins = {}
     for y in ['qoq', 'yoy']:
         set_dict['train_' + y], cut_bins = pd.qcut(set_dict['train_' + y], q=3, labels=[0,1,2], retbins=True)
         set_dict['test_' + y] = pd.cut(set_dict['test_' + y], bins=cut_bins, labels=[0,1,2])
-        print('bins for {} is {}'.format(y, cut_bins))
+        sub_cut_bins[y] = cut_bins
 
     set_dict['test'] = None
     set_dict['train'] = None
-    return set_dict
+    return set_dict, sub_cut_bins
 
 def cut_test_train(df):
-
-    print('------------- cutting testing/training set -------------')
+    print('------------------- cutting testing/training set --------------------')
     start_total = time.time()
 
     dict = {}
+    cut_bins = {}
     testing_period = dt.datetime(2008, 3, 31)
 
-    for i in range(1): # -> 40
-        start_set = time.time()
+    for i in tqdm(range(40)): # here should be -> 40 -> for entire sets
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         end = testing_period + i*relativedelta(months=3)
@@ -148,11 +148,10 @@ def cut_test_train(df):
         dict[i+1]['test'] = df.loc[df['datacqtr'] == end]
         dict[i+1]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
-        dict[i+1] = div_x_y(dict[i+1])
+        dict[i+1], cut_bins[i+1] = div_x_y(dict[i+1])
         # pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
 
-        end_set = time.time()
-        print('subset {} running time: {}'.format(i+1, end_set - start_set))
+    save_load_dict('save', dict=cut_bins, name='cut_bins') # save cut_bins to dictionary
 
     end_total = time.time()
     print('cutting testing/training set running time: {}'.format(end_total - start_total))
@@ -162,7 +161,6 @@ def cut_test_train(df):
 def full_running_cut():
 
     # import engine, select variables, import raw database
-
     print('-------- start load data into different sets (-> dictionary) --------')
 
     try:
@@ -185,10 +183,15 @@ def full_running_cut():
     main_lag = merge_dep_macro(main_lag)
 
     start = time.time()
-    main_lag = main_lag.dropna(axis=0, how='any')
+    main_lag = main_lag.dropna()
     print(main_lag.shape)
     end = time.time()
     print('dropna running time: {}'.format(end - start))
+
+    start = time.time()
+    main_lag.to_csv('main_lag.csv', index=False)
+    end = time.time()
+    print('save csv running time: {}'.format(end - start))
 
     # 3. cut training, testing set
     test_train_dict = cut_test_train(main_lag)
