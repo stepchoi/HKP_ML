@@ -87,15 +87,17 @@ def merge_dep_macro(df):
 
     try:
         dep = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/niq.csv')
-        print('local version running - niq')
+        macro = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/macro_main.csv')
+        print('local version running - niq & macro_main')
     except:
-        # macro = pd.read_sql("SELECT * FROM macro_clean", engine)
+        macro = pd.read_sql("SELECT * FROM macro_main", engine)
         dep = pd.read_sql('SELECT * FROM niq', engine)
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
+    macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y/%m/%d')
 
-    # df_macro = pd.merge(df, macro, on=['datacqtr'], how='left')
-    df_macro_dep = pd.merge(df, dep, on=['gvkey', 'datacqtr'], how='left')  # change to df_macro
+    dep_macro = pd.merge(dep, macro, on=['datacqtr'], how='left')
+    df_macro_dep = pd.merge(df, dep_macro, on=['gvkey', 'datacqtr'], how='left')  # change to df_macro
 
     end = time.time()
     print('adding macro & dependent variable running time: {}'.format(end - start))
@@ -129,7 +131,7 @@ def divide_x_y(set_dict, sub_cut_bins):
     set_dict['train'] = None
     return set_dict, sub_cut_bins
 
-def cut_test_train(df):
+def cut_test_train(df, sets_no, save_csv = False):
     print('------------------- cutting testing/training set --------------------')
     start_total = time.time()
 
@@ -137,7 +139,7 @@ def cut_test_train(df):
     cut_bins = {}
     testing_period = dt.datetime(2008, 3, 31)
 
-    for i in tqdm(range(40)): # here should be -> 40 -> for entire sets
+    for i in tqdm(range(sets_no)):
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         end = testing_period + i*relativedelta(months=3)
@@ -149,7 +151,9 @@ def cut_test_train(df):
         dict[i+1]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
         dict[i+1], cut_bins[i+1] = divide_x_y(dict[i+1], cut_bins[i+1])
-        # pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
+
+        if save_csv is True:
+            pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
 
     save_load_dict('save', dict=cut_bins, name='cut_bins') # save cut_bins to dictionary
 
@@ -158,7 +162,7 @@ def cut_test_train(df):
 
     return dict
 
-def full_running_cut():
+def full_running_cut(sets_no):
 
     # import engine, select variables, import raw database
     print('-------- start load data into different sets (-> dictionary) --------')
@@ -195,11 +199,11 @@ def full_running_cut():
         print('save csv running time: {}'.format(end - start))
 
     # 3. cut training, testing set
-    test_train_dict = cut_test_train(main_lag)
+    test_train_dict = cut_test_train(main_lag, sets_no, True) #
 
     return test_train_dict
 
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    full_running_cut()
+    full_running_cut(2)

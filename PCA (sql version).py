@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 from sklearn.decomposition import PCA
 
-from Preprocessing.Lag_TrainTestCut import full_running_cut
-
 
 class myPCA:
 
@@ -68,12 +66,15 @@ if __name__ == "__main__":
          (Arrays)         (Arrays)            
          
     '''
-
-    sets = full_running_cut()
+    from Preprocessing.Lag_TrainTestCut import full_running_cut
+    sets = full_running_cut(2)  # entire sets -> set as 40
+    sets[1]['train_x']   # -> This is first training set x, i.e. 1988Q1 - 2007Q4
+    sets[1]['train_qoq'] # -> This is first training set y - niq qoq, i.e. 1988Q1 - 2007Q4
     print(sets.keys())
 
     # roll over all sets's train_x array
     explanation_ratio_dict = {}
+
     for set in sets.keys():
         explanation_ratio_dict[set] = myPCA(sets[set]['train_x']).primary_PCA()
 
