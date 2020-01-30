@@ -1,11 +1,27 @@
-from sqlalchemy import create_engine
-import pandas as pd
 import numpy as np
-from ConvertDatabase import select_variable
+import pandas as pd
+from Miscellaneous import Timestamp
+from sqlalchemy import create_engine
 
-def whole_print(df):
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(df)
+
+def select_variable(engine):
+
+    # create dictionary for all selected variables by different formats(yoy, qoq, nom, log), features
+    if engine is None:
+        format_map = pd.read_csv('format_map.csv')
+    else:
+        format_map = pd.read_sql("SELECT * FROM format_map", engine)
+
+    select = {}
+    select['all'] = format_map['name'].to_list()
+    select['label'] = ['gvkey', 'datacqtr', 'sic']
+
+    for col in format_map.columns[2:-1]:
+        select[col] = format_map.loc[format_map[col]==1, 'name'].to_list()
+
+    select.update(format_map.loc[format_map['special'].notnull()].filter(['name','special']).set_index('name').to_dict())
+
+    return select
 
 def convert_ytd(df, ytd_col):
 
@@ -61,5 +77,6 @@ if __name__ == '__main__':
     df_ytd = convert_ytd(df, ytd_col)
     df = pd.concat([df[select['label'] + other_col], df_ytd], axis = 1)
 
+    df = Timestamp(df)
     print(df)
     df.to_csv('raw_main.csv')
