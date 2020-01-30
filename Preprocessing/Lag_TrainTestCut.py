@@ -188,10 +188,11 @@ def full_running_cut():
     end = time.time()
     print('dropna running time: {}'.format(end - start))
 
-    start = time.time()
-    main_lag.to_csv('main_lag.csv', index=False)
-    end = time.time()
-    print('save csv running time: {}'.format(end - start))
+    def save_lag_to_csv():
+        start = time.time()
+        main_lag.to_csv('main_lag.csv', index=False)
+        end = time.time()
+        print('save csv running time: {}'.format(end - start))
 
     # 3. cut training, testing set
     test_train_dict = cut_test_train(main_lag)
