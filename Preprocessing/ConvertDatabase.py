@@ -121,7 +121,7 @@ def fillna(df, rolling_period):
     del_row = ['atq', 'ltq', 'seqq', 'cheq', 'revtq', 'niq']
     del_row = [x + '_atq' for x in del_row] + [x + '_revtq' for x in del_row] + del_row
 
-    df[yoy_qoq_col] = df[yoy_qoq_col].fillna(0)
+    df[yoy_qoq_col] = df[yoy_qoq_col].fillna(value = -1)
 
     # 2: fill 0 after 8th
     def after_8(series):  # for fillna
@@ -156,7 +156,7 @@ def fillna(df, rolling_period):
         end_missing = df.isnull().sum().sum()
         print('rolling period {} fillna: {}'.format(i, start_missing - end_missing))
 
-    df[rest_col] = df[rest_col].fillna(0)
+    df[rest_col] = df[rest_col].fillna(value = -1)
 
     print('end missing: {}'.format(df.isnull().sum().sum()))
 

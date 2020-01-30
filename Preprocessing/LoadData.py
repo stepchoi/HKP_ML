@@ -184,7 +184,7 @@ def full_running_cut(sets_no, save_csv):
     # 1. add 20 lagging factors for each variable
     main_lag = add_lag(main)
     del main
-    gc.collect() #####
+    gc.collect()
 
     # 2. add dependent variable & macro variables to main
     main_lag = merge_dep_macro(main_lag)
