@@ -2,14 +2,9 @@ from keras.layers import Conv2D, Conv2DTranspose, Dense, Flatten, Reshape
 from keras.models import Sequential, Model
 from keras.utils.vis_utils import plot_model
 import numpy as np
-
-def timestamp():
-
-
-    text = '1997Q4'
-    a = time_stamp(text)
-
-    return text
+from time import time
+import argparse
+from Preprocessing.Lag_TrainTestCut import full_running_cut
 
 
 def AE(input_shape=(69), neurons=[64, 32, 16, 8]):
@@ -33,38 +28,13 @@ def AE(input_shape=(69), neurons=[64, 32, 16, 8]):
     model.summary()
     return model
 
-"""
-def random_forest(x, y):
-
-    from sklearn.model_selection import train_test_split, GridSearchCV
-    from sklearn.ensemble import RandomForestRegressor
-
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=6)
-    maxFeature = np.array([None])
-
-    # Define the gridsearch inputs:
-    param_grid = {'max_features': maxFeature}
-
-    # Find the best parameters of the grid:
-    gridRF = GridSearchCV(estimator=RandomForestRegressor(random_state=2, n_estimators=200),
-                          param_grid=param_grid,
-                          cv=5, scoring=None)
-    gridRF.fit(x_train, y_train)
-
-    # Print the accuracy of the tuned random forest:
-    print('Best CV R^2: {:.3f}'.format(gridRF.best_score_))
-    print('Out of Sample R^2: {:.3f}'.format(gridRF.score(x_test, y_test)))
-    print('Best Parameters: ', gridRF.best_params_)
-
-    return(gridRF.score(x_test, y_test))
-"""
 
 
 if __name__ == "__main__":
-    from time import time
+
 
     # setting the hyper parameters
-    import argparse
+
     parser = argparse.ArgumentParser(description='train')
     parser.add_argument('--dataset', default='usps', choices=['mnist', 'usps'])
     parser.add_argument('--n_clusters', default=10, type=int)
@@ -74,15 +44,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    import os
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
+    sets = full_running_cut()
+    print(sets.keys())
 
-    # load dataset
-    from MainDataLoad import load_main
 
-    x, y = load_main(10000)
-
+"""
     # define the model
     neurons = [64, 32, 32, 8]
     model = AE(input_shape=x.shape[1:], neurons=neurons)
@@ -114,3 +80,4 @@ if __name__ == "__main__":
     #RFRscore = random_forest(x, y)
     print(neurons[2], embedded_RFRscore)
     #print(RFRscore)
+"""
