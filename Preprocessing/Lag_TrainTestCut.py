@@ -82,16 +82,14 @@ def add_lag(df):
 
 
 def merge_dep_macro(df):
-    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
-    engine = create_engine(db_string)
-
     print('------------- adding macro & dependent variable -------------')
     start = time.time()
 
-    # macro = pd.read_sql("SELECT * FROM macro_clean", engine)
-    if engine is None:
-        dep = pd.read_csv('niq.csv')
-    else:
+    try:
+        dep = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/niq.csv')
+        print('local version running - niq')
+    except:
+        # macro = pd.read_sql("SELECT * FROM macro_clean", engine)
         dep = pd.read_sql('SELECT * FROM niq', engine)
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
@@ -113,14 +111,12 @@ def div_x_y(set_dict):
 
     set_dict['test_x'], set_dict['test_qoq'], set_dict['test_yoy']  = divide(set_dict['test'])
     set_dict['train_x'], set_dict['train_qoq'], set_dict['train_yoy'] = divide(set_dict['train'])
-    print(1)
 
     # 2: Standardization
     from sklearn.preprocessing import StandardScaler
     scaler = StandardScaler().fit(set_dict['train_x'])
     set_dict['train_x'] = scaler.transform(set_dict['train_x'])
     set_dict['test_x'] = scaler.transform(set_dict['test_x'])
-    print(1)
 
     # 3: qcut
     for y in ['qoq', 'yoy']:
@@ -138,7 +134,6 @@ def cut_test_train(df):
     start_total = time.time()
 
     dict = {}
-    set_no = 1
     testing_period = dt.datetime(2008, 3, 31)
 
     for i in range(1): # -> 40
@@ -147,18 +142,17 @@ def cut_test_train(df):
             training set: y -> qcut -> apply to testing set: y'''
         end = testing_period + i*relativedelta(months=3)
         start = testing_period - relativedelta(years=20)
-        print(set_no, end)
+        print(i+1, end)
 
-        dict[set_no] = {}
-        dict[set_no]['test'] = df.loc[df['datacqtr'] == end]
-        dict[set_no]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
+        dict[i+1] = {}
+        dict[i+1]['test'] = df.loc[df['datacqtr'] == end]
+        dict[i+1]['train'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
 
-        dict[set_no] = div_x_y(dict[set_no])
+        dict[i+1] = div_x_y(dict[i+1])
         # pd.DataFrame(dict[set_no]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
-        set_no += 1
 
         end_set = time.time()
-        print('subset {} running time: {}'.format(set_no, end_set - start_set))
+        print('subset {} running time: {}'.format(i+1, end_set - start_set))
 
     end_total = time.time()
     print('cutting testing/training set running time: {}'.format(end_total - start_total))
@@ -168,8 +162,11 @@ def cut_test_train(df):
 def full_running_cut():
 
     # import engine, select variables, import raw database
+
+    print('-------- start load data into different sets (-> dictionary) --------')
+
     try:
-        main = pd.read_csv('main.csv')
+        main = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/main.csv')
         engine = None
         print('local version running - main')
     except:
@@ -188,15 +185,13 @@ def full_running_cut():
     main_lag = merge_dep_macro(main_lag)
 
     start = time.time()
-    main_lag = main_lag.dropna(how='any', axis=0)
+    main_lag = main_lag.dropna(axis=0, how='any')
     print(main_lag.shape)
     end = time.time()
     print('dropna running time: {}'.format(end - start))
 
-
     # 3. cut training, testing set
     test_train_dict = cut_test_train(main_lag)
-    print(test_train_dict)
 
     return test_train_dict
 

@@ -57,6 +57,7 @@ if __name__ == "__main__":
     # -> each set contain 6 arrays train_x, train_qoq, train_yoy,
     #                              test_x, test_qoq, test_yoy (qoq & yoy two types of y - already qcut into 3 parts)
     sets = full_running_cut()
+    print(sets.keys())
 
     # roll over all sets's train_x array
     exp_dict = {}
