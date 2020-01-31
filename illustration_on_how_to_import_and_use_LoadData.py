@@ -3,7 +3,7 @@ This script is aimed to illustrate how to load data using local csv file & exist
 Here we use PCA code for example.
 
 Step 1: Preparation
-        1.1 download LoadData_csv.zip from google drive
+        1.1 download LoadData_csv.zip from google drive: https://drive.google.com/open?id=1M5dK84S6Uo71P8XxaJ5lLXYahucoBqRV
             -> contains main.csv, niq.csv
         1.2 link VPN
             -> connect PostgreSQL for macro_main table
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # load_data(sets_no, save_csv)
     # sets_no: decide no of sets will be returned in dictionary [for entire sets -> set as 40]
     # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
-    sets = load_data(2, save_csv=True)  # change to 40 for full 40 sets
+    sets = load_data(2, save_csv=True)  # change to 40 for full 40 sets, change to False to stop saving csv
 
     ''' e.g. 
     sets[1]['train_x']    -> This is first training set x, i.e. 1988Q1 - 2007Q4

@@ -105,7 +105,6 @@ def delete_high_missing(df, threshold):
     for name, g in df.groupby('name'):
         if 0 < len(g.loc[g['%_missing']>threshold]) < len(g) :
             del_col.extend(g.loc[g['%_missing']>threshold, 'index'].to_list())
-
     print('# deleted columns due to high {} missing: {}'.format(threshold, len(del_col)))
 
     return del_col
