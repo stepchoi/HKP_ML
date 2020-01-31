@@ -86,15 +86,16 @@ def add_lag(df):
 def merge_dep_macro(df):
     print('----------------- adding macro & dependent variable -----------------')
     start = time.time()
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
 
     try:
         dep = pd.read_csv('niq.csv')
-        macro = pd.read_csv('macro_main.csv')
         print('local version running - niq & macro_main')
     except:
-        macro = pd.read_sql("SELECT * FROM macro_main", engine)
         dep = pd.read_sql('SELECT * FROM niq', engine)
 
+    macro = pd.read_sql("SELECT * FROM macro_main", engine)
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
 
@@ -164,7 +165,7 @@ def cut_test_train(df, sets_no, save_csv = False):
 
     return dict
 
-def full_running_cut(sets_no, save_csv):
+def load_data(sets_no, save_csv):
 
     # import engine, select variables, import raw database
     print('-------- start load data into different sets (-> dictionary) --------')
@@ -210,4 +211,4 @@ def full_running_cut(sets_no, save_csv):
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    full_running_cut(1, save_csv = True)
+    load_data(1, save_csv = True)

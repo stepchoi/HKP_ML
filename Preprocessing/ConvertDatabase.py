@@ -98,7 +98,7 @@ def delete_high_missing(df, threshold):
 
     df = pd.DataFrame(df.isnull().sum().sort_values(), columns=['#_missing']).reset_index(drop = False)
     df[['name','format']] = pd.DataFrame([x.rsplit('_',1) for x in df['index']])
-    df['%_missing'] = df['#_missing']/len(main)
+    df['%_missing'] = df['#_missing']/333325
     df = df.filter(['index', 'name','format','#_missing','%_missing'])
 
     del_col = []
@@ -198,7 +198,7 @@ if __name__ == "__main__":
         rolling_period = optimal_rolling_period(main)
 
     # 3. delete high_missing if exists other formats
-    del_col = delete_high_missing(main, 0.8)
+    del_col = delete_high_missing(main, 0.6)
     main = main.drop(main[del_col], axis = 1)
     print(main.shape)
 
