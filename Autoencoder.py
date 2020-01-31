@@ -1,10 +1,7 @@
-from keras.layers import Conv2D, Conv2DTranspose, Dense, Flatten, Reshape
-from keras.models import Sequential, Model
-from keras.utils.vis_utils import plot_model
-import numpy as np
-from time import time
 import argparse
-from Preprocessing.Lag_TrainTestCut import full_running_cut
+
+from keras.layers import Dense
+from keras.models import Sequential
 
 
 def AE(input_shape=(69), neurons=[64, 32, 16, 8]):
@@ -44,7 +41,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    sets = full_running_cut()
+    sets = load_data()
     print(sets.keys())
 
 

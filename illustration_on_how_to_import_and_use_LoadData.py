@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # load_data(sets_no, save_csv)
     # sets_no: decide no of sets will be returned in dictionary [for entire sets -> set as 40]
     # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
-    sets = load_data(2, save_csv=True)
+    sets = load_data(2, save_csv=True)  # change to 40 for full 40 sets
 
     ''' e.g. 
     sets[1]['train_x']    -> This is first training set x, i.e. 1988Q1 - 2007Q4
