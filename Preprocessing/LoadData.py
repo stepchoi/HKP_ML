@@ -83,20 +83,22 @@ def add_lag(df):
     return df_lag
 
 
-def merge_dep_macro(df):
+def merge_dep_macro(df, sql_version):
     print('----------------- adding macro & dependent variable -----------------')
     start = time.time()
-    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
-    engine = create_engine(db_string)
 
-    try:
+    if sql_version is True:
+        db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+        engine = create_engine(db_string)
+        dep = pd.read_sql('SELECT * FROM niq', engine)
+        macro = pd.read_sql("SELECT * FROM macro_main", engine)
+    else:
+        macro = pd.read_csv('Macro_Data.csv')
         dep = pd.read_csv('niq.csv')
         print('local version running - niq & macro_main')
-    except:
-        dep = pd.read_sql('SELECT * FROM niq', engine)
 
-    macro = pd.read_sql("SELECT * FROM macro_main", engine)
-    dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
+
+    dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%m/%d/%Y')
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
 
     dep_macro = pd.merge(macro, dep, on=['datacqtr'], how='right')
@@ -165,19 +167,19 @@ def cut_test_train(df, sets_no, save_csv = False):
 
     return dict
 
-def load_data(sets_no, save_csv):
+def load_data(sets_no, save_csv = True, sql_version = False):
 
     # import engine, select variables, import raw database
     print('-------- start load data into different sets (-> dictionary) --------')
 
-    try:
-        main = pd.read_csv('main.csv')
-        engine = None
-        print('local version running - main')
-    except:
+    if sql_version is True:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
+    else:
+        main = pd.read_csv('main.csv')
+        engine = None
+        print('local version running - main')
 
     print(main.shape)
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
@@ -211,4 +213,6 @@ def load_data(sets_no, save_csv):
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
-    load_data(1, save_csv = True)
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+    load_data(1, save_csv = True, sql_version = False)

@@ -105,8 +105,10 @@ def delete_high_missing(df, threshold):
     for name, g in df.groupby('name'):
         if 0 < len(g.loc[g['%_missing']>threshold]) < len(g) :
             del_col.extend(g.loc[g['%_missing']>threshold, 'index'].to_list())
-    print('# deleted columns due to high {} missing: {}'.format(threshold, len(del_col)))
+        elif len(g.loc[g['%_missing']>threshold]) == len(g):
+            del_col.extend(g.sort_values(by = ['%_missing'])['index'].to_list()[1:])
 
+    print(len(del_col))
     return del_col
 
 # 4: fillna
@@ -197,7 +199,7 @@ if __name__ == "__main__":
         rolling_period = optimal_rolling_period(main)
 
     # 3. delete high_missing if exists other formats
-    del_col = delete_high_missing(main, 0.6)
+    del_col = delete_high_missing(main, 0.7)
     main = main.drop(main[del_col], axis = 1)
     print(main.shape)
 
@@ -209,6 +211,6 @@ if __name__ == "__main__":
     del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
     main = main.drop(main[del_corr], axis=1)
 
-    main.to_csv('main.csv', index=False)
+    main.to_csv('main_0.7.csv', index=False)
 
 
