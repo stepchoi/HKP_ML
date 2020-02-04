@@ -58,7 +58,7 @@ def delete_high_zero_row(missing_dict):
     return df
 
 def add_lag(df):
-    print('---------------------------- adding lag -----------------------------')
+    print('---------------------------- (step 1/4) adding lag -----------------------------')
     start = time.time()
 
     col = df.columns[3:]
@@ -84,7 +84,7 @@ def add_lag(df):
 
 
 def merge_dep_macro(df, sql_version):
-    print('----------------- adding macro & dependent variable -----------------')
+    print('----------------- (step 2/4) adding macro & dependent variable -----------------')
     start = time.time()
 
     if sql_version is True:
@@ -108,6 +108,15 @@ def merge_dep_macro(df, sql_version):
     print('adding macro & dependent variable running time: {}'.format(end - start))
 
     return df_macro_dep
+
+def dropna_csv(main_lag):
+    print('------------------------------ (step 3/4) dropna -------------------------------')
+    start = time.time()
+    main_lag = main_lag.dropna()
+    print(main_lag.shape)
+    end = time.time()
+    print('dropna running time: {}'.format(end - start))
+    return main_lag
 
 
 def divide_x_y(set_dict, sub_cut_bins):
@@ -137,7 +146,7 @@ def divide_x_y(set_dict, sub_cut_bins):
     return set_dict, sub_cut_bins
 
 def cut_test_train(df, sets_no, save_csv = False):
-    print('------------------- cutting testing/training set --------------------')
+    print('------------------- (step 4/4) cutting testing/training set --------------------')
     start_total = time.time()
 
     dict = {}
@@ -170,7 +179,8 @@ def cut_test_train(df, sets_no, save_csv = False):
 def load_data(sets_no, save_csv = True, sql_version = False):
 
     # import engine, select variables, import raw database
-    print('-------- start load data into different sets (-> dictionary) --------')
+    print('-------------- start load data into different sets (-> dictionary) --------------')
+    start = time.time()
 
     if sql_version is True:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
@@ -180,6 +190,9 @@ def load_data(sets_no, save_csv = True, sql_version = False):
         main = pd.read_csv('main.csv')
         engine = None
         print('local version running - main')
+
+    end = time.time()
+    print('read local csv - main - running time: {}'.format(end - start))
 
     print(main.shape)
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
@@ -193,11 +206,7 @@ def load_data(sets_no, save_csv = True, sql_version = False):
     main_lag = merge_dep_macro(main_lag)
     print(main_lag.shape)
 
-    start = time.time()
-    main_lag = main_lag.dropna()
-    print(main_lag.shape)
-    end = time.time()
-    print('dropna running time: {}'.format(end - start))
+    main_lag = dropna_csv(main_lag)
 
     def save_lag_to_csv():
         start = time.time()
@@ -207,7 +216,6 @@ def load_data(sets_no, save_csv = True, sql_version = False):
 
     # 3. cut training, testing set
     test_train_dict = cut_test_train(main_lag, sets_no, save_csv)
-
     return test_train_dict
 
 if __name__ == "__main__":
