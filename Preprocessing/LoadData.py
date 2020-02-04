@@ -203,7 +203,7 @@ def load_data(sets_no, save_csv = True, sql_version = False):
     gc.collect()
 
     # 2. add dependent variable & macro variables to main
-    main_lag = merge_dep_macro(main_lag)
+    main_lag = merge_dep_macro(main_lag, sql_version)
     print(main_lag.shape)
 
     main_lag = dropna_csv(main_lag)
