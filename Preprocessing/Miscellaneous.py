@@ -1,6 +1,52 @@
 import pandas as pd
 from sqlalchemy import create_engine
 
+def delete_high_zero_row(missing_dict):
+    df_zero_series = pd.concat(missing_dict, axis = 1).sum(axis=1)
+    print(df_zero_series)
+
+    def print_csv(df_zero_series):
+        from collections import Counter
+
+        c = Counter(df_zero_series)
+        csum = 0
+        missing_dict = {}
+        for missing, count in sorted(c.items()):
+            csum += count
+            missing_dict[missing] = csum
+
+        df = pd.DataFrame.from_dict(missing_dict, orient='index', columns=['count'])
+        df['%_count'] = df['count'] / 333325
+        df['changes'] = df['%_count'].sub(df['%_count'].shift(1))
+
+        def double_plot(df, axis1, axis2):
+
+            # plot dataframe by two columns, axis1 = 'red', axis2 = 'blue'
+            import matplotlib.pyplot as plt
+
+            fig, ax1 = plt.subplots()
+            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+            ax1.plot(df[axis1], color='tab:red')
+            ax1.tick_params(axis='y', labelcolor='tab:red')
+
+            ax2.plot(df[axis2], color='tab:blue')
+            ax2.tick_params(axis='y', labelcolor='tab:red')
+
+            fig.tight_layout()  # otherwise the right y-label is slightly clipped
+            plt.show()
+            plt.savefig('double_plot_delete_row.png')
+
+        double_plot(df, '%_count', 'changes')
+
+        df.to_csv('missing_below_threshold.csv')
+        id = df.loc[df['%_count'] < 0.9].sort_values(by=['%_count']).tail(1).index
+        print(id)
+        return id
+
+    df = df.loc[df_zero_series < print_csv(df_zero_series)]
+
+    return df
 
 def whole_print(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also

@@ -1,7 +1,10 @@
 import pandas as pd
 
 if __name__ == "__main__":
-    macro = pd.read_csv('Macro_Data_raw.csv')
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+
+    macro = pd.read_csv('Macro_Data.csv')
 
     macro.columns = ['Date', 'Long Term Rate', 'GDP', 'PCE', 'LEI', 'Short Term Market Rate',
                      'Central Bank Target Rate', 'Unemployment', 'Philly Fed', 'CPI', 'S&P']
@@ -22,5 +25,5 @@ if __name__ == "__main__":
     macro_main = macro_main.reset_index()
     del macro_main['index']
 
-    macro_main.to_csv("macro_main.csv")
+    macro_main.to_csv("macro_main.csv", index = False)
 
