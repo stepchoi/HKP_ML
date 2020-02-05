@@ -19,7 +19,6 @@ def add_lag(df):
 
     # df.loc[df.isnull().sum(axis=1) == 0, 'dropna'] = 1
     convert_to_float32(df)
-    print(df.info())
 
     col = df.columns[3:]
     lag_df = []
@@ -60,19 +59,17 @@ def merge_dep_macro(df, sql_version):
 
     convert_to_float32(dep)
     convert_to_float32(macro)
-    print(dep.info())
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
 
     dep_macro = pd.merge(macro, dep, on=['datacqtr'], how='right')
     dep_macro = dep_macro.dropna()
-    print(dep_macro.isnull().sum().sum())
     df_macro_dep = pd.merge(df, dep_macro, on=['gvkey', 'datacqtr'], how='inner')  # change to df_macro
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
-    print(df_macro_dep.info())
+    print(df_macro_dep.shape)
 
     return df_macro_dep
 
@@ -219,4 +216,15 @@ if __name__ == "__main__":
     # actual running scripts see def above -> for import
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
-    # load_data(20, save_csv = False, sql_version = False)
+    main = load_data()
+
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
+
+    for name, g in main.groupby(by = ['datacqtr']):
+        print(name)
+        main_1 = g.iloc[:, :1600]
+        main_2 = g.iloc[:, 1600:]
+        main_1.to_sql('main_lag_1', engine, index=False, if_exists='append')
+        main_2.to_sql('main_lag_2', engine, index=False, if_exists='append')
+        g.to_csv((str(name) + '.csv'), index=False)

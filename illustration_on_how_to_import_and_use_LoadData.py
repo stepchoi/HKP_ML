@@ -72,18 +72,21 @@ if __name__ == "__main__":
     # sets_no: decide no of sets will be returned in dictionary [for entire sets -> set as 40]
     # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
     main = load_data()
+    # main.to_csv('main_lag.csv', index = False)
 
     '''Step 5: use loaded data for PCA '''
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
     # loop entire sets for explained_variance_ratio in each sets
     period_1 = dt.datetime(2008, 3, 31)
-    for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
+    for i in tqdm(range(5)): # change to 40 for full 40 sets, change to False to stop saving csv
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         testing_period = period_1 + i * relativedelta(months=3)
         train_x = clean_set(main, testing_period).standardize_x()
+
         explanation_ratio_dict[set] = myPCA(train_x).primary_PCA()
+
         del train_x
         gc.collect()
 
