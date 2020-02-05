@@ -35,6 +35,7 @@ class myPCA:
         self.ratio = self.pca.explained_variance_ratio_
 
     def primary_PCA(self):      # primary_PCA return cummulative sum of explained_variance_ratio
+        print('--> start pca')
         return np.cumsum(self.ratio)
 
     '''other def....'''
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     # import 'LoadData.py' module from Local Finder 'Preprocessing'
     # import load_data function from 'LoadData.py' module
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
-    from Preprocessing.LoadData import load_data
+    from Preprocessing.LoadData import (load_data, clean_set)
 
 
     # run load data -> return dictionary mentioned above
@@ -72,14 +73,7 @@ if __name__ == "__main__":
     # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
     main = load_data()
 
-    ''' e.g. 
-    sets[1]['train_x']    -> This is first training set x, i.e. 1988Q1 - 2007Q4
-    sets[1]['train_qoq']  -> This is first training set y - niq qoq, i.e. 1988Q1 - 2007Q4
-    print(sets.keys())    => this should print # of set
-    '''
-
     '''Step 5: use loaded data for PCA '''
-
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
     # loop entire sets for explained_variance_ratio in each sets
@@ -88,9 +82,9 @@ if __name__ == "__main__":
         '''training set: x -> standardize -> apply to testing set: x
             training set: y -> qcut -> apply to testing set: y'''
         testing_period = period_1 + i * relativedelta(months=3)
-        train_x, test_x = test_train_clean(main, testing_period).standardize_x()
+        train_x = clean_set(main, testing_period).standardize_x()
         explanation_ratio_dict[set] = myPCA(train_x).primary_PCA()
-        del train_x, test_x
+        del train_x
         gc.collect()
 
     # convert dictionary to csv and save to local

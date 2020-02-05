@@ -2,6 +2,7 @@ import datetime as dt
 import gc
 import time
 
+import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.preprocessing import StandardScaler
@@ -9,11 +10,16 @@ from sqlalchemy import create_engine
 from tqdm import tqdm
 
 
+def convert_to_float32(df):
+    df.loc[:, df.dtypes == np.float64] = df.loc[:, df.dtypes == np.float64].astype(np.float32)
+
 def add_lag(df):
     print('---------------------------- (step 1/3) adding lag -----------------------------')
     start = time.time()
 
     # df.loc[df.isnull().sum(axis=1) == 0, 'dropna'] = 1
+    convert_to_float32(df)
+    print(df.info())
 
     col = df.columns[3:]
     lag_df = []
@@ -52,6 +58,9 @@ def merge_dep_macro(df, sql_version):
         dep = pd.read_csv('niq.csv')
         print('local version running - niq & macro_main')
 
+    convert_to_float32(dep)
+    convert_to_float32(macro)
+    print(dep.info())
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d')
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
@@ -63,11 +72,11 @@ def merge_dep_macro(df, sql_version):
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
-    print(df_macro_dep.shape)
+    print(df_macro_dep.info())
 
     return df_macro_dep
 
-class test_train_clean:
+class clean_set:
 
     def __init__(self, df, testing_period):
         s = time.time()
@@ -78,16 +87,20 @@ class test_train_clean:
         self.test_x, self.test_qoq, self.test_yoy = divide_set(df.loc[df['datacqtr'] == end])
         self.train_x, self.train_qoq, self.train_yoy = divide_set(df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)])
         e = time.time()
+        print(self.train_x.shape)
         print('--> 3.1. divide test training set using {}'.format(e - s))
 
-    def standardize_x(self):
+    def standardize_x(self, return_test_x = False):
         s = time.time()
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
         self.test_x = scaler.transform(self.test_x)
         e = time.time()
         print('--> 3.2. standardize x using {}'.format(e - s))
-        return self.train_x, self.test_x
+        if return_test_x is True:
+            return self.train_x, self.test_x
+        else:
+            return self.train_x
 
     def yoy(self):
         s = time.time()
@@ -193,6 +206,7 @@ def load_data(sql_version = False):
         end = time.time()
         print('save csv running time: {}'.format(end - start))
 
+    print(main_lag.info())
     return main_lag
 
 def cut_test_train_main(sets_no):
