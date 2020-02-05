@@ -67,6 +67,43 @@ def merge_dep_macro(df, sql_version):
 
     return df_macro_dep
 
+class test_train_clean:
+
+    def __init__(self, df, testing_period):
+        s = time.time()
+        end = testing_period
+        start = testing_period - relativedelta(years=20)
+        def divide_set(df):
+            return df.iloc[:, 3:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
+        self.test_x, self.test_qoq, self.test_yoy = divide_set(df.loc[df['datacqtr'] == end])
+        self.train_x, self.train_qoq, self.train_yoy = divide_set(df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)])
+        e = time.time()
+        print('--> 3.1. divide test training set using {}'.format(e - s))
+
+    def standardize_x(self):
+        s = time.time()
+        scaler = StandardScaler().fit(self.train_x)
+        self.train_x = scaler.transform(self.train_x)
+        self.test_x = scaler.transform(self.test_x)
+        e = time.time()
+        print('--> 3.2. standardize x using {}'.format(e - s))
+        return self.train_x, self.test_x
+
+    def yoy(self):
+        s = time.time()
+        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
+        self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2])
+        e = time.time()
+        print('--> 3.3. qcut y using {}'.format(e - s))
+        return self.train_yoy, self.test_yoy
+
+    def qoq(self):
+        s = time.time()
+        self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=[0, 1, 2], retbins=True)
+        self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2])
+        e = time.time()
+        print('--> 3.3. qcut y using {}'.format(e - s))
+        return self.train_qoq, self.train_qoq
 
 def cut_test_train(df, sets_no, save_csv = False):
     print('------------------- (step 3/3) cutting testing/training set --------------------')
@@ -121,7 +158,7 @@ def cut_test_train(df, sets_no, save_csv = False):
 
     return dict
 
-def load_data(sets_no, save_csv = False, sql_version = False):
+def load_data(sql_version = False):
 
     # import engine, select variables, import raw database
     print('-------------- start load data into different sets (-> dictionary) --------------')
@@ -156,6 +193,9 @@ def load_data(sets_no, save_csv = False, sql_version = False):
         end = time.time()
         print('save csv running time: {}'.format(end - start))
 
+    return main_lag
+
+def cut_test_train_main(sets_no):
     # 3. cut training, testing set
     test_train_dict = cut_test_train(main_lag, sets_no, save_csv)
     return test_train_dict
@@ -165,4 +205,4 @@ if __name__ == "__main__":
     # actual running scripts see def above -> for import
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
-    load_data(20, save_csv = False, sql_version = False)
+    # load_data(20, save_csv = False, sql_version = False)

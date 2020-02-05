@@ -12,11 +12,15 @@ Step 1: Preparation
 
 
 '''Step 2: write PCA codes'''
+import datetime as dt
+import gc
 import time  # 2.1 import modules used in PCA codes
 
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
+from tqdm import tqdm
 
 
 # 2.2 create class contains many functions related to PCA
@@ -66,7 +70,7 @@ if __name__ == "__main__":
     # load_data(sets_no, save_csv)
     # sets_no: decide no of sets will be returned in dictionary [for entire sets -> set as 40]
     # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
-    sets = load_data(40, save_csv=False)  # change to 40 for full 40 sets, change to False to stop saving csv
+    main = load_data()
 
     ''' e.g. 
     sets[1]['train_x']    -> This is first training set x, i.e. 1988Q1 - 2007Q4
@@ -79,8 +83,15 @@ if __name__ == "__main__":
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
     # loop entire sets for explained_variance_ratio in each sets
-    for set in sets.keys():
-        explanation_ratio_dict[set] = myPCA(sets[set]['train_x']).primary_PCA()
+    period_1 = dt.datetime(2008, 3, 31)
+    for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
+        '''training set: x -> standardize -> apply to testing set: x
+            training set: y -> qcut -> apply to testing set: y'''
+        testing_period = period_1 + i * relativedelta(months=3)
+        train_x, test_x = test_train_clean(main, testing_period).standardize_x()
+        explanation_ratio_dict[set] = myPCA(train_x).primary_PCA()
+        del train_x, test_x
+        gc.collect()
 
     # convert dictionary to csv and save to local
     pd.DataFrame.from_dict(explanation_ratio_dict).to_csv('explanation_ratio.csv')
