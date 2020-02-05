@@ -3,15 +3,10 @@ This script is aimed to illustrate how to load data using local csv file & exist
 Here we use PCA code for example.
 
 Step 1: Preparation
-        1.1 download LoadData_csv.zip from google drive: https://drive.google.com/open?id=1M5dK84S6Uo71P8XxaJ5lLXYahucoBqRV
-            -> contains main.csv, niq.csv
-        1.2 link VPN
-            -> connect PostgreSQL for macro_main table
+        1.1 download LoadData_float32.zip from google drive: https://drive.google.com/open?id=197eRULH4uv-OHLc3wbsjODk1I37TpR9K
+            -> contains main.csv, niq.csv, macro_main.csv
 '''
 
-
-
-'''Step 2: write PCA codes'''
 import datetime as dt
 import gc
 import time  # 2.1 import modules used in PCA codes
@@ -22,23 +17,15 @@ from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
 from tqdm import tqdm
 
+'''Step 2: write PCA codes'''
 
-# 2.2 create class contains many functions related to PCA
-#     can also be directly def ....(X_std) -> import data and run PCA
+# 2.2 create def related to PCA
+def myPCA(X_std): # run PCA with no predetermined No. of components
 
-class myPCA:
-
-    def __init__(self, X_std):  # __init__ run PCA with no predetermined No. of components
-        self.pca = PCA()
-        self.pca.fit(X_std)
-        self.X_std = X_std
-        self.ratio = self.pca.explained_variance_ratio_
-
-    def primary_PCA(self):      # primary_PCA return cummulative sum of explained_variance_ratio
-        print('--> start pca')
-        return np.cumsum(self.ratio)
-
-    '''other def....'''
+    pca = PCA()
+    pca.fit(X_std)
+    ratio = pca.explained_variance_ratio_
+    return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 
 
 '''Step 3: parts will be ran when running this py script '''
@@ -47,47 +34,31 @@ if __name__ == "__main__":
     start = time.time() # timing function to record total running time
 
     '''
-    Step 4: import LoadData module written and run
-    
-    This part will return a dictionary contains 40 sets in below structure: 
-                            sets
-                         /        \
-                    set[1]  ...  set[40]                   
-                /     |      \ 
-        [train_x] [train_yoy] [train_qoq]   (qoq & yoy two types of y - already qcut into 3 parts)
-        [test_x]  [test_qoq]  [test_yoy]
-            |           \         /
-      StandardScaler        qcut
-         (Arrays)         (Arrays)            
-         
+    Step 4: (this part is updated) 
+            4.1 load_data
+            4.2 for loop -> roll over all time period
     '''
     # import 'LoadData.py' module from Local Finder 'Preprocessing'
-    # import load_data function from 'LoadData.py' module
+    # import load_data, clean_set function from 'LoadData.py' module
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
     from Preprocessing.LoadData import (load_data, clean_set)
 
 
-    # run load data -> return dictionary mentioned above
-    # load_data(sets_no, save_csv)
-    # sets_no: decide no of sets will be returned in dictionary [for entire sets -> set as 40]
-    # save_csv: will the train_x array will be saved as csv file -> if True will save (longer processing time)
-    main = load_data()
-    # main.to_csv('main_lag.csv', index = False)
+    # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
+    main = load_data(sql_version=False)
 
-    '''Step 5: use loaded data for PCA '''
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
-    # loop entire sets for explained_variance_ratio in each sets
+    # 4.2. for loop -> roll over all time period from main dataset
     period_1 = dt.datetime(2008, 3, 31)
-    for i in tqdm(range(5)): # change to 40 for full 40 sets, change to False to stop saving csv
-        '''training set: x -> standardize -> apply to testing set: x
-            training set: y -> qcut -> apply to testing set: y'''
-        testing_period = period_1 + i * relativedelta(months=3)
-        train_x = clean_set(main, testing_period).standardize_x()
 
-        explanation_ratio_dict[set] = myPCA(train_x).primary_PCA()
+    for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
 
-        del train_x
+        testing_period = period_1 + i * relativedelta(months=3)  # define testing period
+        train_x = clean_set(main, testing_period).standardize_x()  # return clean training period
+        explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
+
+        del train_x  # delete this train_x and collect garbage -> release memory
         gc.collect()
 
     # convert dictionary to csv and save to local
