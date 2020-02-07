@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # 4.2. for loop -> roll over all time period from main dataset
     period_1 = dt.datetime(2008, 3, 31)
 
-    for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
+    for i in tqdm(range(2)): # change to 40 for full 40 sets, change to False to stop saving csv
 
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
         train_x = clean_set(main, testing_period).standardize_x()  # return clean training period
