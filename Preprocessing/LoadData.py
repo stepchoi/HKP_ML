@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import shuffle
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
@@ -168,7 +169,7 @@ def cut_test_train(df, sets_no, save_csv = False):
 
     return dict
 
-def load_data(sql_version = False):
+def load_data(sql_version = False, sample_no = False):
 
     # import engine, select variables, import raw database
     print('-------------- start load data into different sets (-> dictionary) --------------')
@@ -182,6 +183,10 @@ def load_data(sql_version = False):
         main = pd.read_csv('main.csv')
         engine = None
         print('local version running - main')
+
+    if not sample_no == False:
+        main = main.sample(sample_no)
+        print(main.info())
 
     end = time.time()
     print('(step 0/3) read local csv - main - running time: {}'.format(end - start))
@@ -211,20 +216,34 @@ def cut_test_train_main(sets_no):
     test_train_dict = cut_test_train(main_lag, sets_no, save_csv)
     return test_train_dict
 
+def sample_from_main(part=5):
+    df = load_data()
+    df = shuffle(df)
+
+    part_len = len(df)//part
+    part_dict = {}
+    s = 0
+
+    for i in range(part):
+        df_part = df.iloc[s:(s + part_len), 3:-2]
+        part_dict[i] = StandardScaler().fit_transform(df_part)
+        s += part_len
+
+    return part_dict
+
 if __name__ == "__main__":
 
     # actual running scripts see def above -> for import
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
-    main = load_data()
 
-    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
-    engine = create_engine(db_string)
+    main = pd.read_csv('lag_columns.csv')
+    dic = sample_from_main(main)
+    print(dic)
 
-    for name, g in main.groupby(by = ['datacqtr']):
-        print(name)
-        main_1 = g.iloc[:, :1600]
-        main_2 = g.iloc[:, 1600:]
-        main_1.to_sql('main_lag_1', engine, index=False, if_exists='append')
-        main_2.to_sql('main_lag_2', engine, index=False, if_exists='append')
-        g.to_csv((str(name) + '.csv'), index=False)
+    # main = load_data(sample_no=10)
+    # pd.DataFrame(main.columns).to_csv('lag_columns.csv')
+
+
+
+
