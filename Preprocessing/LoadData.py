@@ -1,4 +1,3 @@
-import datetime as dt
 import gc
 import time
 
@@ -116,58 +115,6 @@ class clean_set:
         print('--> 3.3. qcut y using {}'.format(e - s))
         return self.train_qoq, self.train_qoq
 
-def cut_test_train(df, sets_no, save_csv = False):
-    print('------------------- (step 3/3) cutting testing/training set --------------------')
-    start_total = time.time()
-
-    dict = {}
-    testing_period = dt.datetime(2008, 3, 31)
-
-    for i in tqdm(range(sets_no)):
-        '''training set: x -> standardize -> apply to testing set: x
-            training set: y -> qcut -> apply to testing set: y'''
-        end = testing_period + i*relativedelta(months=3)
-        start = testing_period - relativedelta(years=20)
-        dict[i + 1] = {}
-        print(i+1, end)
-
-
-        s = time.time()
-        def divide_set(df):
-            return df.iloc[:, 3:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
-        dict[i+1]['test_x'], dict[i+1]['test_qoq'], dict[i+1]['test_yoy'] = divide_set(df.loc[df['datacqtr'] == end])
-        dict[i+1]['train_x'], dict[i+1]['train_qoq'], dict[i+1]['train_yoy'] = divide_set(df.loc[(start <= df['datacqtr'])
-                                                                                             & (df['datacqtr'] < end)])
-        e = time.time()
-        print('--> 3.1. divide test training set using {}'.format(e - s))
-
-        s = time.time()
-        scaler = StandardScaler().fit(dict[i+1]['train_x'])
-        dict[i+1]['train_x'] = scaler.transform(dict[i+1]['train_x'])
-        dict[i+1]['test_x'] = scaler.transform(dict[i+1]['test_x'])
-        e = time.time()
-        print('--> 3.2. standardize x using {}'.format(e - s))
-
-        s = time.time()
-        for y in ['qoq', 'yoy']:
-            dict[i+1]['train_' + y], cut_bins = pd.qcut(dict[i+1]['train_' + y], q=3, labels=[0, 1, 2], retbins=True)
-            dict[i+1]['test_' + y] = pd.cut(dict[i+1]['test_' + y], bins=cut_bins, labels=[0, 1, 2])
-        e = time.time()
-        print('--> 3.3. qcut y using {}'.format(e - s))
-
-
-        if save_csv is True:
-            s = time.time()
-            pd.DataFrame(dict[i+1]['train_x']).to_csv('train_x_set{}.csv'.format(i), index = False, header = False)
-            e = time.time()
-            print('--> 3.4. saving to csv using {}'.format(e - s))
-
-    # save_load_dict('save', dict=cut_bins, name='cut_bins') # save cut_bins to dictionary
-
-    end_total = time.time()
-    print('(step 3/3) cutting testing/training set running time: {}'.format(end_total - start_total))
-
-    return dict
 
 def load_data(sql_version = False, sample_no = False):
 
@@ -210,11 +157,6 @@ def load_data(sql_version = False, sample_no = False):
 
     print(main_lag.info())
     return main_lag
-
-def cut_test_train_main(sets_no):
-    # 3. cut training, testing set
-    test_train_dict = cut_test_train(main_lag, sets_no, save_csv)
-    return test_train_dict
 
 def sample_from_main(part=5):
     df = load_data()

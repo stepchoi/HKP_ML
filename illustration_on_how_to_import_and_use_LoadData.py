@@ -55,7 +55,12 @@ if __name__ == "__main__":
     for i in tqdm(range(2)): # change to 40 for full 40 sets, change to False to stop saving csv
 
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
-        train_x = clean_set(main, testing_period).standardize_x()  # return clean training period
+
+        main_period = clean_set(main, testing_period)
+        #train_x = main_period.standardize_x(return_test_x = False)  # return clean training period
+        train_x, test_x = main_period.standardize_x(return_test_x = True)  # return clean training period
+        train_yoy, test_yoy = main_period.yoy()
+
         explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
 
         del train_x  # delete this train_x and collect garbage -> release memory
