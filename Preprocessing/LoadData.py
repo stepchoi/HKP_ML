@@ -237,8 +237,7 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-    main = pd.read_csv('lag_columns.csv')
-    dic = sample_from_main(main)
+    dic = sample_from_main()
     print(dic)
 
     # main = load_data(sample_no=10)
