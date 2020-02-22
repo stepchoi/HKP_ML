@@ -1,3 +1,5 @@
+import gc
+
 from Preprocessing.LoadData import (load_data, clean_set)
 
 '''
@@ -12,6 +14,9 @@ main = load_data(sql_version=False)  # change sql_version -> True if trying to r
 period_1 = dt.datetime(2008, 3, 31)
 main_period = clean_set(main, period_1)
 train_x, test_x = main_period.standardize_x(return_test_x = True)
+
+del main_period  # delete this train_x and collect garbage -> release memory
+gc.collect()
 
 
 
