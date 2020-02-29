@@ -8,12 +8,19 @@ from keras.models import Sequential, Model
 from keras.utils.vis_utils import plot_model
 
 
-def AE_fitting(training_x):
+def AE_fitting(training_x, reduced_dens):
 
     model = Sequential()
-    model.add(Dense(units=1800, activation='tanh', name='en1', input_shape=[3169]))
-    model.add(Dense(units=650, activation='tanh', name='en2'))
-    model.add(Dense(units=1800, activation='tanh', name='de1'))
+    if reduced_dens > 700:
+        second_layer = 2400
+    elif reduced_dens < 600:
+        second_layer = 1800
+    else:
+        second_layer = 2000
+
+    model.add(Dense(units=second_layer, activation='tanh', name='en1', input_shape=[3169]))
+    model.add(Dense(units=reduced_dens, activation='tanh', name='en2'))
+    model.add(Dense(units=second_layer, activation='tanh', name='de1'))
     model.add(Dense(units=3169, name='de2'))
 
     model.summary()
@@ -38,9 +45,7 @@ def AE_predict(x, feature_model):
 if __name__ == "__main__":
 
     training_x = pd.read_csv('trainingset0.csv', index_col=0)
-    #testing_x = pd.read_csv('trainingset1.csv', index_col=0)
 
-    feature_model = AE_fitting(training_x)
+    feature_model = AE_fitting(training_x, 508)
     training_compressed_x = AE_predict(training_x, feature_model)
-    #testing_compressed_x = AE_predict(testing_x, feature_model)
     print(training_compressed_x.shape)
