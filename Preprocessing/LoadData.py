@@ -13,7 +13,7 @@ from tqdm import tqdm
 def convert_to_float32(df):
     df.loc[:, df.dtypes == np.float64] = df.loc[:, df.dtypes == np.float64].astype(np.float32)
 
-def add_lag(df):
+def add_lag(df, lag_year):
     print('---------------------------- (step 1/3) adding lag -----------------------------')
     start = time.time()
 
@@ -27,7 +27,7 @@ def add_lag(df):
     # missing_dict = []
     # missing_dict.append(df.mask(df == 0).isnull().sum(axis=1))
 
-    for i in tqdm(range(19)): # change to 19
+    for i in tqdm(range(lag_year*4-1)): # change to 19
         df_temp = df.groupby('gvkey').shift(i + 1)[col]
         df_temp.columns = ['{}_lag{}'.format(k, str(i+1).zfill(2)) for k in col]
         df_temp = df_temp.dropna()
@@ -116,7 +116,7 @@ class clean_set:
         return self.train_qoq, self.train_qoq
 
 
-def load_data(sql_version = False, sample_no = False):
+def load_data(lag_year = 5, sql_version = False, sample_no = False):
 
     # import engine, select variables, import raw database
     print('-------------- start load data into different sets (-> dictionary) --------------')
@@ -142,7 +142,7 @@ def load_data(sql_version = False, sample_no = False):
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
 
     # 1. add 20 lagging factors for each variable
-    main_lag = add_lag(main)
+    main_lag = add_lag(main, lag_year)
     del main
     gc.collect()
 
@@ -179,11 +179,11 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-    dic = sample_from_main()
-    print(dic)
+    main = load_data(lag_year=2)
 
-    # main = load_data(sample_no=10)
-    # pd.DataFrame(main.columns).to_csv('lag_columns.csv')
+
+    # dic = sample_from_main()
+    # print(dic)
 
 
 

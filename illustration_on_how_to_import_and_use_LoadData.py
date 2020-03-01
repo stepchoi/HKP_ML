@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    main = load_data(lagyear=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
 
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
