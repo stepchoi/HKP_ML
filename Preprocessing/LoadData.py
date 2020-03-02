@@ -222,18 +222,18 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-    # 1
+    # 1. return main dateframe
     main = load_data(lag_year=1)
-    # train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
-    # print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
 
+    # 2.1 if want to return (train_x, test_x, train_y, test_y) by given testing_period
+    train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
+    print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
+
+    # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
+    '''dfs is dictionary contains all set of (train_x, train_y)'''
     dfs = sample_from_main(main, y_type = 'yoy',part = 3)
     print(dfs.keys(),dfs[0])
     
-
-    # dic = sample_from_main()
-    # print(dic)
-
 
 
 

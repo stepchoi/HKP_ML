@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(lagyear=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
 
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
@@ -57,13 +57,11 @@ if __name__ == "__main__":
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
 
         main_period = clean_set(main, testing_period)
-        #train_x = main_period.standardize_x(return_test_x = False)  # return clean training period
-        train_x, test_x = main_period.standardize_x(return_test_x = True)  # return clean training period
-        train_yoy, test_yoy = main_period.yoy()
+        train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period=testing_period)
 
         explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
 
-        del train_x  # delete this train_x and collect garbage -> release memory
+        del train_x, test_x, train_y, test_y  # delete this train_x and collect garbage -> release memory
         gc.collect()
 
     # convert dictionary to csv and save to local
