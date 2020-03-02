@@ -10,9 +10,9 @@ params = {
     'feature_fraction':     hp.choice('feature_fraction',   [0.6, 0.8, 0.9]),
     'bagging_fraction':     hp.choice('bagging_fraction',   [0.6, 0.8, 0.95]),
     'bagging_freq':         hp.choice('bagging_freq',       [2, 5, 8]),
-    'min_gain_to_split':    hp.choice('min_gain_to_split',  [2, 5, 8]),
-    'lambda_l1':            hp.choice('lambda_l1',          [0, 0.4, 0.8]),
-    'lambda_l2':            hp.choice('lambda_l2',          [0, 0.5, 2]),
+    'min_gain_to_split':    hp.choice('min_gain_to_split',  [0.05, 0.2, 0.4]),
+    'lambda_l1':            hp.choice('lambda_l1',          [0, 0.4, 1]),
+    'lambda_l2':            hp.choice('lambda_l2',          [0, 0.5, 1]),
 
     # parameters won't change
     'objective': 'multiclass',
