@@ -41,11 +41,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    sets = load_data()
-    print(sets.keys())
+    main = load_data(sql_version=False).sample(10000)
+    print(main.info())
 
-
-"""
     # define the model
     neurons = [64, 32, 32, 8]
     model = AE(input_shape=x.shape[1:], neurons=neurons)
@@ -59,7 +57,6 @@ if __name__ == "__main__":
     csv_logger = CSVLogger(args.save_dir + '/%s-pretrain-log.csv' % args.dataset)
 
     # begin training
-    t0 = time()
     model.fit(x, x, batch_size=args.batch_size, epochs=args.epochs, callbacks=[csv_logger])
     print('Training time: ', time() - t0)
     model.save(args.save_dir + '/%s-pretrain-model-%d.h5' % (args.dataset, args.epochs))
@@ -70,11 +67,3 @@ if __name__ == "__main__":
     features = np.reshape(features, newshape=(features.shape[0], -1))
     print('feature shape=', features.shape)
     print('y shape=', y.shape)
-
-
-    #use features for Random Forest Regression
-    embedded_RFRscore = random_forest(features, y)
-    #RFRscore = random_forest(x, y)
-    print(neurons[2], embedded_RFRscore)
-    #print(RFRscore)
-"""
