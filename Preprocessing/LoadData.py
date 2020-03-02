@@ -1,4 +1,3 @@
-import datetime as dt
 import gc
 import time
 
@@ -76,41 +75,43 @@ def merge_dep_macro(df, sql_version):
 
 'define how to cut different set'
 class clean_set:
-    def __init__(self, dfs):
+    def __init__(self, train, test):
         s = time.time()
 
         def divide_set(df):
             return df.iloc[:, 3:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
-        for key, df in dfs:
-            if key == 'test'
-        self.test_x, self.test_qoq, self.test_yoy = divide_set(df.loc[df['datacqtr'] == end])
-        self.train_x, self.train_qoq, self.train_yoy = divide_set(df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)])
+        self.train_x, self.train_qoq, self.train_yoy = divide_set(train)
+        try:
+            self.test_x, self.test_qoq, self.test_yoy = divide_set(test)
+        except:
+            pass
+
         e = time.time()
         print(self.train_x.shape)
         print('--> 3.1. divide test training set using {}'.format(e - s))
 
-    def standardize_x(self, return_test = False):
+    def standardize_x(self):
         s = time.time()
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
         e = time.time()
         print('--> 3.2. standardize x using {}'.format(e - s))
-        if return_test is True:
+        try:
             self.test_x = scaler.transform(self.test_x)
             return self.train_x, self.test_x
-        else:
+        except:
             return self.train_x, None
 
-    def yoy(self, return_test = False):
+    def yoy(self):
         s = time.time()
         self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
         e = time.time()
         print('--> 3.3. qcut y using {}'.format(e - s))
-        if return_test is True:
+        try:
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2])
             return self.train_yoy, self.test_yoy
-        else:
+        except:
             return self.train_yoy, None
 
     def qoq(self, return_test = False):
@@ -118,10 +119,10 @@ class clean_set:
         self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=[0, 1, 2], retbins=True)
         e = time.time()
         print('--> 3.3. qcut y using {}'.format(e - s))
-        if return_test is True:
+        try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2])
             return self.train_qoq, self.test_qoq
-        else:
+        except:
             return self.train_qoq, None
 
 
@@ -167,65 +168,53 @@ def load_data(lag_year = 5, sql_version = False, sample_no = False):
     print(main_lag.info())
     return main_lag
 
-def sample_from_datacqtr(testing_period):
-    end = testing_period
-    start = testing_period - relativedelta(years=20)
-
-    dfs = {}
-    dfs['train'] = df.loc[df['datacqtr'] == end]
-    dfs['test'] = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
-    print(dfs.info())
-    return dfs
-
-def sample_from_main(df, part=5):
-    df = shuffle(df)
-
-    part_len = len(df) // part
-    dfs = {}
-    s = 0
-
-    for i in range(part):
-        dfs[i] = df.iloc[s:(s + part_len)]
-        s += part_len
-
-    print(dfs.info())
-    return dfs
-
-
-def train_test_clean(df, y_type, testing_period, return_test=False):
+def train_test_clean(y_type, train, test = None):
     class bcolors:
         WARNING = '\033[93m'
         FAIL = '\033[91m'
 
-    if (y_type != 'yoy') and (y_type != 'qoq'):
+    if not y_type in ('yoy', 'qoq'):
         print(f"{bcolors.FAIL}y_type can only 'yoy' or 'qoq'.")
         exit(1)
 
-    main_period = clean_set(main, testing_period)
-    train_x, test_x = main_period.standardize_x(return_test)
+    main_period = clean_set(train, test)
+    train_x, test_x = main_period.standardize_x()
 
     if y_type == 'yoy':
-        train_y, test_y = main_period.yoy(return_test)
+        train_y, test_y = main_period.yoy()
     elif y_type == 'qoq':
-        train_y, test_y = main_period.qoq(return_test)
+        train_y, test_y = main_period.qoq()
 
     return train_x, test_x, train_y, test_y
 
+def sample_from_datacqtr(df, y_type, testing_period):
+    end = testing_period
+    start = testing_period - relativedelta(years=20)
 
-def sample_from_main(part=5):
-    df = load_data()'de?'
+    train = df.loc[df['datacqtr'] == end]
+    test = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]
+
+    return train_test_clean(y_type, train, test)
+
+def sample_from_main(df, y_type, part=5):
     df = shuffle(df)
 
     part_len = len(df) // part
-    part_dict = {}
+    dfs = {}
     s = 0
 
     for i in range(part):
-        df_part = df.iloc[s:(s + part_len), 3:-2]
-        part_dict[i] = StandardScaler().fit_transform(df_part)
+        set = df.iloc[s:(s + part_len)]
+        train_x, test_x, train_y, test_y = train_test_clean(y_type, set)
+        dfs[i] = (train_x, train_y)
         s += part_len
 
-    return part_dict
+        del train_x, test_x, train_y, test_y
+        gc.collect()
+
+    return dfs
+
+
 
 if __name__ == "__main__":
 
@@ -233,10 +222,14 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-    main = load_data(lag_year=2)
-    train_x, test_x, train_y, test_y = train_test_clean(main, 'yoy', dt.datetime(2008, 3, 31))
+    # 1
+    main = load_data(lag_year=1)
+    # train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
+    # print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
 
-    print()
+    dfs = sample_from_main(main, y_type = 'yoy',part = 3)
+    print(dfs.keys(),dfs[0])
+    
 
     # dic = sample_from_main()
     # print(dic)
