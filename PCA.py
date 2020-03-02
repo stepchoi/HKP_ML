@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # import 'LoadData.py' module from Local Finder 'Preprocessing'
     # import load_data, clean_set function from 'LoadData.py' module
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
-    from Preprocessing.LoadData import (load_data, clean_set)
+    from Preprocessing.LoadData import (load_data)
 
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
@@ -56,7 +56,6 @@ if __name__ == "__main__":
 
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
 
-        main_period = clean_set(main, testing_period)
         train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period=testing_period)
 
         explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
