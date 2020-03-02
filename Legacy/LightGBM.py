@@ -1,14 +1,14 @@
-import gc
 import datetime as dt
-import pandas as pd
-from Preprocessing.LoadData import (load_data, clean_set)
-from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
+import gc
+
 import lightgbm as lgb
-from sklearn.metrics import f1_score,r2_score,fbeta_score,roc_auc_score,precision_score,recall_score,accuracy_score
-from sklearn.metrics import cohen_kappa_score,hamming_loss,jaccard_score,hinge_loss
-import numpy as np
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.metrics import cohen_kappa_score, hamming_loss, jaccard_score
+from sklearn.metrics import f1_score, fbeta_score, precision_score, recall_score, accuracy_score
 from sklearn.metrics import mean_squared_error
+
+from Preprocessing.LoadData import (load_data, clean_set)
 
 '''
 part_dict = sample_from_main(part=5)  # part_dict[0], part_dict[1], ... would be arrays after standardization
@@ -25,7 +25,7 @@ train_x, test_x = main_period.standardize_x(return_test_x = True)
 train_yoy, test_yoy = main_period.yoy()
 
 '''PCA'''
-pca = PCA(n_components=508)  # Threshold for dimension reduction,float or integer
+pca = PCA(n_components=589)  # Threshold for dimension reduction,float or integer
 #此处应添加直接引用PCA指定阈值ratio数量的参数
 pca.fit(train_x)
 new_train_x = pca.transform(train_x)
@@ -36,11 +36,10 @@ del main_period  # delete this train_x and collect garbage -> release memory
 gc.collect()
 
 '''Converting np-array to dataframe'''
-X_tr=pd.DataFrame(new_train_x)
-y_tr=pd.DataFrame(train_yoy)
-#X_test=pd.DataFrame(new_test_x)
-#y_test=pd.DataFrame(test_yoy)
-X_train, X_test, y_train, y_test = train_test_split(X_tr, y_tr,test_size=0.25, random_state=666)
+X_train=pd.DataFrame(new_train_x)
+y_train=pd.DataFrame(train_yoy)
+X_test=pd.DataFrame(new_test_x)
+y_test=pd.DataFrame(test_yoy)
 
 '''Training'''
 lgb_train = lgb.Dataset(X_train, y_train,
@@ -73,9 +72,9 @@ params = {
 print('Starting training...')
 gbm = lgb.train(params,
                 lgb_train,
-                num_boost_round=1000,
+                num_boost_round=500,
                 valid_sets=lgb_eval,  # eval training data
-                early_stopping_rounds=100)
+                early_stopping_rounds=30)
 
 print('Saving model...')
 # save model to file
