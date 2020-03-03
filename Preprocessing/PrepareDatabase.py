@@ -1,3 +1,9 @@
+'''This code would import TABLE raw and perform:
+    1. remove company with non-sequencial record (i.e. Q2 and then jump to Q4)
+    2. convert ytd variable from statement of cash flow to quarterly data.
+    3. save result to TABLE raw_main
+'''
+
 import numpy as np
 import pandas as pd
 from Miscellaneous import Timestamp
@@ -6,7 +12,9 @@ from sqlalchemy import create_engine
 
 def select_variable(engine):
 
+    '''This def read TABLE format_map and convert into dictionary where map variables to desired formats'''
     # create dictionary for all selected variables by different formats(yoy, qoq, nom, log), features
+
     if engine is None:
         format_map = pd.read_csv('format_map.csv')
     else:
@@ -25,6 +33,8 @@ def select_variable(engine):
 
 def convert_ytd(df, ytd_col):
 
+    '''This def convert ytd variable from statement of cash flow to quarterly data.'''
+
     df_ytd = df[ytd_col].sub(df[ytd_col].shift(1))
     df_ytd = pd.concat([df[['gvkey','datacqtr','fqtr']], df_ytd], axis= 1)
 
@@ -38,6 +48,8 @@ def convert_ytd(df, ytd_col):
     return df_ytd
 
 def drop_nonseq(df):
+
+    '''This def remove company with non-sequencial record (i.e. Q2 and then jump to Q4)'''
 
     # drop samples with non-sequential order during sampling period
     # add datacqtr_no to main dataset

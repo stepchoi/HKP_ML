@@ -1,3 +1,12 @@
+'''This code would import TABLE raw_main and perform:
+    1. convert variables to selected formats: (333325, 204)
+    2. convert columns ‘datacqtr’ to timestamp (yyyy-mm-dd)
+    3. delete high missing columns if there rests other formats
+    4. fillna
+    5. run correlation and deleted high correlation pairs(>0.9)
+    6. save to TABLE main
+'''
+
 import numpy as np
 import pandas as pd
 from PrepareDatabase import select_variable

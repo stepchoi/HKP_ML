@@ -41,11 +41,11 @@ if __name__ == "__main__":
     # import 'LoadData.py' module from Local Finder 'Preprocessing'
     # import load_data, clean_set function from 'LoadData.py' module
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
-    from Preprocessing.LoadData import (load_data)
+    from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    main = load_data(lag_year=2, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
 
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
