@@ -1,0 +1,25 @@
+Recreation Instruction
+
+This instruction will walk through all steps needed to create the same datasets as used in our model.
+
+1. Start with TABLE raw in PostgreSQL. This table is directly downloaded from WRDS using website query to csv and uploaded.
+
+
+
+
+PostgreSQL TABLE            raw                    niq              (to be uploaded)
+(or csv files)               |                      |                  macro_raw
+                     PrepareDatabase.py             |                      |
+                             |                      |                      |
+PostgreSQL TABLE          raw_main                  |                      |
+                             |                      |                      |
+                     ConvertDatabase.py    DependentVariable.py      Macro_process.py
+                             |                      |                      |
+PostgreSQL TABLE            main                   niq                 macro_main
+                              \                     |                      /
+                                --------------------|----------------------
+                                                LoadData.py
+                                    (import & run everytime before PCA/AE)
+                                                    |
+                                                  PCA.py
+                                                   ...
