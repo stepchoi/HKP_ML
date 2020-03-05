@@ -72,7 +72,7 @@ def merge_dep_macro(df, sql_version):
         macro = pd.read_csv('macro_main.csv')
         dep = pd.read_csv('niq.csv')
         stock = pd.read_csv('stock_return.csv', usecols=['gvkey','datacqtr','return'])
-        print('local version running - niq & macro_main')
+        print('local version running - niq, macro_main, stock_return')
 
     convert_to_float32(dep)
     convert_to_float32(macro)
@@ -81,16 +81,19 @@ def merge_dep_macro(df, sql_version):
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
     stock['datacqtr'] = pd.to_datetime(stock['datacqtr'],format='%Y-%m-%d')
-    print(stock)
 
-    merge_1 = pd.merge(macro, stock, on=['datacqtr'], how='right') # merge by gvkey and datacqtr
-    merge_2 = pd.merge(merge_1, dep, on=['datacqtr'], how='inner')
+    merge_1 = pd.merge(macro, stock, on=['datacqtr'], how='right') # merge eco data & stock return by datacqtr
+    merge_2 = pd.merge(merge_1, dep, on=['gvkey', 'datacqtr'], how='inner') # add merge dependent variable
     merge_2 = merge_2.dropna() # remove records with missing eco data
+
+    del merge_1, dep, macro, stock
+    gc.collect()
+
     merge_3 = pd.merge(df, merge_2, on=['gvkey', 'datacqtr'], how='inner')
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
-    print('after add macro & dependent variable : ', df_macro_dep.shape)
+    print('after add macro & dependent variable : ', merge_3.shape)
 
     return merge_3
 
