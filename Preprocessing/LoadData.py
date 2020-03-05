@@ -52,7 +52,7 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
 
     end = time.time()
     print('(step 1/3) adding lag running time: {}'.format(end - start))
-    print('after add lag: ' + df_lag.shape)
+    print('after add lag: ', df_lag.shape)
     return df_lag
 
 def merge_dep_macro(df, sql_version):
@@ -83,16 +83,16 @@ def merge_dep_macro(df, sql_version):
     stock['datacqtr'] = pd.to_datetime(stock['datacqtr'],format='%Y-%m-%d')
     print(stock)
 
-    dep_macro = pd.merge(macro, dep, on=['datacqtr'], how='right') # merge by gvkey and datacqtr
-    dep_macro = dep_macro.dropna() # remove records with missing eco data
-    dep_macro_stock = pd.merge(dep_macro, stock, on=['datacqtr'], how='inner')
-    df_macro_dep = pd.merge(df, dep_macro_stock, on=['gvkey', 'datacqtr'], how='inner')
+    merge_1 = pd.merge(macro, stock, on=['datacqtr'], how='right') # merge by gvkey and datacqtr
+    merge_2 = pd.merge(merge_1, dep, on=['datacqtr'], how='inner')
+    merge_2 = merge_2.dropna() # remove records with missing eco data
+    merge_3 = pd.merge(df, merge_2, on=['gvkey', 'datacqtr'], how='inner')
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
-    print('after add macro & dependent variable : ' + df_macro_dep.shape)
+    print('after add macro & dependent variable : ', df_macro_dep.shape)
 
-    return df_macro_dep
+    return merge_3
 
 
 class clean_set:
@@ -260,11 +260,11 @@ if __name__ == "__main__":
     train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
     print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
 
-    # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
-    '''dfs is dictionary contains all set of (train_x, train_y)'''
-    dfs = sample_from_main(main, y_type = 'yoy',part = 3)
-    print(dfs.keys(),dfs[0])
-    
+    # # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
+    # '''dfs is dictionary contains all set of (train_x, train_y)'''
+    # dfs = sample_from_main(main, y_type = 'yoy',part = 3)
+    # print(dfs.keys(),dfs[0])
+
 
 
 
