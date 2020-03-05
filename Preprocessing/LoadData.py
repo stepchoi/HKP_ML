@@ -67,24 +67,30 @@ def merge_dep_macro(df, sql_version):
         engine = create_engine(db_string)
         dep = pd.read_sql('SELECT * FROM niq', engine)
         macro = pd.read_sql("SELECT * FROM macro_main", engine)
+        stock  = pd.read_sql("SELECT gvkey, datacqtr, return FROM stock_return", engine)
     else: # local version read TABLE from local csv files -> faster
         macro = pd.read_csv('macro_main.csv')
         dep = pd.read_csv('niq.csv')
+        stock = pd.read_csv('stock_return.csv', usecols=['gvkey','datacqtr','return'])
         print('local version running - niq & macro_main')
 
     convert_to_float32(dep)
     convert_to_float32(macro)
+    convert_to_float32(stock)
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
+    stock['datacqtr'] = pd.to_datetime(stock['datacqtr'],format='%Y-%m-%d')
+    print(stock)
 
     dep_macro = pd.merge(macro, dep, on=['datacqtr'], how='right') # merge by gvkey and datacqtr
     dep_macro = dep_macro.dropna() # remove records with missing eco data
-    df_macro_dep = pd.merge(df, dep_macro, on=['gvkey', 'datacqtr'], how='inner')
+    dep_macro_stock = pd.merge(dep_macro, stock, on=['datacqtr'], how='inner')
+    df_macro_dep = pd.merge(df, dep_macro_stock, on=['gvkey', 'datacqtr'], how='inner')
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
-    print('after add macro & dependent variable : 'df_macro_dep.shape)
+    print('after add macro & dependent variable : ' + df_macro_dep.shape)
 
     return df_macro_dep
 
