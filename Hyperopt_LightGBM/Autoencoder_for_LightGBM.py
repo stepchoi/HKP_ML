@@ -4,18 +4,18 @@ import pandas as pd
 from keras.layers import Dense
 from keras.models import Sequential, Model
 
-def AE_fitting(training_x, reduced_dimensionss):
+def AE_fitting(training_x, reduced_dimensions):
 
     model = Sequential()
-    if reduced_dimensionss > 700:
+    if reduced_dimensions > 700:
         second_layer = 2400
-    elif reduced_dimensionss < 600:
+    elif reduced_dimensions < 600:
         second_layer = 1800
     else:
         second_layer = 2000
 
     model.add(Dense(units=second_layer, activation='tanh', name='en1', input_shape=[3170]))
-    model.add(Dense(units=reduced_dens, activation='tanh', name='en2'))
+    model.add(Dense(units=reduced_dimensions, activation='tanh', name='en2'))
     model.add(Dense(units=second_layer, activation='tanh', name='de1'))
     model.add(Dense(units=3170, name='de2'))
 
