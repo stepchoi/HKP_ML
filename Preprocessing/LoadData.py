@@ -137,9 +137,9 @@ class clean_set:
         print('--> 3.3. qcut y using {}'.format(e - s))
         try:
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
-            return self.train_yoy, self.test_yoy
+            return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
-            return self.train_yoy, None
+            return self.train_yoy.astype(np.int8), None
 
     def qoq(self): # qcut y with train_y cut_bins
         s = time.time()
@@ -148,9 +148,9 @@ class clean_set:
         print('--> 3.3. qcut y using {}'.format(e - s))
         try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
-            return self.train_qoq, self.test_qoq
+            return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
         except:
-            return self.train_qoq, None
+            return self.train_qoq.astype(np.int8), None
 
 
 def load_data(lag_year = 5, sql_version = False):
@@ -277,10 +277,13 @@ if __name__ == "__main__":
     # 1. return main dateframe
     from Preprocessing.LoadData import (load_data, sample_from_main)
     main = load_data(lag_year=1)
-    dfs = sample_from_main(main, y_type = 'yoy',part = 5)
+    dfs = sample_from_main(main, y_type = 'yoy',part = 1)
 
     for k in dfs.keys():
         x, y = dfs[k]
-        pass
+        print(type(x))
+        print(type(y))
+        print(y)
+
 
 
