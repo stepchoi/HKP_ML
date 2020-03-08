@@ -1,19 +1,10 @@
-import pandas as pd
-import numpy as np
-
-from PCA_for_LightGBM import PCA_fitting, PCA_predict
-from Autoencoder_for_LightGBM import AE_fitting, AE_predict
-
-from sklearn.model_selection import train_test_split
-
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-
 import lightgbm as lgb
-
+import pandas as pd
+from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+from PCA_for_LightGBM import PCA_fitting, PCA_predict
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-
-from Preprocessing.LoadData import load_data, sample_from_main
-
+from sklearn.model_selection import train_test_split
 
 space = {
     # dimension
@@ -40,14 +31,19 @@ space = {
     'metric': 'multi_error',
     'num_threads': 2  # for the best speed, set this to the number of real CPU cores
     }
+def load_data():
 
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
+    # 1. return main dateframe
+    from Preprocessing.LoadData import (load_data, sample_from_main)
+    main = load_data(lag_year=1)
+    dfs = sample_from_main(main, y_type='yoy', part=2)
 
+    return dfs
 
-def Dimension_reduction(reduced_dimensions, method='PCA'):
-
-    x = pd.read_csv('x0.csv', index_col=0)
-    y = pd.read_csv('y0.csv', index_col=0)
+def Dimension_reduction(x, y, reduced_dimensions, method='PCA'):
 
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2, stratify=y)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25, stratify=y_lgbm)
@@ -118,38 +114,41 @@ def f(space):
 
 if __name__ == "__main__":
 
+    dfs = load_data()
 
-    method = 'PCA'
-    reduced_dimensions = [508, 624, 757]
-    compressed_x_train = {}
-    compressed_x_valid = {}
-    compressed_x_test = {}
-    y_train = {}
-    y_valid = {}
-    y_test = {}
-    for i in range(len(reduced_dimensions)):
-        compressed_x_train[reduced_dimensions[i]], \
-        compressed_x_valid[reduced_dimensions[i]], \
-        compressed_x_test[reduced_dimensions[i]], \
-        y_train[reduced_dimensions[i]], \
-        y_valid[reduced_dimensions[i]], \
-        y_test[reduced_dimensions[i]] = Dimension_reduction(reduced_dimensions[i], method)
+    for method in ['PCA','AE']:
+        for k in dfs.keys():
+            x, y = dfs[k]
 
-    trials = Trials()
-    best = fmin(f, space, algo=tpe.suggest, max_evals=100, trials=trials)
+            reduced_dimensions = [508, 624, 757]
+            compressed_x_train = {}
+            compressed_x_valid = {}
+            compressed_x_test = {}
+            y_train = {}
+            y_valid = {}
+            y_test = {}
+            for i in range(len(reduced_dimensions)):
+                compressed_x_train[reduced_dimensions[i]], \
+                compressed_x_valid[reduced_dimensions[i]], \
+                compressed_x_test[reduced_dimensions[i]], \
+                y_train[reduced_dimensions[i]], \
+                y_valid[reduced_dimensions[i]], \
+                y_test[reduced_dimensions[i]] = Dimension_reduction(x, y, reduced_dimensions[i], method)
 
-    records = pd.DataFrame()
-    row = 0
-    for record in trials.trials:
-        print(record)
-        for i in record['result']['space'].keys():
-            records.loc[row, i] = record['result']['space'][i]
-        record['result'].pop('space')
-        for i in record['result'].keys():
-            records.loc[row, i] = record['result'][i]
-        row = row + 1
-    records.to_csv('records.csv')
+            trials = Trials()
+            best = fmin(f, space, algo=tpe.suggest, max_evals=100, trials=trials)
 
+            records = pd.DataFrame()
+            row = 0
+            for record in trials.trials:
+                print(record)
+                for i in record['result']['space'].keys():
+                    records.loc[row, i] = record['result']['space'][i]
+                record['result'].pop('space')
+                for i in record['result'].keys():
+                    records.loc[row, i] = record['result'][i]
+                row = row + 1
+            records.to_csv(method + '_records.csv')
 
-    print(best)
+            print(best)
 

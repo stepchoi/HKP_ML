@@ -248,9 +248,9 @@ def sample_from_main(df, y_type, part=5): # df = big table; y_type = ['yoy','qoq
 
     return dfs
 
+def trial_main():
 
-
-if __name__ == "__main__":
+    '''this code run above funtions for trail run'''
 
     # actual running scripts see def above -> for import
     import os
@@ -263,11 +263,24 @@ if __name__ == "__main__":
     train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
     print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
 
-    # # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
-    # '''dfs is dictionary contains all set of (train_x, train_y)'''
-    # dfs = sample_from_main(main, y_type = 'yoy',part = 3)
-    # print(dfs.keys(),dfs[0])
+    # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
+    '''dfs is dictionary contains all set of (train_x, train_y)'''
+    dfs = sample_from_main(main, y_type = 'yoy',part = 3)
+    print(dfs.keys(),dfs[0])
 
+if __name__ == "__main__":
 
+    # actual running scripts see def above -> for import
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+
+    # 1. return main dateframe
+    from Preprocessing.LoadData import (load_data, sample_from_main)
+    main = load_data(lag_year=1)
+    dfs = sample_from_main(main, y_type = 'yoy',part = 5)
+
+    for k in dfs.keys():
+        x, y = dfs[k]
+        pass
 
 
