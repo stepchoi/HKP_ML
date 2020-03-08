@@ -38,8 +38,8 @@ def load_data():
 
     # 1. return main dateframe
     from Preprocessing.LoadData import (load_data, sample_from_main)
-    main = load_data(lag_year=1)
-    dfs = sample_from_main(main, y_type='yoy', part=2)
+    main = load_data(lag_year=5)
+    dfs = sample_from_main(main, y_type='yoy', part=1)
 
     return dfs
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     dfs = load_data()
 
-    for method in ['PCA','AE']:
+    for method in ['PCA']:
         for k in dfs.keys():
             x, y = dfs[k]
 
