@@ -1,17 +1,26 @@
-import lightgbm as lgb
 import pandas as pd
-from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+import numpy as np
+
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+
 from sklearn.model_selection import train_test_split
+
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+
+import lightgbm as lgb
+
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+
+from Preprocessing.LoadData import load_data, sample_from_main
+
 
 space = {
     # dimension
     'reduced_dimension' : hp.choice('reduced_dimension', [508, 624, 757]),
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', [0.0001, 0.001, 0.01, 0.1, 1]),
+    'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
     'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']),
     'max_bin': hp.choice('max_bin', [200, 255, 300]),
     'num_leaves': hp.choice('num_leaves', [200, 300, 400]),
@@ -31,19 +40,11 @@ space = {
     'metric': 'multi_error',
     'num_threads': 2  # for the best speed, set this to the number of real CPU cores
     }
-def load_data():
 
-    import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+x =
+y =
 
-    # 1. return main dateframe
-    from Preprocessing.LoadData import (load_data, sample_from_main)
-    main = load_data(lag_year=5)
-    dfs = sample_from_main(main, y_type='yoy', part=1)
-
-    return dfs
-
-def Dimension_reduction(x, y, reduced_dimensions, method='PCA'):
+def Dimension_reduction(reduced_dimensions, method='PCA'):
 
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2, stratify=y)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25, stratify=y_lgbm)
@@ -62,8 +63,13 @@ def Dimension_reduction(x, y, reduced_dimensions, method='PCA'):
 
     return compressed_x_train, compressed_x_valid, compressed_x_test, y_train, y_valid, y_test
 
-def LightGBM(params, X_train, X_valid, Y_train, Y_valid):
+def LightGBM(space):
 
+    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'])
+
+    params = space.copy()
+    params.pop('reduced_dimension')
+    
     lgb_train = lgb.Dataset(X_train, Y_train,  free_raw_data=False)
     lgb_valid = lgb.Dataset(X_valid, Y_valid,  reference=lgb_train, free_raw_data=False)
 
@@ -74,21 +80,11 @@ def LightGBM(params, X_train, X_valid, Y_train, Y_valid):
                     verbose_eval=1,
                     early_stopping_rounds=150)
 
-    return gbm
+    return gbm, X_test, Y_test
 
 def f(space):
 
-    params = space.copy()
-    params.pop('reduced_dimension', None)
-
-    X_train = compressed_x_train[space['reduced_dimension']]
-    X_valid = compressed_x_valid[space['reduced_dimension']]
-    X_test = compressed_x_test[space['reduced_dimension']]
-    Y_train = y_train[space['reduced_dimension']]
-    Y_valid = y_valid[space['reduced_dimension']]
-    Y_test = y_test[space['reduced_dimension']]
-
-    gbm = LightGBM(params, X_train, X_valid, Y_train, Y_valid)
+    gbm, X_test, Y_test = LightGBM(space)
 
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
@@ -96,6 +92,8 @@ def f(space):
     Y_valid_pred = [list(i).index(max(i)) for i in Y_valid_pred_softmax]
     Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
     Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
+
+
 
     result = {'loss': - accuracy_score(Y_test, Y_test_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
@@ -114,41 +112,27 @@ def f(space):
 
 if __name__ == "__main__":
 
-    dfs = load_data()
 
-    for method in ['PCA']:
-        for k in dfs.keys():
-            x, y = dfs[k]
+    method = 'PCA'
+    reduced_dimensions = [508, 624, 757]
 
-            reduced_dimensions = [508, 624, 757]
-            compressed_x_train = {}
-            compressed_x_valid = {}
-            compressed_x_test = {}
-            y_train = {}
-            y_valid = {}
-            y_test = {}
-            for i in range(len(reduced_dimensions)):
-                compressed_x_train[reduced_dimensions[i]], \
-                compressed_x_valid[reduced_dimensions[i]], \
-                compressed_x_test[reduced_dimensions[i]], \
-                y_train[reduced_dimensions[i]], \
-                y_valid[reduced_dimensions[i]], \
-                y_test[reduced_dimensions[i]] = Dimension_reduction(x, y, reduced_dimensions[i], method)
 
-            trials = Trials()
-            best = fmin(f, space, algo=tpe.suggest, max_evals=100, trials=trials)
 
-            records = pd.DataFrame()
-            row = 0
-            for record in trials.trials:
-                print(record)
-                for i in record['result']['space'].keys():
-                    records.loc[row, i] = record['result']['space'][i]
-                record['result'].pop('space')
-                for i in record['result'].keys():
-                    records.loc[row, i] = record['result'][i]
-                row = row + 1
-            records.to_csv(method + '_records.csv')
+    trials = Trials()
+    best = fmin(f, space, algo=tpe.suggest, max_evals=100, trials=trials)
 
-            print(best)
+    records = pd.DataFrame()
+    row = 0
+    for record in trials.trials:
+        print(record)
+        for i in record['result']['space'].keys():
+            records.loc[row, i] = record['result']['space'][i]
+        record['result'].pop('space')
+        for i in record['result'].keys():
+            records.loc[row, i] = record['result'][i]
+        row = row + 1
+    records.to_csv('records.csv')
+
+
+    print(best)
 
