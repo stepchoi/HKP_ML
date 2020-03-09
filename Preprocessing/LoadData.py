@@ -67,11 +67,11 @@ def merge_dep_macro(df, sql_version):
         engine = create_engine(db_string)
         dep = pd.read_sql('SELECT * FROM niq', engine)
         macro = pd.read_sql("SELECT * FROM macro_main", engine)
-        stock  = pd.read_sql("SELECT gvkey, datacqtr, return FROM stock_return", engine)
+        stock  = pd.read_sql("SELECT * FROM stock_main", engine)
     else: # local version read TABLE from local csv files -> faster
         macro = pd.read_csv('macro_main.csv')
         dep = pd.read_csv('niq.csv')
-        stock = pd.read_csv('stock_return.csv', usecols=['gvkey','datacqtr','return'])
+        stock = pd.read_csv('stock_main.csv')
         print('local version running - niq, macro_main, stock_return')
 
     convert_to_float32(dep)
@@ -266,24 +266,20 @@ def trial_main():
     # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
     '''dfs is dictionary contains all set of (train_x, train_y)'''
     dfs = sample_from_main(main, y_type = 'yoy',part = 3)
-    print(dfs.keys(),dfs[0])
-
-if __name__ == "__main__":
-
-    # actual running scripts see def above -> for import
-    import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
-
-    # 1. return main dateframe
-    from Preprocessing.LoadData import (load_data, sample_from_main)
-    main = load_data(lag_year=1)
-    dfs = sample_from_main(main, y_type = 'yoy',part = 1)
 
     for k in dfs.keys():
         x, y = dfs[k]
         print(type(x))
         print(type(y))
         print(y)
+
+
+if __name__ == "__main__":
+
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+
+
 
 
 
