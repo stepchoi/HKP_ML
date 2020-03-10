@@ -23,6 +23,15 @@ from sqlalchemy import create_engine
 from tqdm import tqdm
 
 
+def check_print(df_list):
+    df = pd.concat(df_list, axis=1)
+    col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
+    df = df.reindex(col, axis=1)
+    df.head(500).to_csv('check.csv')
+
+    os.system("open -a '/Applications/Microsoft Excel.app' 'check.csv'")
+    exit(0)
+
 def convert_to_float32(df):
 
     ''''This def convert float64 to float32 to save memory usage.'''
@@ -50,6 +59,7 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
         lag_df.append(df_temp)
 
     df_lag = pd.concat(lag_df, axis = 1, join='inner')
+    check_print([df_lag])
 
     end = time.time()
     print('(step 1/3) adding lag running time: {}'.format(end - start))
@@ -169,7 +179,7 @@ def load_data(lag_year = 5, sql_version = False):
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
     else: # local version read TABLE from local csv files -> faster
-        main = pd.read_csv('main.csv')
+        main = pd.read_csv('main.csv').head(500)
         engine = None
         print('local version running - main')
 

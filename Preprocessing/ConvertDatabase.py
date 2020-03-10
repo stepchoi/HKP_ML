@@ -7,7 +7,6 @@
     6. save to TABLE main
 '''
 
-import os
 from collections import Counter
 
 import numpy as np
@@ -17,15 +16,6 @@ from PrepareDatabase import select_variable
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-
-def check_print(df_list):
-    df = pd.concat(df_list, axis=1)
-    col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
-    df = df.reindex(col, axis=1)
-    df.to_csv('check.csv')
-
-    os.system("open -a '/Applications/Microsoft Excel.app' 'check.csv'")
-    exit(0)
 
 # 1: convert
 def convert():

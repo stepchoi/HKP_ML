@@ -1,6 +1,15 @@
 import pandas as pd
 from sqlalchemy import create_engine
 
+def check_print(df_list):
+    df = pd.concat(df_list, axis=1)
+    col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
+    df = df.reindex(col, axis=1)
+    df.to_csv('check.csv')
+
+    os.system("open -a '/Applications/Microsoft Excel.app' 'check.csv'")
+    exit(0)
+
 def delete_high_zero_row(missing_dict):
     df_zero_series = pd.concat(missing_dict, axis = 1).sum(axis=1)
     print(df_zero_series)
