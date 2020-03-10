@@ -59,7 +59,6 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
         lag_df.append(df_temp)
 
     df_lag = pd.concat(lag_df, axis = 1, join='inner')
-    check_print([df_lag])
 
     end = time.time()
     print('(step 1/3) adding lag running time: {}'.format(end - start))
