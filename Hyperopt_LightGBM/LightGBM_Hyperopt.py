@@ -17,7 +17,7 @@ from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', [508, 624, 757]),
+    'reduced_dimension' : hp.choice('reduced_dimension', [475, 573, 709]), # past[508, 624, 757]
 
     # better accuracy
     'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
 
     method = 'PCA'
-    reduced_dimensions = [508, 624, 757]
+    reduced_dimensions = [475, 573, 709] # past[508, 624, 757]
 
 
 
