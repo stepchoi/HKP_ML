@@ -178,7 +178,7 @@ def load_data(lag_year = 5, sql_version = False):
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
     else: # local version read TABLE from local csv files -> faster
-        main = pd.read_csv('main.csv').head(500)
+        main = pd.read_csv('main.csv')
         engine = None
         print('local version running - main')
 
