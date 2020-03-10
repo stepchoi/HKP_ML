@@ -14,7 +14,6 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 
 from Preprocessing.LoadData import load_data, sample_from_main
 
-
 space = {
     # dimension
     'reduced_dimension' : hp.choice('reduced_dimension', [475, 573, 709]), # past[508, 624, 757]
@@ -40,11 +39,15 @@ space = {
     'metric': 'multi_error',
     'num_threads': 2  # for the best speed, set this to the number of real CPU cores
     }
-
-x =
-y =
+def load():
+    main = load_data(lag_year=5)
+    dfs = sample_from_main(main, y_type='yoy', part=1)
+    x, y = dfs[0]
+    print(x.shape, y.shape)
+    return x, y
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
+    x, y = load()
 
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2, stratify=y)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25, stratify=y_lgbm)
@@ -115,8 +118,6 @@ if __name__ == "__main__":
 
     method = 'PCA'
     reduced_dimensions = [475, 573, 709] # past[508, 624, 757]
-
-
 
     trials = Trials()
     best = fmin(f, space, algo=tpe.suggest, max_evals=100, trials=trials)
