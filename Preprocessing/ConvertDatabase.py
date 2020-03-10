@@ -61,14 +61,14 @@ def convert():
         print('finish dividends rolling accural conversion')
 
         # qoq conversion
-        qoq = df.groupby('gvkey').apply(lambda x: x[dic['qoq']].div(x[dic['qoq']].shift(1)).sub(1)).reset_index(
-            drop=True)
+        qoq = df[dic['qoq']].div(df[dic['qoq']].shift(1)).sub(1).reset_index(drop=True)
+        qoq.iloc[df.groupby('gvkey').head(1).index] = np.nan
         qoq.columns = convert_select['qoq']
         print('finish qoq conversion')
 
         # yoy conversion
-        yoy = df.groupby('gvkey').apply(lambda x: x[dic['yoy']].div(x[dic['yoy']].shift(4)).sub(1)).reset_index(
-            drop=True)
+        yoy = df[dic['yoy']].div(df[dic['yoy']].shift(4)).sub(1).reset_index(drop=True)
+        yoy.iloc[df.groupby('gvkey').head(4).index] = np.nan
         yoy.columns = convert_select['yoy']
         print('finish yoy conversion')
 
@@ -95,15 +95,15 @@ def convert():
             print('export df_missing.csv')
 
         # missing_count(df_converted)
-        convert_to_float32(df_converted)
-        df_converted.to_csv('main_convert.csv', index=False)
+        # convert_to_float32(df_converted)
+        # df_converted.to_csv('main_convert.csv', index=False)
 
-        print('shape of df_converted is ', main_convert.shape)
+        print('shape of df_converted is ', df_converted.shape)
         return df_converted, dic
 
     select, engine = select_variable()  # dictionary with variables based on selection criteria
     main, select = convert_format(raw, select)
-
+    print('coverted missing:', main.isnull().sum().sum())
     return main
 
 # 2. delete high_missing if exists other formats
@@ -121,21 +121,29 @@ def delete_high_missing(df, threshold):
         elif len(g.loc[g['%_missing']>threshold]) == len(g):    # if all columns > missing rate threshold
             del_col.extend(g.sort_values(by = ['%_missing'])['index'].to_list()[1:])    # only append higher 2
     print(len(del_col))
+    df.loc[df['name'].isin(del_col)].to_csv('delete_high_missing.csv', index=False)
     return del_col
 
 # 3: fillna
 def fillna(df):
 
     ''' 1: fill YoY, QoQ -> -1'''
-
+    fillna_count = {}
     print('------ start fillna -------')
     col = df.columns
-    yoy_qoq_col = [x for x in col if (('yoy' in x) or ('qoq' in x))]
 
-    del_row = ['atq', 'ltq', 'seqq', 'cheq', 'revtq', 'niq']
-    del_row = [x + '_atq' for x in del_row] + [x + '_revtq' for x in del_row] + del_row
+    important = ['atq', 'ltq', 'seqq', 'cheq', 'revtq', 'niq']
+    del_row = [x for x in df.columns if (x.rsplit('_',1)[0] in important)]
+    yoy_qoq_col = [x for x in col if ((('yoy' in x) or ('qoq' in x)) & (x not in del_row))]
+
+    del_row_na1 = df[del_row].isnull().sum()
+    s0 = df.isnull().sum().sum() # counting
+    fillna_count['original'] = s0
 
     df[yoy_qoq_col] = df[yoy_qoq_col].fillna(value = -1) # yoy, qoq format columns NAN -> -1
+
+    s1 = df.isnull().sum().sum() # counting
+    fillna_count['yoy_qoq'] = s0 - s1
 
     ''' 2: fill 0 after 8th '''
 
@@ -160,6 +168,9 @@ def fillna(df):
     rest_col = list(set(col) - set(del_row) - set(['gvkey','datacqtr']) - set(yoy_qoq_col))
 
     df[rest_col] = df[rest_col].apply(after_8)
+    s2 = df.isnull().sum().sum() # counting
+    fillna_count['after 8'] = s1 - s2
+    print(fillna_count)
 
     ''' 3: decide optimal rolling average fill NaN period '''
 
@@ -171,12 +182,15 @@ def fillna(df):
         for p in tqdm([1, 4, 8, 12, 16, 20]):
             if p == 1:  # test for forward fill
                 df_rolling = df.groupby('gvkey').apply(lambda x: x[rest_col].shift(1))
-            else:       # test for rolling average
+            else:   # test for rolling average
                 df_rolling = df.groupby('gvkey').apply(lambda x: x[rest_col].rolling(p, min_periods=1).mean().shift())
             diff_dict[p] = df_rolling.sub(df[rest_col]).pow(2).mean(axis=0) # square sum of error with above methods
 
         rolling_period_series = pd.DataFrame.from_dict(diff_dict, orient='index').idxmin() # find minimum error option
+
+        pd.DataFrame.from_dict(diff_dict, orient='index').to_csv('optimal_rolling_period_full.csv')
         pd.DataFrame(rolling_period_series).to_csv('rolling_period.csv')
+
         return rolling_period_series
 
     try:
@@ -194,8 +208,6 @@ def fillna(df):
             start_missing = df.isnull().sum().sum() # for counting and print
 
             period_col = [x for x in rolling_period[rolling_period == i].index.to_list() if x in rest_col]
-            bf = df[period_col]
-            bf.columns = [x + '_bf' for x in bf.columns]
 
             if i == 1:
                 df[period_col] = df.groupby('gvkey').apply(lambda x: x[period_col].ffill())
@@ -204,16 +216,24 @@ def fillna(df):
                                                            .fillna(x[period_col].rolling(i, min_periods=1).mean().shift()))[period_col]
 
             end_missing = df.isnull().sum().sum() # for counting and print
+            fillna_count['rolling period {}'.format(i)] = start_missing - end_missing
             print('rolling period {} fillna: {}'.format(i, start_missing - end_missing))
+
+    s3 = df.isnull().sum().sum() # counting
 
     df[rest_col] = df[rest_col].fillna(value = -1)
 
-    print('end missing: {}'.format(df.isnull().sum().sum()))
+    s4 = df.isnull().sum().sum() # counting
+    del_row_na2 = df[del_row].isnull().sum()
+    pd.concat([del_row_na1,del_row_na2],axis=1).to_csv('important col nan.csv')
+    fillna_count['fill in rest missing'] = s3 - s4
+    fillna_count['ending'] = s4
+    pd.DataFrame.from_dict(fillna_count, orient='index').to_csv('fillna_count.csv')
 
     return df
 
 # 4. delete high correlation items
-def check_correlation(df):
+def check_correlation(df,threshold=0.9):
     # find high correlated items -> excel
 
     corr = df.corr().abs()  # create correlation matrix
@@ -224,8 +244,10 @@ def check_correlation(df):
 
     high_corr_col = []  # create list for to_be_deleted high correlation items
     for k in Counter(so['v1']):
-        if k not in high_corr_col:
-            high_corr_col.append(k)
+        for i in so.loc[so['v1']==k,'v2']:
+            print(k, i)
+            if i not in high_corr_col:
+                high_corr_col.append(k)
 
     print(high_corr_col)
     return high_corr_col
@@ -238,24 +260,24 @@ def main():
         print('local version running - main_convert')
     except:
         main = convert()
-
+    col_dict = pd.DataFrame(index = main.columns)
     convert_to_float32(main)
 
     # 2. delete high_missing if exists other formats
     del_col = delete_high_missing(main, 0.7)
     main = main.drop(main[del_col], axis = 1)
-    s = main.notnull().sum()
-    main = main.drop(s[s<2].index, axis=1)
     print(main.shape)
+    col_dict.loc[main.columns, 'low_missing'] = 1
 
     # 3: fillna
     main = fillna(main)
 
     # 4. delete high correlation items
-    print(main.columns)
-    high_corr_col = check_correlation(main.iloc[:,2:])
+    high_corr_col = check_correlation(main.iloc[:,2:], 0.9)
     # del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
     main = main.drop(main[high_corr_col], axis=1)
+    col_dict.loc[main.columns, 'low_correlation'] = 1
+    col_dict.to_csv('columns_after_conversion.csv')
 
     convert_to_float32(main)
     main.to_csv('main_new.csv', index=False)

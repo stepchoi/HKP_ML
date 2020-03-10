@@ -10,6 +10,7 @@
         y -> qcut
 
 '''
+import datetime as dt
 import gc
 import time
 
@@ -37,7 +38,7 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
 
     convert_to_float32(df)
 
-    col = df.columns[3:]  # first three columns are gvkey, datacqtr(Timestamp), and sic which won't need lagging values
+    col = df.columns[2:]  # first three columns are gvkey, datacqtr(Timestamp), and sic which won't need lagging values
 
     lag_df = []  # create list for to be concated dataframes
     lag_df.append(df.dropna())  # current quarters, dropna remove records with missing important fields (e.g. niq....)
@@ -106,7 +107,7 @@ class clean_set:
         s = time.time()
 
         def divide_set(df): # this funtion cut main df into df for x_variables, y_yoy, y_qoq by columns position
-            return df.iloc[:, 3:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
+            return df.iloc[:, 2:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
         self.train_x, self.train_qoq, self.train_yoy = divide_set(train)
         try:
@@ -116,14 +117,14 @@ class clean_set:
 
         e = time.time()
         print(self.train_x.shape)
-        print('--> 3.1. divide test training set using {}'.format(e - s))
+        # print('--> 3.1. divide test training set using {}'.format(e - s))
 
     def standardize_x(self): # standardize x with train_x fit
         s = time.time()
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
         e = time.time()
-        print('--> 3.2. standardize x using {}'.format(e - s))
+        # print('--> 3.2. standardize x using {}'.format(e - s))
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
             return self.train_x, self.test_x
@@ -134,9 +135,11 @@ class clean_set:
         s = time.time()
         self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
         e = time.time()
-        print('--> 3.3. qcut y using {}'.format(e - s))
+        # print('--> 3.3. qcut y using {}'.format(e - s))
         try:
+            # print(cut_bins, self.test_yoy)
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
+            # print(self.test_yoy)
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
             return self.train_yoy.astype(np.int8), None
@@ -145,7 +148,7 @@ class clean_set:
         s = time.time()
         self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=[0, 1, 2], retbins=True)
         e = time.time()
-        print('--> 3.3. qcut y using {}'.format(e - s))
+        # print('--> 3.3. qcut y using {}'.format(e - s))
         try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
             return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
@@ -263,6 +266,8 @@ def trial_main():
     train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoy', testing_period = dt.datetime(2008, 3, 31))
     print(train_x.shape, test_x.shape, train_y.shape, test_y.shape)
 
+    exit(0)
+
     # 2.2 if want to return (train_x, train_y) by randomly sampled from main df
     '''dfs is dictionary contains all set of (train_x, train_y)'''
     dfs = sample_from_main(main, y_type = 'yoy',part = 3)
@@ -279,7 +284,7 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-
+    trial_main()
 
 
 
