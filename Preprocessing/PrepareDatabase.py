@@ -84,7 +84,7 @@ if __name__ == '__main__':
         df = pd.read_csv('raw.csv', usecols = all_col)
         print('local version running')
     except:
-        raw = pd.read_sql('SELECT * FROM raw', engine, columns = all_col)
+        df = pd.read_sql('SELECT * FROM raw', engine, columns = all_col)
 
     convert_to_float32(df)
 
