@@ -3,6 +3,12 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/LightGBM" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM/LightGBM" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM/LightGBM/build/cmake-3.15.7/LightGBM" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM/LightGBM/build/cmake-3.15.7/LightGBM/compute" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM/LightGBM/compute" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/LightGBM/build/LightGBM/compute" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/LightGBM/compute" vcs="Git" />
   </component>
 </project>
