@@ -177,7 +177,6 @@ def load_data(lag_year = 5, sql_version = False):
     end = time.time()
     print('(step 0/3) read local csv - main - running time: {}'.format(end - start))
 
-    print(main.shape)
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
 
     # 1. add 20 lagging factors for each variable
@@ -188,13 +187,6 @@ def load_data(lag_year = 5, sql_version = False):
     # 2. add dependent variable & macro variables to main
     main_lag = merge_dep_macro(main_lag, sql_version) # i.e. big table
 
-    def save_lag_to_csv(): # save big table as local csv -> not recommends, probably takes hours
-        start = time.time()
-        main_lag.to_csv('main_lag.csv', index=False)
-        end = time.time()
-        print('save csv running time: {}'.format(end - start))
-
-    # print(main_lag.info())
     return main_lag # i.e. big table
 
 def train_test_clean(y_type, train, test = None): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
@@ -281,26 +273,23 @@ def trial_main():
         print(type(y))
         print(y)
 
-
-if __name__ == "__main__":
-
-
+def final_check():
     # read and return x, y from 150k (entire space)
     main = load_data(lag_year=5)
     x, y = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
     x_qoq, y_qoq = sample_from_main(main, y_type='qoq', part=1)[0]  # change to 'qoq' and run again !!
 
-    # col = main.columns
-
+    col = main.columns
+    #
     # print('1. check chronological sequence ')
     # print(len(main))
     # from PrepareDatabase import drop_nonseq
     # drop_nonseq(main)
     # print(len(main))
     # del main['datacqtr_no']
-
+    #
     # print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
-
+    #
     # df_1 = main.filter(['gvkey', 'datacqtr'])
     # print(len(set(main['gvkey'])))
     # df_1['exist'] = 1
@@ -311,48 +300,27 @@ if __name__ == "__main__":
     # for i, row in df.iterrows():
     #     l = row.to_list()
     # print(len(df), k)
-
-
+    #
     # print('check columns in main')
     # print(col)
     # print(main.info())
-
-
+    #
     # print('2. check NaN in main')
     # print(main.isnull().sum().sum())
-
-
-    print('3. check standardize in main')
-    print(pd.DataFrame(x).iloc[:,:5])
-    print(pd.DataFrame(x_qoq).iloc[:,:5])
-    print(x == x_qoq)
-    pd.DataFrame(x).describe().to_csv('describe_main.csv')
-
-
+    #
+    # print('3. check standardize in main')
+    # print(x == x_qoq)
+    # pd.DataFrame(x).describe().to_csv('describe_main.csv')
+    #
     # print('4. check # of [0,1,2] in y')
     # from collections import Counter
     # print(type(y), Counter(y))
     # print(type(y_qoq), Counter(y_qoq))
 
+if __name__ == "__main__":
+    final_check()
 
-    print('6. check random classification')
-    from sklearn.model_selection import train_test_split
 
-    x_label = pd.concat([main[['gvkey', 'datacqtr']], pd.DataFrame(x)], axis=1, join='inner')
-    x_lgbm, x_test, y_lgbm, y_test = train_test_split(x_label, y, test_size=0.2)
-    x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
-
-    t0 = x_train['gvkey', 'datacqtr']
-    t0['split'] = 0
-
-    t1 = x_valid['gvkey', 'datacqtr']
-    t1['split'] = 1
-
-    t2 = x_test['gvkey', 'datacqtr']
-    t2['split'] = 2
-
-    df_2 = pd.concat([t0, t1, t2], axis=0)
-    df_2.pivot(index='gvkey', columns='datacqtr', values='split').to_csv('check_chron_split')
 
 
 
