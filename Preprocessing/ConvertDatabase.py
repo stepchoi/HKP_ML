@@ -274,5 +274,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import os
 
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    df = pd.read_csv('main.csv', usecols=['gvkey','datacqtr'])
+    print(df.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
