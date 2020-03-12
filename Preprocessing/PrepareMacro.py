@@ -1,10 +1,13 @@
 import pandas as pd
+from sqlalchemy import create_engine
 
-if __name__ == "__main__":
-    import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
-
-    macro = pd.read_csv('Macro_Data.csv')
+def main():
+    try:
+        macro = pd.read_csv('Macro_Data.csv')
+    except:
+        db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+        engine = create_engine(db_string)
+        macro = pd.read_sql('SELECT * FROM macro_raw', engine)
 
     macro.columns = ['Date', 'Long Term Rate', 'GDP', 'PCE', 'LEI', 'Short Term Market Rate',
                      'Central Bank Target Rate', 'Unemployment', 'Philly Fed', 'CPI', 'S&P']
@@ -25,5 +28,10 @@ if __name__ == "__main__":
     macro_main = macro_main.reset_index()
     del macro_main['index']
 
-    macro_main.to_csv("macro_main.csv", index = False)
+    macro_main.to_csv("macro_main.csv", index=False)
+
+if __name__ == "__main__":
+    main()
+
+
 
