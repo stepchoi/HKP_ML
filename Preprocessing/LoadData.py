@@ -286,28 +286,27 @@ if __name__ == "__main__":
     main = load_data(lag_year=5)
     x, y = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
     x_qoq, y_qoq = sample_from_main(main, y_type='qoq', part=1)[0]  # change to 'qoq' and run again !!
-    print(x[:5])
-    print(x_qoq[:5])
 
-    col = main.columns
+    # col = main.columns
 
     print('1. check chronological sequence ')
+    print(len)
+    drop_nonseq(df)
+    print(len)
+    del stock['datacqtr_no']
 
     # print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
 
-    df_1 = main.filter(['gvkey', 'datacqtr'])
-    df_1['exist'] = 1
-    df = df_1.pivot(index='gvkey', columns='datacqtr', values='exist')
-    df.to_csv('check_chron.csv')
-
-    k = 0
-    for i, row in df.iterrows():
-        l = row.to_list()
-        posit = [p for p, x in enumerate(l) if (x == 1)]
-        posit_1 = [x-1 for x in posit[1:]]
-        if posit_1 == posit[:-1]:
-            k += 1
-    print(len(df), k)
+    # df_1 = main.filter(['gvkey', 'datacqtr'])
+    # print(len(set(main['gvkey'])))
+    # df_1['exist'] = 1
+    # df = df_1.pivot(index='gvkey', columns='datacqtr', values='exist')
+    # df.to_csv('check_chron.csv')
+    #
+    # k = 0
+    # for i, row in df.iterrows():
+    #     l = row.to_list()
+    # print(len(df), k)
 
 
     # print('check columns in main')
@@ -315,17 +314,19 @@ if __name__ == "__main__":
     # print(main.info())
 
 
-    print('2. check NaN in main')
-    print(main.isnull().sum().sum())
+    # print('2. check NaN in main')
+    # print(main.isnull().sum().sum())
 
 
     print('3. check standardize in main')
+    pd.DataFrame(x).iloc[:,:5]
+    pd.DataFrame(x_qoq).iloc[:,:5]
     print(x == x_qoq)
-    x.describe().to_csv('describe_main.csv')
+    pd.DataFrame(x).describe().to_csv('describe_main.csv')
 
 
     print('4. check # of [0,1,2] in y')
-    from collections import Counter
+    from collections import
     print(type(y), Counter(y))
     print(type(y_qoq), Counter(y_qoq))
 

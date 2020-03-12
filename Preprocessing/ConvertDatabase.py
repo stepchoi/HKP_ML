@@ -277,5 +277,14 @@ if __name__ == "__main__":
     import os
 
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
-    df = pd.read_csv('main.csv', usecols=['gvkey','datacqtr'])
-    print(df.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
+    main = pd.read_csv('main.csv', usecols=['gvkey','datacqtr'])
+    stock = pd.read_csv('stock_main.csv', usecols=['gvkey','datacqtr'])
+    macro = pd.read_csv('macro_main.csv', usecols=['datacqtr'])
+    dep = pd.read_csv('niq.csv', usecols=['gvkey','datacqtr'])
+
+    print(len(set(main['gvkey'])))
+    print(len(set(stock['gvkey'])))
+    print(len(set(macro['datacqtr'])))
+    print(len(set(dep['gvkey'])))
+
+    # print(df.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))

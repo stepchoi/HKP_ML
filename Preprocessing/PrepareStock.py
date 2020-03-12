@@ -36,12 +36,10 @@ def main():
     print(len(stock))
     del stock['month']
 
-
     new = pd.merge(stock, sp, how='left', on='datacqtr')    # merge individual stock price & s&p500 from macro_main
 
-    new_ret = new.groupby('gvkey').apply(lambda x: x['stock_price'].div(x['stock_price'].shift(1)).sub(1)).reset_index(drop=True)   # qoq return for stock
+    new_ret = new.groupby('gvkey').apply(lambda x: x['stock_price'].pct_change(periods=1)).reset_index(drop=True)   # qoq return for stock
     new = pd.concat([new, new_ret], axis =1)
-    print(new)
     new.columns = ['gvkey','datacqtr','stock_price','S&P_qoq','stock_ret']
     new = new.replace([np.inf, -np.inf], np.nan)
     new['return'] = new['stock_ret'] - new['S&P_qoq']   # calculate relative return to equivalent S&P500 return
@@ -51,7 +49,4 @@ def main():
     new.to_csv('stock_main.csv', index=False)
 
 if __name__ == "__main__":
-    import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
-    dep.
-    stock = drop_nonseq(stock)  # drop
+    main()
