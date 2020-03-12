@@ -291,7 +291,8 @@ if __name__ == "__main__":
 
     print('1. check chronological sequence ')
     print(len)
-    drop_nonseq(df)
+    from PrepareDatabase import drop_nonseq
+    drop_nonseq(main)
     print(len)
     del stock['datacqtr_no']
 
