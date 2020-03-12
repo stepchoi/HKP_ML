@@ -107,7 +107,10 @@ def f(space):
 
     return result
 
-def result_boxplot(df): # plot the hyperopt table result into boxplot
+def result_boxplot(df):
+
+    ''' plot the hyperopt table result into boxplot '''
+
     option = {}
     for col in df:
         if len(set(df[col])) in np.arange(2,10,1):
