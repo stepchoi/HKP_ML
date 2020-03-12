@@ -289,11 +289,75 @@ def trial_main():
 
 
 if __name__ == "__main__":
-
     import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
 
-    trial_main()
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+
+    # read and return x, y from 150k (entire space)
+    main = load_data(lag_year=1)
+    x, y = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
+    x_qoq, y_qoq = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
+
+    col = main.columns
+
+    print('1. check chronological sequence ')
+
+    print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
+
+    df_1 = main.filter(['gvkey', 'datacqtr'])
+    df_1['exist'] = 1
+    df = df_1.pivot(index='gvkey', columns='datacqtr', values='exist')
+    df.to_csv('check_chron.csv')
+
+    k = 0
+    for i, row in df.iterrows():
+        l = row.to_list()
+        posit = [p for p, x in enumerate(l) if (x == 1)]
+        posit_1 = [x-1 for x in posit[1:]]
+        if posit_1 == posit[:-1]:
+            k += 1
+    print(len(df)==k, k)
+
+
+    print('check columns in main')
+    print(col)
+    print(main.info())
+
+
+    print('2. check NaN in main')
+    print(main.isnull().sum().sum())
+
+
+    print('3. check standardize in main')
+    print(x == x_qoq)
+    main.describe().to_csv('describe_main.csv')
+
+
+    print('4. check # of [0,1,2] in y')
+    from collections import Counter
+    print(type(y), Counter(y))
+    print(type(y_qoq), Counter(y_qoq))
+
+
+    print('6. check random classification')
+    x_label = pd.concat([main[['gvkey', 'datacqtr']], pd.DataFrame(x)], axis=1)
+    x_lgbm, x_test, y_lgbm, y_test = train_test_split(x_label, y, test_size=0.2)
+    x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
+
+    t0 = x_train['gvkey', 'datacqtr']
+    t0['split'] = 0
+
+    t1 = x_valid['gvkey', 'datacqtr']
+    t1['split'] = 1
+
+    t2 = x_test['gvkey', 'datacqtr']
+    t2['split'] = 2
+
+    df_2 = pd.concat([t0, t1, t2], axis=0)
+    df_2.pivot(index='gvkey', columns='datacqtr', values='split').to_csv('check_chron_split')
+
+
+
 
 
 
