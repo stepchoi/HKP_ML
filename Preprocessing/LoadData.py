@@ -118,7 +118,6 @@ class clean_set:
     '''4. This def converts x -> std, y -> qcut'''
 
     def __init__(self, train, test):
-        s = time.time()
 
         def divide_set(df): # this funtion cut main df into df for x_variables, y_yoy, y_qoq by columns position
             return df.iloc[:, 2:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
@@ -128,17 +127,11 @@ class clean_set:
             self.test_x, self.test_qoq, self.test_yoy = divide_set(test) # can work without test set
         except:
             pass
-
-        e = time.time()
         print(self.train_x.shape)
-        # print('--> 3.1. divide test training set using {}'.format(e - s))
 
     def standardize_x(self): # standardize x with train_x fit
-        s = time.time()
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
-        e = time.time()
-        # print('--> 3.2. standardize x using {}'.format(e - s))
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
             return self.train_x, self.test_x
@@ -146,29 +139,16 @@ class clean_set:
             return self.train_x, None
 
     def yoy(self): # qcut y with train_y cut_bins
-        s = time.time()
         self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
 
-        print('delete this!')
-        from collections import Counter
-        print(type(self.train_yoy), Counter(self.train_yoy))
-
-        print()
-        e = time.time()
-        # print('--> 3.3. qcut y using {}'.format(e - s))
         try:
-            # print(cut_bins, self.test_yoy)
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
-            # print(self.test_yoy)
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
             return self.train_yoy.astype(np.int8), None
 
     def qoq(self): # qcut y with train_y cut_bins
-        s = time.time()
         self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=[0, 1, 2], retbins=True)
-        e = time.time()
-        # print('--> 3.3. qcut y using {}'.format(e - s))
         try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
             return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)

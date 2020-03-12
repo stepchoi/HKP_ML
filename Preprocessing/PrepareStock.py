@@ -51,4 +51,7 @@ def main():
     new.to_csv('stock_main.csv', index=False)
 
 if __name__ == "__main__":
-    main()
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    dep.
+    stock = drop_nonseq(stock)  # drop
