@@ -1,19 +1,14 @@
-import pandas as pd
+import lightgbm as lgb
 import numpy as np
-
-from PCA_for_LightGBM import PCA_fitting, PCA_predict
+import pandas as pd
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
-
+from PCA_for_LightGBM import PCA_fitting, PCA_predict
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from matplotlib import pyplot as plt
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
 
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-
-import lightgbm as lgb
-
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-
 from Preprocessing.LoadData import load_data, sample_from_main
-
 
 space = {
     # dimension
@@ -41,11 +36,13 @@ space = {
     'num_threads': 2  # for the best speed, set this to the number of real CPU cores
     }
 
-x = pd.read_csv('x0.csv', index_col=0)
-y = pd.read_csv('y0.csv', index_col=0)
+def load():
+    main = load_data(lag_year=5, sql_version = True)    # main = entire dataset before standardization/qcut
+    dfs = sample_from_main(main, y_type='yoy', part=1)  # part=1: i.e. test over entire 150k records
+    return dfs[0]
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
-
+    x, y = load()
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
 
@@ -91,7 +88,6 @@ def LightGBM(space):
 
     return Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred
 
-
 def f(space):
 
     Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred = LightGBM(space)
@@ -111,6 +107,45 @@ def f(space):
 
     return result
 
+def result_boxplot(df): # plot the hyperopt table result into boxplot
+    option = {}
+    for col in df:
+        if len(set(df[col])) in np.arange(2,10,1):
+            option[col] = set(df[col])  # option is a dictionary contain all possible result of hyperopts
+
+    fig = plt.figure(figsize=(20, 16), dpi=80)
+    n = round(len(option.keys())**0.5,0)+1
+    k = 1
+    for i in option.keys():
+        print(i, option[i])
+        data = []
+        data2 = []
+        label = []
+        for name, g in df.groupby([i]):
+            label.append(name)  # for x axis label
+            data.append(g['accuracy_score_test'])
+            data2.append(g['accuracy_score_train'])
+
+        ax = fig.add_subplot(n, n, k)
+        def draw_plot(ax, data, label, edge_color, fill_color):
+
+            ''' differentiate plots with color'''
+
+            bp = ax.boxplot(data, labels = label, patch_artist=True)
+
+            for element in ['boxes', 'whiskers', 'fliers', 'means', 'medians', 'caps']:
+                plt.setp(bp[element], color=edge_color)
+
+            for patch in bp['boxes']:
+                patch.set(facecolor=fill_color)
+
+        draw_plot(ax, data, label, 'red', 'tan')  # plot for testing accuracy is Red(Clay)
+        draw_plot(ax, data2, label, 'blue', 'cyan')  # plot for training accuracy is Blue
+        ax.set_title(i) # title = hyper-parameter name
+        k += 1
+
+    fig.savefig('results.png')
+
 if __name__ == "__main__":
 
     trials = Trials()
@@ -126,8 +161,9 @@ if __name__ == "__main__":
         for i in record['result'].keys():
             records.loc[row, i] = record['result'][i]
         row = row + 1
-    records.to_csv('records.csv')
 
+    result_boxplot(records) # plot the hyperopt table result into boxplot
+    records.to_csv('records.csv')
 
     print(best)
 
