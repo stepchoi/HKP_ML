@@ -326,16 +326,16 @@ if __name__ == "__main__":
     pd.DataFrame(x).describe().to_csv('describe_main.csv')
 
 
-    print('4. check # of [0,1,2] in y')
-    from collections import Counter
-    print(type(y), Counter(y))
-    print(type(y_qoq), Counter(y_qoq))
+    # print('4. check # of [0,1,2] in y')
+    # from collections import Counter
+    # print(type(y), Counter(y))
+    # print(type(y_qoq), Counter(y_qoq))
 
 
     print('6. check random classification')
     from sklearn.model_selection import train_test_split
 
-    x_label = pd.concat([main[['gvkey', 'datacqtr']], pd.DataFrame(x)], axis=1)
+    x_label = pd.concat([main[['gvkey', 'datacqtr']], pd.DataFrame(x)], axis=1, join='inner')
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x_label, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
 
