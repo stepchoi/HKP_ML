@@ -95,9 +95,6 @@ def merge_dep_macro(df, sql_version):
     merge_1 = pd.merge(stock, macro, on=['datacqtr'], how='left') # merge eco data & stock return by datacqtr
     merge_2 = pd.merge(merge_1, dep, on=['gvkey', 'datacqtr'], how='right') # add merge dependent variable
 
-    print('delete')
-    print(merge_2.shape)
-
     merge_2 = merge_2.dropna(how='any') # remove records with missing eco data
 
     del merge_1, dep, macro, stock
@@ -123,15 +120,19 @@ class clean_set:
             return df.iloc[:, 2:-2].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
         self.train_x, self.train_qoq, self.train_yoy = divide_set(train)
+
+        print('inti-x\n', pd.DataFrame(self.train_x).iloc[0,:5])
+
         try:
             self.test_x, self.test_qoq, self.test_yoy = divide_set(test) # can work without test set
         except:
             pass
-        print(self.train_x.shape)
 
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
+        print('std-x\n', pd.DataFrame(self.train_x).iloc[0,:5])
+
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
             return self.train_x, self.test_x
@@ -193,7 +194,7 @@ def load_data(lag_year = 5, sql_version = False):
         end = time.time()
         print('save csv running time: {}'.format(end - start))
 
-    print(main_lag.info())
+    # print(main_lag.info())
     return main_lag # i.e. big table
 
 def train_test_clean(y_type, train, test = None): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
