@@ -320,8 +320,8 @@ if __name__ == "__main__":
 
 
     print('3. check standardize in main')
-    pd.DataFrame(x).iloc[:,:5]
-    pd.DataFrame(x_qoq).iloc[:,:5]
+    print(pd.DataFrame(x).iloc[:,:5])
+    print(pd.DataFrame(x_qoq).iloc[:,:5])
     print(x == x_qoq)
     pd.DataFrame(x).describe().to_csv('describe_main.csv')
 
