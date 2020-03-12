@@ -18,7 +18,7 @@ PostgreSQL TABLE            main                   niq                 macro_mai
                               \                     |                      /
                                 --------------------|----------------------
                                                 LoadData.py
-                                    (import & run everytime before PCA/AE)      # if need to run on SQL, remember to change to load_date(sql_version = True)
+                                    (import & run everytime before PCA/AE)
                                                     |
                                     ----------------|----------------
                                   /                 |                 \
@@ -26,3 +26,4 @@ PostgreSQL TABLE            main                   niq                 macro_mai
                                                (Current Focus)
 
 2. LoadData.py will be imported into different .py code, and return x, y needed.
+   (if need to run on SQL, remember to change to load_date(sql_version = True)
