@@ -326,7 +326,7 @@ if __name__ == "__main__":
 
 
     print('4. check # of [0,1,2] in y')
-    from collections import
+    from collections import Counter
     print(type(y), Counter(y))
     print(type(y_qoq), Counter(y_qoq))
 
