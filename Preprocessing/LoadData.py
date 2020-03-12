@@ -55,7 +55,7 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
     for i in tqdm(range(lag_year*4-1)): # when lag_year is 5, here loop over past 19 quarter
         df_temp = df.groupby('gvkey').shift(i + 1)[col]
         df_temp.columns = ['{}_lag{}'.format(k, str(i+1).zfill(2)) for k in col] # name columns e.g. atq_lag01 -> last quarter total asset
-        df_temp = df_temp.dropna()
+        df_temp = df_temp.dropna(how='any')
         lag_df.append(df_temp)
 
     df_lag = pd.concat(lag_df, axis = 1, join='inner')
@@ -92,14 +92,19 @@ def merge_dep_macro(df, sql_version):
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
     stock['datacqtr'] = pd.to_datetime(stock['datacqtr'],format='%Y-%m-%d')
 
-    merge_1 = pd.merge(macro, stock, on=['datacqtr'], how='right') # merge eco data & stock return by datacqtr
-    merge_2 = pd.merge(merge_1, dep, on=['gvkey', 'datacqtr'], how='inner') # add merge dependent variable
-    merge_2 = merge_2.dropna() # remove records with missing eco data
+    merge_1 = pd.merge(stock, macro, on=['datacqtr'], how='left') # merge eco data & stock return by datacqtr
+    merge_2 = pd.merge(merge_1, dep, on=['gvkey', 'datacqtr'], how='right') # add merge dependent variable
+
+    print('delete')
+    print(merge_2.shape)
+
+    merge_2 = merge_2.dropna(how='any') # remove records with missing eco data
 
     del merge_1, dep, macro, stock
     gc.collect()
 
-    merge_3 = pd.merge(df, merge_2, on=['gvkey', 'datacqtr'], how='inner')
+    merge_3 = pd.merge(df, merge_2, on=['gvkey', 'datacqtr'], how='left')
+    merge_3 = merge_3.dropna(how='any') # remove records with missing eco data
 
     end = time.time()
     print('(step 2/3) adding macro & dependent variable running time: {}'.format(end - start))
@@ -143,6 +148,12 @@ class clean_set:
     def yoy(self): # qcut y with train_y cut_bins
         s = time.time()
         self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
+
+        print('delete this!')
+        from collections import Counter
+        print(type(self.train_yoy), Counter(self.train_yoy))
+
+        print()
         e = time.time()
         # print('--> 3.3. qcut y using {}'.format(e - s))
         try:
@@ -289,20 +300,20 @@ def trial_main():
 
 
 if __name__ == "__main__":
-    import os
 
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
     # read and return x, y from 150k (entire space)
-    main = load_data(lag_year=1)
+    main = load_data(lag_year=5)
     x, y = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
-    x_qoq, y_qoq = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
+    x_qoq, y_qoq = sample_from_main(main, y_type='qoq', part=1)[0]  # change to 'qoq' and run again !!
+    print(x[:5])
+    print(x_qoq[:5])
 
     col = main.columns
 
     print('1. check chronological sequence ')
 
-    print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
+    # print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
 
     df_1 = main.filter(['gvkey', 'datacqtr'])
     df_1['exist'] = 1
@@ -316,12 +327,12 @@ if __name__ == "__main__":
         posit_1 = [x-1 for x in posit[1:]]
         if posit_1 == posit[:-1]:
             k += 1
-    print(len(df)==k, k)
+    print(len(df), k)
 
 
-    print('check columns in main')
-    print(col)
-    print(main.info())
+    # print('check columns in main')
+    # print(col)
+    # print(main.info())
 
 
     print('2. check NaN in main')
@@ -330,7 +341,7 @@ if __name__ == "__main__":
 
     print('3. check standardize in main')
     print(x == x_qoq)
-    main.describe().to_csv('describe_main.csv')
+    x.describe().to_csv('describe_main.csv')
 
 
     print('4. check # of [0,1,2] in y')
@@ -340,6 +351,8 @@ if __name__ == "__main__":
 
 
     print('6. check random classification')
+    from sklearn.model_selection import train_test_split
+
     x_label = pd.concat([main[['gvkey', 'datacqtr']], pd.DataFrame(x)], axis=1)
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x_label, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
