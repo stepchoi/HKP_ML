@@ -290,11 +290,11 @@ if __name__ == "__main__":
     # col = main.columns
 
     print('1. check chronological sequence ')
-    print(len)
+    print(len(main))
     from PrepareDatabase import drop_nonseq
     drop_nonseq(main)
-    print(len)
-    del stock['datacqtr_no']
+    print(len(main))
+    del main['datacqtr_no']
 
     # print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
 
