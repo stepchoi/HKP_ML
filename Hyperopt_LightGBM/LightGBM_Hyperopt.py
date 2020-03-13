@@ -39,8 +39,8 @@ space = {
 
 space_check = {
     # check
-    'num_boost_round': hp.choice('num_boost_round', [10, 100, 1000, 10000]),
-    'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
+    'num_boost_round': hp.choice('num_boost_round', [10, 100, 1000]),
+    'learning_rate': hp.choice('learning_rate', [0.0001, 0.001, 0.01, 0.1, 1]),
 
     # dimension
     'reduced_dimension' : 573,
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 
 
     trials = Trials()
-    best = fmin(fn=f, space=space_check, algo=tpe.suggest, max_evals=30, trials=trials) # space = space for normal run; max_evals = 50
+    best = fmin(fn=f, space=space_check, algo=tpe.suggest, max_evals=20, trials=trials) # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()
     row = 0
