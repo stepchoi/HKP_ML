@@ -313,7 +313,8 @@ def final_check():
     # print(type(y_qoq), Counter(y_qoq))
 
 if __name__ == "__main__":
-    final_check()
+    d = dt.datetime.today().strftime('%Y%M%d')
+    print('time{}'.format(d))
 
 
 

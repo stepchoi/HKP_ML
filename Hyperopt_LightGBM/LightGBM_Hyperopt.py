@@ -1,13 +1,13 @@
-import lightgbm as lgb
-import numpy as np
-import pandas as pd
 import datetime as dt
+
+import lightgbm as lgb
+import pandas as pd
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from matplotlib import pyplot as plt
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
+
 from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
@@ -33,8 +33,39 @@ space = {
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
+    'num_boost_round': 1000,
     'num_threads': 2  # for the best speed, set this to the number of real CPU cores
     }
+
+space_check = {
+    # check
+    'num_boost_round': hp.choice('num_boost_round', [10, 100, 1000, 10000]),
+    'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
+
+    # dimension
+    'reduced_dimension' : 573,
+
+    # better accuracy
+    'boosting_type': 'gbdt',
+    'max_bin': 255,
+    'num_leaves': 400,
+
+    # avoid overfit
+    'min_data_in_leaf': 250,
+    'feature_fraction': 0.8,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 8,
+    'min_gain_to_split': 0.05,
+    'lambda_l1': 0,
+    'lambda_l2': 1,
+
+    # parameters won't change
+    'objective': 'multiclass',
+    'num_class': 3,
+    'metric': 'multi_error',
+    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
+    }
+
 
 def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
@@ -77,7 +108,6 @@ def LightGBM(space):
     gbm = lgb.train(params,
                     lgb_train,
                     valid_sets=lgb_valid,
-                    num_boost_round=1000,
                     verbose_eval=1,
                     early_stopping_rounds=150)
 
@@ -109,48 +139,6 @@ def f(space):
 
     return result
 
-def result_boxplot(df, save_name):
-
-    ''' plot the hyperopt table result into boxplot '''
-
-    option = {}
-    for col in df:
-        if len(set(df[col])) in np.arange(2,10,1):
-            option[col] = set(df[col])  # option is a dictionary contain all possible result of hyperopts
-
-    fig = plt.figure(figsize=(20, 16), dpi=80)
-    n = round(len(option.keys())**0.5,0)+1
-    k = 1
-    for i in option.keys():
-        print(i, option[i])
-        data = []
-        data2 = []
-        label = []
-        for name, g in df.groupby([i]):
-            label.append(name)  # for x axis label
-            data.append(g['accuracy_score_test'])
-            data2.append(g['accuracy_score_train'])
-
-        ax = fig.add_subplot(n, n, k)
-        def draw_plot(ax, data, label, edge_color, fill_color):
-
-            ''' differentiate plots with color'''
-
-            bp = ax.boxplot(data, labels = label, patch_artist=True)
-
-            for element in ['boxes', 'whiskers', 'fliers', 'means', 'medians', 'caps']:
-                plt.setp(bp[element], color=edge_color)
-
-            for patch in bp['boxes']:
-                patch.set(facecolor=fill_color)
-
-        draw_plot(ax, data, label, 'red', 'tan')  # plot for testing accuracy is Red(Clay)
-        draw_plot(ax, data2, label, 'blue', 'cyan')  # plot for training accuracy is Blue
-        ax.set_title(i) # title = hyper-parameter name
-        k += 1
-
-    fig.savefig(save_name)
-
 if __name__ == "__main__":
     print('-------------------- start hyperopt for lightgbm --------------------')
 
@@ -159,7 +147,7 @@ if __name__ == "__main__":
 
 
     trials = Trials()
-    best = fmin(f, space, algo=tpe.suggest, max_evals=50, trials=trials)
+    best = fmin(fn=f, space=space_check, algo=tpe.suggest, max_evals=30, trials=trials) # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()
     row = 0
@@ -173,7 +161,6 @@ if __name__ == "__main__":
         row = row + 1
 
     records.to_csv(save_name)
-    result_boxplot(records, save_name) # plot the hyperopt table result into boxplot
 
     print(best)
 
