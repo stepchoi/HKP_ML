@@ -121,8 +121,6 @@ class clean_set:
 
         self.train_x, self.train_qoq, self.train_yoy = divide_set(train)
 
-        print('inti-x\n', pd.DataFrame(self.train_x).iloc[:1,:5])
-
         try:
             self.test_x, self.test_qoq, self.test_yoy = divide_set(test) # can work without test set
         except:
@@ -131,7 +129,6 @@ class clean_set:
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
-        print('std-x\n', pd.DataFrame(self.train_x).iloc[:1,:5])
 
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
@@ -192,8 +189,6 @@ def load_data(lag_year = 5, sql_version = False):
 def train_test_clean(y_type, train, test = None): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 
     '''This def consolidate steps 4 -> return (train_x, test_x, train_y, test_y)'''
-
-    print('before split-train\n', pd.DataFrame(train).iloc[:1, :5])
 
     class bcolors: # define color for waring
         WARNING = '\033[93m'

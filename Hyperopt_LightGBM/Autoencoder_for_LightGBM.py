@@ -14,10 +14,10 @@ def AE_fitting(training_x, reduced_dimensionss):
     else:
         second_layer = 2000
 
-    model.add(Dense(units=second_layer, activation='tanh', name='en1', input_shape=[3170]))
+    model.add(Dense(units=second_layer, activation='tanh', name='en1', input_shape=[2910]))
     model.add(Dense(units=reduced_dens, activation='tanh', name='en2'))
     model.add(Dense(units=second_layer, activation='tanh', name='de1'))
-    model.add(Dense(units=3170, name='de2'))
+    model.add(Dense(units=2910, name='de2'))
 
     model.summary()
 

@@ -1,18 +1,18 @@
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import datetime as dt
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from matplotlib import pyplot as plt
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
-
 from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', [508, 624, 757]),
+    'reduced_dimension' : hp.choice('reduced_dimension', [475, 573, 709]), # past: [508, 624, 757]
 
     # better accuracy
     'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
@@ -22,8 +22,8 @@ space = {
 
     # avoid overfit
     'min_data_in_leaf': hp.choice('min_data_in_leaf', [250, 500, 750]),
-    'feature_fraction': hp.choice('feature_fraction', [0.6, 0.8, 0.9]),
-    'bagging_fraction': hp.choice('bagging_fraction', [0.6, 0.8, 0.95]),
+    'feature_fraction': hp.choice('feature_fraction', [0.4, 0.6, 0.8]),
+    'bagging_fraction': hp.choice('bagging_fraction', [0.4, 0.6, 0.8]),
     'bagging_freq': hp.choice('bagging_freq', [2, 5, 8]),
     'min_gain_to_split': hp.choice('min_gain_to_split', [0.05, 0.2, 0.4]),
     'lambda_l1': hp.choice('lambda_l1', [0, 0.4, 1]),
@@ -37,12 +37,14 @@ space = {
     }
 
 def load():
-    main = load_data(lag_year=5, sql_version = True)    # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
+    main = main.drop_duplicates(subset = ['gvkey','datacqtr'])
     dfs = sample_from_main(main, y_type='yoy', part=1)  # part=1: i.e. test over entire 150k records
     return dfs[0]
 
+x, y = load()
+
 def Dimension_reduction(reduced_dimensions, method='PCA'):
-    x, y = load()
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
 
@@ -107,7 +109,7 @@ def f(space):
 
     return result
 
-def result_boxplot(df):
+def result_boxplot(df, save_name):
 
     ''' plot the hyperopt table result into boxplot '''
 
@@ -147,9 +149,14 @@ def result_boxplot(df):
         ax.set_title(i) # title = hyper-parameter name
         k += 1
 
-    fig.savefig('results.png')
+    fig.savefig(save_name)
 
 if __name__ == "__main__":
+    print('-------------------- start hyperopt for lightgbm --------------------')
+
+    d = dt.datetime.today().strftime('%Y%M%d')
+    save_name = 'records_{}.csv'.format(d)
+
 
     trials = Trials()
     best = fmin(f, space, algo=tpe.suggest, max_evals=50, trials=trials)
@@ -165,8 +172,8 @@ if __name__ == "__main__":
             records.loc[row, i] = record['result'][i]
         row = row + 1
 
-    result_boxplot(records) # plot the hyperopt table result into boxplot
-    records.to_csv('records.csv')
+    records.to_csv(save_name)
+    result_boxplot(records, save_name) # plot the hyperopt table result into boxplot
 
     print(best)
 
