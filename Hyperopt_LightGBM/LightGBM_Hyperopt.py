@@ -15,7 +15,7 @@ space = {
     'reduced_dimension' : hp.choice('reduced_dimension', [475, 573, 709]), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]),
+    'learning_rate': hp.choice('learning_rate', [0.01, 0.05, 0.1, 0.5, 1]),
     'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']),
     'max_bin': hp.choice('max_bin', [200, 255, 300]),
     'num_leaves': hp.choice('num_leaves', [200, 300, 400]),
@@ -34,7 +34,7 @@ space = {
     'num_class': 3,
     'metric': 'multi_error',
     'num_boost_round': 1000,
-    'num_threads': 2  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
 space_check = {
@@ -95,7 +95,7 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
 
 def LightGBM(space):
 
-    method = 'PCA'
+    method = 'AE' # change to 'PCA'/'AE'
 
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'], method)
 
@@ -142,12 +142,12 @@ def f(space):
 if __name__ == "__main__":
     print('-------------------- start hyperopt for lightgbm --------------------')
 
-    d = dt.datetime.today().strftime('%Y%M%d')
+    d = dt.datetime.today().strftime('%Y%m%d')
     save_name = 'records_{}.csv'.format(d)
 
 
     trials = Trials()
-    best = fmin(fn=f, space=space_check, algo=tpe.suggest, max_evals=20, trials=trials) # space = space for normal run; max_evals = 50
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=50, trials=trials) # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()
     row = 0
