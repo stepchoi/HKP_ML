@@ -17,6 +17,7 @@ import time
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+from scipy import stats
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from sqlalchemy import create_engine
@@ -87,6 +88,15 @@ def merge_dep_macro(df, sql_version):
     convert_to_float32(dep)
     convert_to_float32(macro)
     convert_to_float32(stock)
+
+    def remove_outliers(y_type, dep):  # function to remove outlier i.e. > 5 stv
+        y_series = dep[y_type].dropna()
+        y_clean = y_series.where(np.abs(stats.zscore(y_series)) <= 5).dropna()
+        idx = y_clean.index
+        return dep.loc[idx]
+
+    dep = remove_outliers(y_type='qoq', dep=dep)    # remove outlier for qoq
+    dep = remove_outliers(y_type='yoy', dep=dep)    # remove outlier for yoy
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
