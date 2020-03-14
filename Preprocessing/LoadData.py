@@ -89,7 +89,7 @@ def merge_dep_macro(df, sql_version):
     convert_to_float32(macro)
     convert_to_float32(stock)
 
-    def cut_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
+    def remove_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
         y_series = dep[y_type].dropna()
 
         if by == 'stv': # remove outlier by standard deviation
@@ -105,7 +105,7 @@ def merge_dep_macro(df, sql_version):
             print("Error: 'by' can only be 'stv' or 'quantile'.")
         return dep.loc[idx]
 
-    dep = remove_outliers(y_type='qoq', dep=dep, by='stv')    # remove outlier for qoq
+    # dep = remove_outliers(y_type='qoq', dep=dep, by='stv')    # remove outlier for qoq
     dep = remove_outliers(y_type='yoy', dep=dep, by='quantile')    # remove outlier for yoy
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
