@@ -9,7 +9,7 @@ def load_data_y(y = 'niq'):
     # import engine, select variables, import raw database
     try:
         import os
-        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
+        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
         dep = pd.read_csv('raw.csv', usecols = ['gvkey', 'datacqtr', y])
         print('local version')
     except:
@@ -28,16 +28,8 @@ def qoq_yoy(dep):
     dep['past4_abs'] = dep.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
     dep['next4_abs'] = dep.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
     dep['yoy'] = dep['next4_abs'].div(dep['past4_abs']).sub(1)  # T4/T0
-    dep = dep.replace([np.inf, -np.inf], np.nan)
-    dep.to_csv('check_dep_2.csv')
-    # ind = dep.loc[np.abs(dep['qoq'])>100].index.to_list()
-    # ind.extend([x+1 for x in ind])
-    # ind.extend([x-1 for x in ind])
-    # ind = set(sorted(ind))
-    # dep.loc[ind].to_csv('check_dep.csv')
-    # exit(0)
-
     dep = dep.filter(['gvkey', 'datacqtr', 'qoq', 'yoy'])
+    dep = dep.replace([np.inf, -np.inf], np.nan)
     return dep
 
 def Timestamp(df):
@@ -49,10 +41,8 @@ def main():
     dep = qoq_yoy(dep)
     dep = Timestamp(dep)
     convert_to_float32(dep)
-    # dep.to_csv('niq.csv', index=False)
-
-
+    dep.to_csv('niq.csv', index=False)
     print(dep.info())
 
 if __name__ == '__main__':
-
+    main()
