@@ -89,14 +89,24 @@ def merge_dep_macro(df, sql_version):
     convert_to_float32(macro)
     convert_to_float32(stock)
 
-    def remove_outliers(y_type, dep):  # function to remove outlier i.e. > 5 stv
+    def cut_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
         y_series = dep[y_type].dropna()
-        y_clean = y_series.where(np.abs(stats.zscore(y_series)) <= 5).dropna()
-        idx = y_clean.index
+
+        if by == 'stv': # remove outlier by standard deviation
+            y_clean = y_series.where(np.abs(stats.zscore(y_series)) < 5).dropna()
+            idx = y_clean.index
+
+        elif by == 'quantile': # remove outlier by top/bottom percentage
+            Q1 = y_series.quantile(0.01)
+            Q3 = y_series.quantile(0.99)
+            y_clean = y_series.mask((y_series < Q1) | (y_series > Q3)).dropna()
+            idx = y_clean.index
+        else:
+            print("Error: 'by' can only be 'stv' or 'quantile'.")
         return dep.loc[idx]
 
-    dep = remove_outliers(y_type='qoq', dep=dep)    # remove outlier for qoq
-    dep = remove_outliers(y_type='yoy', dep=dep)    # remove outlier for yoy
+    dep = remove_outliers(y_type='qoq', dep=dep, by='stv')    # remove outlier for qoq
+    dep = remove_outliers(y_type='yoy', dep=dep, by='quantile')    # remove outlier for yoy
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')

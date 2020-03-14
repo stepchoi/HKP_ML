@@ -9,7 +9,7 @@ def load_data_y(y = 'niq'):
     # import engine, select variables, import raw database
     try:
         import os
-        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL')
+        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
         dep = pd.read_csv('raw.csv', usecols = ['gvkey', 'datacqtr', y])
         print('local version')
     except:
@@ -28,6 +28,8 @@ def qoq_yoy(dep):
     dep['past4_abs'] = dep.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
     dep['next4_abs'] = dep.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
     dep['yoy'] = dep['next4_abs'].div(dep['past4_abs']).sub(1)  # T4/T0
+    dep.to_csv('dep_full.csv', index=False)
+    exit(0)
     dep = dep.filter(['gvkey', 'datacqtr', 'qoq', 'yoy'])
     dep = dep.replace([np.inf, -np.inf], np.nan)
     return dep
@@ -45,4 +47,4 @@ def main():
     print(dep.info())
 
 if __name__ == '__main__':
-    # main()
+    main()
