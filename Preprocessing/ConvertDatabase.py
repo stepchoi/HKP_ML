@@ -7,7 +7,7 @@
     6. save to TABLE main
 '''
 
-from collections import Counter
+import os
 
 import numpy as np
 import pandas as pd
@@ -17,11 +17,21 @@ from sqlalchemy import create_engine
 from tqdm import tqdm
 
 
+def check_print(df_list):
+    df = pd.concat(df_list, axis=1)
+    col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
+    df = df.reindex(col, axis=1)
+    df.to_csv('check.csv')
+
+    os.system("open -a '/Applications/Microsoft Excel.app' 'check.csv'")
+    exit(0)
+
 # 1: convert
-def convert():
+def convert(abs_version):
 
     # import engine, select variables, import raw database
     try:
+        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
         raw = pd.read_csv('raw_main.csv')
         engine = None
         print('local version running - raw_main.csv')
@@ -32,7 +42,7 @@ def convert():
 
     convert_to_float32(raw)
 
-    def convert_format(df, dic):
+    def convert_format(df, dic, abs_version):
 
         # convert raw dataset to desired formats (YoY, QoQ, Log)
         # groupby 'gvkey'
@@ -51,13 +61,22 @@ def convert():
         print('finish dividends rolling accural conversion')
 
         # qoq conversion
-        qoq = df[dic['qoq']].div(df[dic['qoq']].shift(1)).sub(1).reset_index(drop=True)
+        if abs_version == False:
+            qoq = df[dic['qoq']].div(df[dic['qoq']].shift(1)).sub(1).reset_index(drop=True)
+            print('abs_version is', abs_version)
+        else:
+            qoq = (df[dic['qoq']]-df[dic['qoq']].shift(1)).div(np.abs(df[dic['qoq']].shift(1))).reset_index(drop=True) # absolute version
         qoq.iloc[df.groupby('gvkey').head(1).index] = np.nan
         qoq.columns = convert_select['qoq']
+
         print('finish qoq conversion')
 
         # yoy conversion
-        yoy = df[dic['yoy']].div(df[dic['yoy']].shift(4)).sub(1).reset_index(drop=True)
+        if abs_version == False:
+            yoy = df[dic['yoy']].div(df[dic['yoy']].shift(4)).sub(1).reset_index(drop=True)
+        else:
+            yoy = (df[dic['yoy']]-df[dic['yoy']].shift(4)).div(np.abs(df[dic['yoy']].shift(4))).reset_index(drop=True) # absolute version
+
         yoy.iloc[df.groupby('gvkey').head(4).index] = np.nan
         yoy.columns = convert_select['yoy']
         print('finish yoy conversion')
@@ -89,10 +108,13 @@ def convert():
         # df_converted.to_csv('main_convert.csv', index=False)
 
         print('shape of df_converted is ', df_converted.shape)
+
+        print(df_converted['niq_qoq'].describe())
+        exit(0)
         return df_converted, dic
 
     select, engine = select_variable()  # dictionary with variables based on selection criteria
-    main, select = convert_format(raw, select)
+    main, select = convert_format(raw, select, abs_version)
     print('coverted missing:', main.isnull().sum().sum())
     return main
 
@@ -111,7 +133,7 @@ def delete_high_missing(df, threshold):
         elif len(g.loc[g['%_missing']>threshold]) == len(g):    # if all columns > missing rate threshold
             del_col.extend(g.sort_values(by = ['%_missing'])['index'].to_list()[1:])    # only append higher 2
     print(len(del_col))
-    df.loc[df['name'].isin(del_col)].to_csv('delete_high_missing.csv', index=False)
+    df.loc[df['name'].isin(del_col)].to_csv('delete_high_missing.csv', index=False) # absolute version
     return del_col
 
 # 3: fillna
@@ -215,41 +237,44 @@ def fillna(df):
 
     s4 = df.isnull().sum().sum() # counting
     del_row_na2 = df[del_row].isnull().sum()
-    pd.concat([del_row_na1,del_row_na2],axis=1).to_csv('important col nan.csv')
+    pd.concat([del_row_na1,del_row_na2],axis=1).to_csv('important_col_nan.csv')
     fillna_count['fill in rest missing'] = s3 - s4
     fillna_count['ending'] = s4
     pd.DataFrame.from_dict(fillna_count, orient='index').to_csv('fillna_count.csv')
 
-    return df
+    return df, del_row
 
 # 4. delete high correlation items
-def check_correlation(df,threshold=0.9):
+def check_correlation(df, del_row, threshold=0.9):
     # find high correlated items -> excel
 
     corr = df.corr().abs()  # create correlation matrix
     so = corr.unstack().reset_index()   # unstack matrix
     so.columns = ['v1', 'v2', 'corr']
     so = so.loc[(so['v1'] != so['v2']) & (so['corr'] > threshold)].drop_duplicates(subset=['v1', 'v2'])  # extract highly correlated pairs
+
+    high_corr_col = set() # create set for to_be_deleted high correlation items
+    for i in range(len(corr.columns)):
+        for j in range(i):
+            if (corr.iloc[i, j] >= threshold) and (corr.columns[j] not in high_corr_col):
+                colname = corr.columns[i]  # getting the name of column
+                high_corr_col.add(colname)
+
+    high_corr_col = high_corr_col - set(del_row)
+
+    so.loc[so['v1'].isin(high_corr_col),'exist_v1'] = 1
+    so.loc[so['v2'].isin(high_corr_col),'exist_v2'] = 1
     so.to_csv('high_corr.csv',index=False)
-
-    high_corr_col = []  # create list for to_be_deleted high correlation items
-    for k in Counter(so['v1']):
-        for i in so.loc[so['v1']==k,'v2']:
-            print(k, i)
-            if i not in high_corr_col:
-                high_corr_col.append(k)
-
-    print(high_corr_col)
     return high_corr_col
 
-def main():
+def main(abs_version=False):
 
     # 1: convert
     try:
         main = pd.read_csv('main_convert.csv')
         print('local version running - main_convert')
     except:
-        main = convert()
+        main = convert(abs_version)
     col_dict = pd.DataFrame(index = main.columns)
     convert_to_float32(main)
 
@@ -260,31 +285,33 @@ def main():
     col_dict.loc[main.columns, 'low_missing'] = 1
 
     # 3: fillna
-    main = fillna(main)
+    main, del_row = fillna(main)
+    print('del_row (i.e. non allowed fillna): ', del_row)
 
     # 4. delete high correlation items
-    high_corr_col = check_correlation(main.iloc[:,2:], 0.9)
+    high_corr_col = check_correlation(main.iloc[:,2:], del_row, 0.9)
     # del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
     main = main.drop(main[high_corr_col], axis=1)
     col_dict.loc[main.columns, 'low_correlation'] = 1
     col_dict.to_csv('columns_after_conversion.csv')
 
     convert_to_float32(main)
-    main.to_csv('main_new.csv', index=False)
+    main.to_csv('main.csv', index=False)
+    print(main['niq_qoq'].describe())
+
+
+
 
 
 if __name__ == "__main__":
-    import os
+    # main(abs_version=True)
+    df1 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/abs_version/main.csv')
+    # print(df1['niq_qoq'].describe())
+    #
+    df2 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/nom_version/main.csv')
+    # print(df2['niq_qoq'].describe())
+    # print(all([False, True]))
+    print(all(df1['niq_qoq']==df2['niq_qoq']))
+    # print(all(df1==df2))
 
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
-    main = pd.read_csv('main.csv', usecols=['gvkey','datacqtr'])
-    stock = pd.read_csv('stock_main.csv', usecols=['gvkey','datacqtr'])
-    macro = pd.read_csv('macro_main.csv', usecols=['datacqtr'])
-    dep = pd.read_csv('niq.csv', usecols=['gvkey','datacqtr'])
-
-    print(len(set(main['gvkey'])))
-    print(len(set(stock['gvkey'])))
-    print(len(set(macro['datacqtr'])))
-    print(len(set(dep['gvkey'])))
-
-    # print(df.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
+    # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
