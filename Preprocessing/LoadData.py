@@ -81,7 +81,7 @@ def merge_dep_macro(df, sql_version):
         stock  = pd.read_sql("SELECT * FROM stock_main", engine)
     else: # local version read TABLE from local csv files -> faster
         macro = pd.read_csv('macro_main.csv')
-        dep = pd.read_csv('niq.csv')
+        dep = pd.read_csv('niq_abs.csv')
         stock = pd.read_csv('stock_main.csv')
         print('local version running - niq, macro_main, stock_return')
 
@@ -187,7 +187,7 @@ def load_data(lag_year = 5, sql_version = False):
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
     else: # local version read TABLE from local csv files -> faster
-        main = pd.read_csv('main.csv')
+        main = pd.read_csv('main_abs.csv')
         engine = None
         print('local version running - main')
 

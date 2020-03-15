@@ -33,7 +33,7 @@ space = {
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
-    'num_boost_round': 1000,
+    'num_boost_round': 100,
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
