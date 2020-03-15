@@ -66,6 +66,8 @@ space_check = {
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
+feature_importance = pd.DataFrame()
+
 
 def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
@@ -111,6 +113,9 @@ def LightGBM(space):
                     valid_sets=lgb_valid,
                     verbose_eval=1,
                     early_stopping_rounds=150)
+    
+    print('Feature importances:', list(gbm.feature_importance()))
+    feature_importance.append(list(gbm.feature_importance()), ignore_index=True)
 
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
@@ -162,6 +167,7 @@ if __name__ == "__main__":
         row = row + 1
 
     records.to_csv(save_name)
+    feature_importance.to_csv('feature_importance.csv')
 
     print(best)
 
