@@ -127,6 +127,7 @@ def LightGBM(space):
 
     params = space.copy()
     params.pop('reduced_dimension')
+    print(X_train.shape)
     
     lgb_train = lgb.Dataset(X_train, Y_train,  free_raw_data=False)
     lgb_valid = lgb.Dataset(X_valid, Y_valid,  reference=lgb_train, free_raw_data=False)
