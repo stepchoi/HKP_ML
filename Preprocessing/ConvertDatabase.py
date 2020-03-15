@@ -300,13 +300,16 @@ def main(abs_version=False):
     print(main['niq_qoq'].describe())
 
 
-
-
-
 if __name__ == "__main__":
+
     # main(abs_version=True)
-    df1 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/abs_version/main.csv')
-    # print(df1['niq_qoq'].describe())
+    df1 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/abs_version/main_abs.csv')
+    pd.concat([df1.quantile(0.05), df1.quantile(0.95)], axis=1).to_csv('describe-abs5.csv')
+    pd.concat([df1.quantile(0.02), df1.quantile(0.98)], axis=1).to_csv('describe-abs2.csv')
+    pd.concat([df1.quantile(0.01), df1.quantile(0.99)], axis=1).to_csv('describe-abs1.csv')
+    # print(df1.quantile(0.01))
+
+    exit(0)
     #
     df2 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/nom_version/main.csv')
     # print(df2['niq_qoq'].describe())

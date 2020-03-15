@@ -40,7 +40,7 @@ space = {
 space_check = {
     # check
     'num_boost_round': hp.choice('num_boost_round', [10, 100, 1000]),
-    'learning_rate': hp.choice('learning_rate', [0.0001, 0.001, 0.01, 0.1, 1]),
+    'learning_rate': hp.choice('learning_rate', [0.0001, 0.001, 0.01, 0.1, 1, 5]),
 
     # dimension
     'reduced_dimension' : 573,
@@ -60,6 +60,25 @@ space_check = {
     'lambda_l2': 1,
 
     # parameters won't change
+    'objective': 'multiclass',
+    'num_class': 3,
+    'metric': 'multi_error',
+    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
+    }
+
+space_check_full = {
+    'num_boost_round': 1000,
+    'learning_rate': 0.1,
+    'boosting_type': 'gbdt',
+    'max_bin': 255,
+    'num_leaves': 400,
+    'min_data_in_leaf': 250,
+    'feature_fraction': 0.8,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 8,
+    'min_gain_to_split': 0.05,
+    'lambda_l1': 0,
+    'lambda_l2': 1,
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
@@ -88,19 +107,23 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
         compressed_x_valid = AE_predict(x_valid, AE_model)
         compressed_x_test = AE_predict(x_test, AE_model)
 
-    if (method == 'PCA'):
+    elif (method == 'PCA'):
         PCA_model = PCA_fitting(x_train, reduced_dimensions)
         compressed_x_train = PCA_predict(x_train, PCA_model)
         compressed_x_valid = PCA_predict(x_valid, PCA_model)
         compressed_x_test = PCA_predict(x_test, PCA_model)
+    else:
+        compressed_x_train = x_train
+        compressed_x_valid = x_valid
+        compressed_x_test = x_test
 
     return compressed_x_train, compressed_x_valid, compressed_x_test, y_train, y_valid, y_test
 
 def LightGBM(space):
 
-    method = 'PCA' # change to 'PCA'/'AE'
+    method = None # change to 'PCA'/'AE'
 
-    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'], method)
+    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'])
 
     params = space.copy()
     params.pop('reduced_dimension')
@@ -145,15 +168,15 @@ def f(space):
 
     return result
 
-if __name__ == "__main__":
+def main(space, max_evals):
     print('-------------------- start hyperopt for lightgbm --------------------')
 
     d = dt.datetime.today().strftime('%Y%m%d')
     save_name = 'records_{}.csv'.format(d)
 
-
     trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=50, trials=trials) # space = space for normal run; max_evals = 50
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals,
+                trials=trials)  # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()
     row = 0
@@ -171,3 +194,5 @@ if __name__ == "__main__":
 
     print(best)
 
+if __name__ == "__main__":
+    main(space=space_check_full, max_evals=10)
