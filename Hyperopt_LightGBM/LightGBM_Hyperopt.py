@@ -16,7 +16,7 @@ space = {
 
     # better accuracy
     'learning_rate': hp.choice('learning_rate', [0.01, 0.05, 0.1, 0.5, 1]),
-    'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']),
+    'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [200, 255, 300]),
     'num_leaves': hp.choice('num_leaves', [200, 300, 400]),
 
@@ -27,7 +27,7 @@ space = {
     'bagging_freq': hp.choice('bagging_freq', [2, 5, 8]),
     'min_gain_to_split': hp.choice('min_gain_to_split', [0.05, 0.2, 0.4]),
     'lambda_l1': hp.choice('lambda_l1', [0, 0.4, 1]),
-    'lambda_l2': hp.choice('lambda_l2', [0, 0.5, 1]),
+    'lambda_l2': hp.choice('lambda_l2', [0, 0.5, 1, 5]),
 
     # parameters won't change
     'objective': 'multiclass',
@@ -69,6 +69,7 @@ space_check = {
 
 def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
+    print(main.describe())
     main = main.drop_duplicates(subset = ['gvkey','datacqtr'])
     dfs = sample_from_main(main, y_type='yoy', part=1)  # part=1: i.e. test over entire 150k records
     return dfs[0]
@@ -95,7 +96,7 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
 
 def LightGBM(space):
 
-    method = 'AE' # change to 'PCA'/'AE'
+    method = 'PCA' # change to 'PCA'/'AE'
 
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'], method)
 
