@@ -68,6 +68,7 @@ space_check = {
 
 space_check_full = {
     'num_boost_round': 1000,
+    'reduced_dimension': 573,
     'learning_rate': 0.1,
     'boosting_type': 'gbdt',
     'max_bin': 255,
@@ -98,6 +99,9 @@ def load():
 x, y = load()
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
+
+    method = None
+
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
 
@@ -196,4 +200,4 @@ def main(space, max_evals):
     print(best)
 
 if __name__ == "__main__":
-    main(space=space_check_full, max_evals=10)
+    main(space=space_check_full, max_evals=1)
