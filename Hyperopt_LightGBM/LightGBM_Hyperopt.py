@@ -1,5 +1,5 @@
 import datetime as dt
-import os
+
 import lightgbm as lgb
 import pandas as pd
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
@@ -7,6 +7,7 @@ from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
+
 from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
@@ -85,14 +86,12 @@ space_check_full = {
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
-def load():
+def load(q):
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
-    dfs = sample_from_main(main, y_type='yoy', part=1, q=3)  # part=1: i.e. test over entire 150k records
+    dfs = sample_from_main(main, y_type='yoy', part=1, q=q)  # part=1: i.e. test over entire 150k records
     x, y = dfs[0]
     return x, y, col
-
-x, y, col = load()
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
 
@@ -112,6 +111,9 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
         compressed_x_train = PCA_predict(x_train, PCA_model)
         compressed_x_valid = PCA_predict(x_valid, PCA_model)
         compressed_x_test = PCA_predict(x_test, PCA_model)
+        print('reduced_dimensions:', reduced_dimensions)
+        print('x_train shape after PCA:', X_train.shape)
+
     else:
         compressed_x_train = x_train
         compressed_x_valid = x_valid
@@ -121,10 +123,7 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
 
 def LightGBM(space):
 
-    method = None # change to 'PCA'/'AE'
-
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'])
-    print('x_train shape after PCA:', X_train.shape)
 
     params = space.copy()
     params.pop('reduced_dimension')
@@ -201,7 +200,8 @@ def main(space, max_evals):
     print(best)
 
 if __name__ == "__main__":
+    x, y, col = load(q=7)
     # main(space=space_check_full, max_evals=1)
-    main(space=space_check, max_evals=5)
+    main(space=space, max_evals=50)
 
     print('x shape before PCA:', x.shape)
