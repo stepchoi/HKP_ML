@@ -141,9 +141,8 @@ def LightGBM(space):
                     early_stopping_rounds=150)
 
     # print and save feature importance for model
-    booster = gbm.booster_
-    importance = booster.feature_importance(importance_type='split')
-    feature_name = booster.feature_name()
+    importance = gbm.feature_importance(importance_type='split')
+    feature_name = gbm.feature_name()
     feature_importance = pd.DataFrame({'feature_name': feature_name, 'importance': importance})
     print(feature_importance)
     feature_importance.to_csv('feature_importance.csv', index=False)
@@ -203,8 +202,7 @@ def main(space, max_evals):
     print(best)
 
 if __name__ == "__main__":
-    # main(space=space_check_full, max_evals=1)
-    main(space=space_check, max_evals=10)
+    main(space=space_check_full, max_evals=1)
+    # main(space=space_check, max_evals=10)
 
     print('x shape before PCA:', x.shape)
-    print('x columns before PCA:', x.columns)
