@@ -31,7 +31,7 @@ space = {
 
     # parameters won't change
     'objective': 'multiclass',
-    'num_class': 3,
+    'num_class': 6,
     'metric': 'multi_error',
     'num_boost_round': 100,
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
@@ -81,7 +81,7 @@ space_check_full = {
     'lambda_l1': 0,
     'lambda_l2': 1,
     'objective': 'multiclass',
-    'num_class': 3,
+    'num_class': 6,
     'metric': 'multi_error',
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
@@ -112,7 +112,7 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
         compressed_x_valid = PCA_predict(x_valid, PCA_model)
         compressed_x_test = PCA_predict(x_test, PCA_model)
         print('reduced_dimensions:', reduced_dimensions)
-        print('x_train shape after PCA:', X_train.shape)
+        print('x_train shape after PCA:', compressed_x_train.shape)
 
     else:
         compressed_x_train = x_train
@@ -200,8 +200,11 @@ def main(space, max_evals, name=''):
     print(best)
 
 if __name__ == "__main__":
-    x, y, col = load(q=7)
+    qcut_q = 15
+    x, y, col = load(q=qcut_q)
+    space['num_class'] = qcut_q
+
     # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=50, name='qcut7')
+    main(space=space, max_evals=50, name='qcut{}'.format(qcut_q))
 
     print('x shape before PCA:', x.shape)
