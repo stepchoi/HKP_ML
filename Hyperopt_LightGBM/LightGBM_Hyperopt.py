@@ -1,5 +1,5 @@
 import datetime as dt
-
+import os
 import lightgbm as lgb
 import pandas as pd
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
@@ -7,7 +7,6 @@ from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
-
 from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
@@ -88,14 +87,10 @@ space_check_full = {
 
 def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
-    print(main.describe())
-    main = main.drop_duplicates(subset = ['gvkey','datacqtr'])
-    print(main.describe())
-
     col = main.columns[2:-2]
-    print(len(col))
     dfs = sample_from_main(main, y_type='yoy', part=1, q=3)  # part=1: i.e. test over entire 150k records
-    return dfs[0], col
+    x, y = dfs[0]
+    return x, y, col
 
 x, y, col = load()
 
