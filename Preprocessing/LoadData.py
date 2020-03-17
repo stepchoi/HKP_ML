@@ -138,19 +138,19 @@ class clean_set:
             return self.train_x, None
 
     def yoy(self, q): # qcut y with train_y cut_bins
-        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(q), retbins=True)
+        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(q), retbins=True, duplicates=drop)
         print('qcut labels:', range(q))
 
         try:
-            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q)) # can work without test set
+            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q), duplicates=drop) # can work without test set
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
             return self.train_yoy.astype(np.int8), None
 
     def qoq(self, q): # qcut y with train_y cut_bins
-        self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=range(q), retbins=True)
+        self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=range(q), retbins=True, duplicates=drop)
         try:
-            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q)) # can work without test set
+            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q), duplicates=drop) # can work without test set
             return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
         except:
             return self.train_qoq.astype(np.int8), None
