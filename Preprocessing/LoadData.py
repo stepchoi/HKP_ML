@@ -138,12 +138,16 @@ class clean_set:
             return self.train_x, None
 
     def yoy(self, q): # qcut y with train_y cut_bins
-        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, retbins=True, duplicates='drop')
-        self.train_yoy = self.train_yoy.replace(set(self.train_yoy), range(len(set(self.train_yoy))))
+        while q > 0:
+            try:
+                self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(q), retbins=True, duplicates='drop')
+                print(q, True)
+                break
+            except:
+                print(q, False)
+                q += 1
+                continue
         print(set(self.train_yoy))
-        print(range(len(set(self.train_yoy))))
-        print(self.train_yoy)
-
         print('qcut labels:', range(q))
 
         try:
@@ -323,4 +327,3 @@ if __name__ == "__main__":
     pass
     # d = dt.datetime.today().strftime('%Y%M%d')
     # print('time{}'.format(d))
-    
