@@ -145,7 +145,7 @@ class clean_set:
                 break
             except:
                 print(q, False)
-                q += 1
+                q -= 1
                 continue
         print(set(self.train_yoy))
         print('qcut labels:', range(q))
