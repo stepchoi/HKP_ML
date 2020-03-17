@@ -13,6 +13,7 @@
 import datetime as dt
 import gc
 import time
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -147,8 +148,9 @@ class clean_set:
                 print(q, False)
                 q -= 1
                 continue
-        print('qcut labels:', set(self.train_yoy))
 
+        print('qcut labels:', set(self.train_yoy))
+        print('y qcut label counts:', Counter(self.train_yoy))
         try:
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
@@ -165,7 +167,8 @@ class clean_set:
                 print(q, False)
                 q -= 1
                 continue
-        print('qcut labels:', set(self.train_yoy))
+        print('qcut labels:', set(self.train_qoq))
+        print('y qcut label counts:', Counter(self.train_qoq))
 
         try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
