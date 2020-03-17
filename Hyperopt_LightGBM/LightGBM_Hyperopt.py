@@ -39,10 +39,10 @@ space = {
 space_check = {
     # check
     'num_boost_round': hp.choice('num_boost_round', [100, 1000]),
-    'learning_rate': hp.choice('learning_rate', [0.1, 1, 5]),
+    'learning_rate': hp.choice('learning_rate', [1, 5]),
 
     # dimension
-    'reduced_dimension' : 573,
+    'reduced_dimension' : 0.7,
 
     # better accuracy
     'boosting_type': 'gbdt',
@@ -96,7 +96,7 @@ x, y, col = load()
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
 
-    method = None
+    method = 'PCA'
 
     x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2)
     x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
@@ -140,11 +140,11 @@ def LightGBM(space):
                     early_stopping_rounds=150)
 
     # print and save feature importance for model
-    importance = gbm.feature_importance(importance_type='split')
-    print(col)
-    feature_importance = pd.DataFrame({'feature_name': col, 'importance': importance})
-    print(feature_importance)
-    feature_importance.to_csv('feature_importance.csv', index=False)
+    # importance = gbm.feature_importance(importance_type='split')
+    # print(col)
+    # feature_importance = pd.DataFrame({'feature_name': col, 'importance': importance})
+    # print(feature_importance)
+    # feature_importance.to_csv('feature_importance.csv', index=False)
 
     # predict Y
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
@@ -197,11 +197,11 @@ def main(space, max_evals):
             records.loc[row, i] = record['result'][i]
         row = row + 1
 
-    records.to_csv(os.getcwd()+'/records/' + save_name)
+    records.to_csv(save_name)
     print(best)
 
 if __name__ == "__main__":
-    main(space=space_check_full, max_evals=1)
-    # main(space=space_check, max_evals=10)
+    # main(space=space_check_full, max_evals=1)
+    main(space=space_check, max_evals=5)
 
     print('x shape before PCA:', x.shape)
