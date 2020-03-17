@@ -1,14 +1,32 @@
 import pandas as pd
 from sqlalchemy import create_engine
 
-def check_print(df_list):
+def check_print(df_list, sort=True):
+    import os
     df = pd.concat(df_list, axis=1)
-    col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
-    df = df.reindex(col, axis=1)
+    if sort==True:
+        col = ['gvkey','datacqtr'] + [x for x in sorted(df.columns) if x not in ['gvkey','datacqtr']]
+        df = df.reindex(col, axis=1)
     df.to_csv('check.csv')
 
     os.system("open -a '/Applications/Microsoft Excel.app' 'check.csv'")
     exit(0)
+
+def remove_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
+    y_series = dep[y_type].dropna()
+
+    if by == 'stv': # remove outlier by standard deviation
+        y_clean = y_series.where(np.abs(stats.zscore(y_series)) < 5).dropna()
+        idx = y_clean.index
+
+    elif by == 'quantile': # remove outlier by top/bottom percentage
+        Q1 = y_series.quantile(0.01)
+        Q3 = y_series.quantile(0.99)
+        y_clean = y_series.mask((y_series < Q1) | (y_series > Q3)).dropna()
+        idx = y_clean.index
+    else:
+        print("Error: 'by' can only be 'stv' or 'quantile'.")
+    return dep.loc[idx]
 
 def delete_high_zero_row(missing_dict):
     df_zero_series = pd.concat(missing_dict, axis = 1).sum(axis=1)

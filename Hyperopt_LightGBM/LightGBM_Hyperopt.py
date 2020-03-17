@@ -86,9 +86,6 @@ space_check_full = {
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
-feature_importance = pd.DataFrame()
-
-
 def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     print(main.describe())
@@ -148,10 +145,10 @@ def LightGBM(space):
     feature_name = booster.feature_name()
     feature_importance = pd.DataFrame({'feature_name': feature_name, 'importance': importance})
     feature_importance.to_csv('feature_importance.csv', index=False)
-
     print('Feature importances:', list(gbm.feature_importance()))
     feature_importance.append(list(gbm.feature_importance()), ignore_index=True)
 
+    # predict Y
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
     Y_valid_pred_softmax = gbm.predict(X_valid, num_iteration=gbm.best_iteration)
@@ -165,6 +162,7 @@ def f(space):
 
     Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred = LightGBM(space)
 
+    # why result is dictionary???????
     result = {'loss': - accuracy_score(Y_test, Y_test_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
             'accuracy_score_valid': accuracy_score(Y_valid, Y_valid_pred),
@@ -202,8 +200,6 @@ def main(space, max_evals):
         row = row + 1
 
     records.to_csv(save_name)
-    feature_importance.to_csv('feature_importance.csv')
-
     print(best)
 
 if __name__ == "__main__":

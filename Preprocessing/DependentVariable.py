@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from LoadData import convert_to_float32
 from PrepareDatabase import drop_nonseq
-from scipy import stats
 from sqlalchemy import create_engine
 
 
@@ -21,31 +20,36 @@ def load_data_y(y='niq'):
 
     return dep
 
+def trim_outlier(df, prc=0.10):
+    pmax = df.quantile(q=(1-prc), axis=0)
+    print(pmax)
+    df = df.mask(df>pmax,pmax, axis=1)
+    return df
 
-def qoq_yoy(dep, abs_version):
-    dep = drop_nonseq(dep)
+def qoq_yoy(df, trim=False, pmax=None):
+
+    df = drop_nonseq(df)
 
     # convert to qoq, yoy
-    dep['next1_abs'] = dep.groupby('gvkey').apply(lambda x: x['niq'].shift(-1)).to_list()
+    df['next1_abs'] = df.groupby('gvkey').apply(lambda x: x['niq'].shift(-1)).to_list()
 
-    if abs_version == False:
-        dep['qoq'] = dep['next1_abs'].div(dep['niq']).sub(1)  # T1/T0
-    else:
-        dep['qoq'] = (dep['next1_abs'] - dep['niq']).div(np.abs(dep['niq']))  # T1/T0 - absolute version
+    df['qoq'] = df['next1_abs'].div(df['niq']).sub(1)  # T1/T0
 
-    dep['past4_abs'] = dep.groupby('gvkey').apply(
-        lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
-    dep['next4_abs'] = dep.groupby('gvkey').apply(
-        lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
+    df['past4_abs'] = df.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
+    df['next4_abs'] = df.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
 
-    if abs_version == False:
-        dep['yoy'] = dep['next4_abs'].div(dep['past4_abs']).sub(1)  # T4/T0
-    else:
-        dep['yoy'] = (dep['next4_abs'] - dep['past4_abs']).div(np.abs(dep['past4_abs']))  # T4/T0 - absolute version
+    df['yoy'] = df['next4_abs'].div(df['past4_abs']).sub(1)  # T4/T0
+    df = df.filter(['gvkey', 'datacqtr', 'qoq', 'yoy'])
 
-    dep = dep.filter(['gvkey', 'datacqtr', 'qoq', 'yoy'])
-    dep = dep.replace([np.inf, -np.inf], np.nan)
-    return dep
+    # print('before trim:', df.describe())
+
+    if trim == True:
+        print(pmax)
+        df[['qoq','yoy']] = df[['qoq','yoy']].mask(df[['qoq','yoy']] > pmax[['qoq','yoy']], pmax[['qoq','yoy']], axis=1)
+
+    # print('after trim:', df.describe())
+
+    return df
 
 
 def Timestamp(df):
@@ -54,54 +58,29 @@ def Timestamp(df):
     return df
 
 
-def main(abs_version=False):
+def main(neg_to_zero=False):
     dep = load_data_y()
-    dep = qoq_yoy(dep, abs_version)
-    dep = Timestamp(dep)
-    convert_to_float32(dep)
-    return dep
 
+    # use all positive value to decide the maximum
+    pre_dep = pd.concat([dep[['gvkey','datacqtr']], dep['niq'].mask(dep['niq'] <= 0, np.nan)],axis=1)
+    pre_dep = qoq_yoy(pre_dep, trim=False)
+    pmax_95 = pre_dep.quantile(0.95, axis=0)
+    print(pmax_95)
 
-def remove_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
-    y_series = dep[y_type].dropna()
-
-    if by == 'stv': # remove outlier by standard deviation
-        y_clean = y_series.where(np.abs(stats.zscore(y_series)) < 5).dropna()
-        idx = y_clean.index
-
-    elif by == 'quantile': # remove outlier by top/bottom percentage
-        Q1 = y_series.quantile(0.01)
-        Q3 = y_series.quantile(0.99)
-        y_clean = y_series.mask((y_series < Q1) | (y_series > Q3)).dropna()
-        idx = y_clean.index
-    else:
-        print("Error: 'by' can only be 'stv' or 'quantile'.")
-    return dep.loc[idx]
-
-if __name__ == '__main__':
-
-    # dep = main(abs_version=False)
-    # dep.to_csv('niq.csv', index=False)
-    # print(dep.describe())
-    #
-    # dep1 = main(abs_version=True)
-    # dep1.to_csv('niq_abs.csv', index=True)
-    # print(dep1.describe())
-    # exit(0)
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
-
-    # dep = pd.read_csv('niq.csv')
-    dep = pd.read_csv('niq_abs.csv')
-    print(len(dep))
-    # dep = remove_outliers(y_type='qoq', dep=dep, by='quantile')    # remove outlier for qoq
-    # print(len(dep))
-    # print(dep.describe())
-
-
-    dep = remove_outliers(y_type='yoy', dep=dep, by='quantile')  # remove outlier for yoy
-    print(len(dep))
+    # clean negative value -> 0 (use 0.000001 to facilitate calculation)
+    dep['niq'] = dep['niq'].mask(dep['niq']<0,float(1e-6))
+    dep = qoq_yoy(dep, trim=True, pmax=pmax_95)
     print(dep.describe())
 
+    # convert datacqtr to timestamp
+    dep = Timestamp(dep)
+    convert_to_float32(dep)
+    dep.to_csv('niq.csv', index=False)
+    return dep
+
+if __name__ == '__main__':
+    main()
+    # print(1/15)
 
 
 

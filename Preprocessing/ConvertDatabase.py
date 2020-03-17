@@ -16,6 +16,7 @@ from PrepareDatabase import select_variable
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
+trim = {}
 
 def check_print(df_list):
     df = pd.concat(df_list, axis=1)
@@ -27,7 +28,7 @@ def check_print(df_list):
     exit(0)
 
 # 1: convert
-def convert(abs_version):
+def convert():
 
     # import engine, select variables, import raw database
     try:
@@ -40,9 +41,13 @@ def convert(abs_version):
         engine = create_engine(db_string)
         raw = pd.read_sql('SELECT * FROM raw_main', engine)
 
-    convert_to_float32(raw)
+    raw[['atq','revtq']] = raw[['atq','revtq']].mask(raw[['atq','revtq']] < 0, np.nan)
+    # print(raw[['atq','revtq']].where(raw[['atq','revtq']] < 0).count())
 
-    def convert_format(df, dic, abs_version):
+    convert_to_float32(raw)
+    select, engine = select_variable()  # dictionary with variables based on selection criteria
+
+    def convert_format(df, dic, trim=False):
 
         # convert raw dataset to desired formats (YoY, QoQ, Log)
         # groupby 'gvkey'
@@ -56,65 +61,71 @@ def convert(abs_version):
         print('------ start conversion -------')
 
         # special: convert dividend to rolling 4 period sum
-        df['dvy_q'] = df.groupby('gvkey').apply(lambda x: x['dvy_q'].rolling(4, min_periods=1).sum()).reset_index(
-            drop=True)
+        df['dvy_q'] = df['dvy_q'].rolling(4, min_periods=4).sum()
+        df['dvy_q'] = df['dvy_q'].mask(df['dvy_q'] < 0, float(1e-6))
+        df['dvy_q'].iloc[df.groupby('gvkey').head(4).index] = np.nan
         print('finish dividends rolling accural conversion')
 
         # qoq conversion
-        if abs_version == False:
-            qoq = df[dic['qoq']].div(df[dic['qoq']].shift(1)).sub(1).reset_index(drop=True)
-            print('abs_version is', abs_version)
-        else:
-            qoq = (df[dic['qoq']]-df[dic['qoq']].shift(1)).div(np.abs(df[dic['qoq']].shift(1))).reset_index(drop=True) # absolute version
+        qoq = df[dic['qoq']].pct_change(periods=1)
         qoq.iloc[df.groupby('gvkey').head(1).index] = np.nan
         qoq.columns = convert_select['qoq']
-
+        # qoq = trim_outlier(qoq,max=4)
         print('finish qoq conversion')
 
         # yoy conversion
-        if abs_version == False:
-            yoy = df[dic['yoy']].div(df[dic['yoy']].shift(4)).sub(1).reset_index(drop=True)
-        else:
-            yoy = (df[dic['yoy']]-df[dic['yoy']].shift(4)).div(np.abs(df[dic['yoy']].shift(4))).reset_index(drop=True) # absolute version
-
+        yoy = df[dic['yoy']].pct_change(periods=4)
         yoy.iloc[df.groupby('gvkey').head(4).index] = np.nan
         yoy.columns = convert_select['yoy']
+        # yoy = trim_outlier(yoy)
         print('finish yoy conversion')
 
         # ln(*/atq + 1) conversion
-        atq = np.log(df[dic['atq']].apply(lambda x: x.div(df['atq']).add(1).replace([np.inf, -np.inf], np.nan)))
+        atq = np.log(df[dic['atq']].apply(lambda x: x.div(df['atq']).add(1)))
         atq.columns = convert_select['atq']
+        # atq = trim_outlier(atq,prc=0.01)
         print('finish atq conversion')
 
         # ln(*/revtq + 1) conversion
-        revtq = np.log(df[dic['revtq']].apply(lambda x: x.div(df['revtq']).add(1).replace([np.inf, -np.inf], np.nan)))
+        revtq = np.log(df[dic['revtq']].apply(lambda x: x.div(df['revtq']).add(1)))
         revtq.columns = convert_select['revtq']
+        # revtq = trim_outlier(revtq,prc=0.01)
         print('finish revtq conversion')
-
         dic.update(convert_select)
 
+        # trim outliers
+        if trim == True:
+            qoq = qoq.mask(qoq > pmax_95[qoq.columns], pmax_95[qoq.columns], axis=1)
+            yoy = yoy.mask(yoy > pmax_95[yoy.columns], pmax_95[yoy.columns], axis=1)
+            revtq = revtq.mask(revtq > pmax_99[revtq.columns], pmax_99[revtq.columns], axis=1)
+            atq = atq.mask(atq > pmax_99[atq.columns], pmax_99[atq.columns], axis=1)
+
         df_converted = pd.concat([label_nom, qoq, yoy, atq, revtq], axis=1) # concat all formats
-        df_converted = df_converted.replace([np.inf, -np.inf], np.nan)
 
-        def missing_count(df):
-            df = pd.DataFrame(df.isnull().sum(), columns=['missing']).reset_index(drop=False)
-            sp = pd.DataFrame([x.rsplit('_', 1) for x in df['index']])
-            df[['name', 'format']] = sp
-            df.to_csv('df_missing.csv')
-            print('export df_missing.csv')
-
-        # missing_count(df_converted)
-        # convert_to_float32(df_converted)
-        # df_converted.to_csv('main_convert.csv', index=False)
-
-        print('shape of df_converted is ', df_converted.shape)
-
-        print(df_converted['niq_qoq'].describe())
-        exit(0)
+        print('shape of df_converted is', df_converted.shape)
         return df_converted, dic
 
-    select, engine = select_variable()  # dictionary with variables based on selection criteria
-    main, select = convert_format(raw, select, abs_version)
+    dvy1 = pd.DataFrame()
+    dvy1['dvy_q_1'] = raw['dvy_q']
+
+    # remove negative value to zero
+    pre_raw = pd.concat([raw[['gvkey','datacqtr']], raw.iloc[:, 3:].mask(raw.iloc[:, 3:] <= 0, np.nan)],axis=1)
+    pre_main, select = convert_format(pre_raw, select, trim=False)
+    pmax_95 = pre_main.quantile(0.95, axis=0)
+    pmax_99 = pre_main.quantile(0.99, axis=0)
+
+
+    # official convert & remove outlier
+    select, engine = select_variable()
+    raw = pd.concat([raw[['gvkey','datacqtr']], raw.iloc[:, 3:].mask(raw.iloc[:, 3:] < 0, float(1e-6))],axis=1)
+    main, select = convert_format(raw, select, trim=True)
+
+    from Miscellaneous import check_print
+    check_print([raw[['gvkey','datacqtr','acchgq']], main['acchgq_qoq']], sort=True)
+    # check_print([main.describe().transpose()], sort=False)
+    main.describe().transpose().to_csv('1_trim_threshold.csv')
+
+
     print('coverted missing:', main.isnull().sum().sum())
     return main
 
@@ -126,14 +137,17 @@ def delete_high_missing(df, threshold):
     df['%_missing'] = df['#_missing']/333325
     df = df.filter(['index', 'name','format','#_missing','%_missing'])
 
+    df.to_csv('2_missing_rate.csv', index=False)
+
     del_col = []
     for name, g in df.groupby('name'):
         if 0 < len(g.loc[g['%_missing']>threshold]) < len(g) :  # if not all columns > missing rate threshold
             del_col.extend(g.loc[g['%_missing']>threshold, 'index'].to_list())
         elif len(g.loc[g['%_missing']>threshold]) == len(g):    # if all columns > missing rate threshold
             del_col.extend(g.sort_values(by = ['%_missing'])['index'].to_list()[1:])    # only append higher 2
-    print(len(del_col))
-    df.loc[df['name'].isin(del_col)].to_csv('delete_high_missing.csv', index=False) # absolute version
+    print('# of high missing columns deleted:', len(del_col))
+
+    df.loc[df['name'].isin(del_col)].to_csv('3_delete_high_missing.csv', index=False)
     return del_col
 
 # 3: fillna
@@ -200,8 +214,8 @@ def fillna(df):
 
         rolling_period_series = pd.DataFrame.from_dict(diff_dict, orient='index').idxmin() # find minimum error option
 
-        pd.DataFrame.from_dict(diff_dict, orient='index').to_csv('optimal_rolling_period_full.csv')
-        pd.DataFrame(rolling_period_series).to_csv('rolling_period.csv')
+        pd.DataFrame.from_dict(diff_dict, orient='index').to_csv('4_optimal_rolling_period_full.csv')
+        pd.DataFrame(rolling_period_series).to_csv('5_rolling_period.csv')
 
         return rolling_period_series
 
@@ -237,10 +251,10 @@ def fillna(df):
 
     s4 = df.isnull().sum().sum() # counting
     del_row_na2 = df[del_row].isnull().sum()
-    pd.concat([del_row_na1,del_row_na2],axis=1).to_csv('important_col_nan.csv')
+    pd.concat([del_row_na1,del_row_na2],axis=1).to_csv('6_important_col_nan.csv')
     fillna_count['fill in rest missing'] = s3 - s4
     fillna_count['ending'] = s4
-    pd.DataFrame.from_dict(fillna_count, orient='index').to_csv('fillna_count.csv')
+    pd.DataFrame.from_dict(fillna_count, orient='index').to_csv('7_fillna_count.csv')
 
     return df, del_row
 
@@ -264,24 +278,24 @@ def check_correlation(df, del_row, threshold=0.9):
 
     so.loc[so['v1'].isin(high_corr_col),'exist_v1'] = 1
     so.loc[so['v2'].isin(high_corr_col),'exist_v2'] = 1
-    so.to_csv('high_corr.csv',index=False)
+    so.to_csv('8_high_corr.csv',index=False)
     return high_corr_col
 
-def main(abs_version=False):
+def main():
 
     # 1: convert
     try:
         main = pd.read_csv('main_convert.csv')
         print('local version running - main_convert')
     except:
-        main = convert(abs_version)
+        main = convert()
     col_dict = pd.DataFrame(index = main.columns)
     convert_to_float32(main)
 
     # 2. delete high_missing if exists other formats
     del_col = delete_high_missing(main, 0.7)
     main = main.drop(main[del_col], axis = 1)
-    print(main.shape)
+    print('after delele high missing', main.shape)
     col_dict.loc[main.columns, 'low_missing'] = 1
 
     # 3: fillna
@@ -293,28 +307,13 @@ def main(abs_version=False):
     # del_corr = ['xsgaq_qoq', 'gdwlq_atq', 'cogsq_qoq']  # same for both forward & rolling version
     main = main.drop(main[high_corr_col], axis=1)
     col_dict.loc[main.columns, 'low_correlation'] = 1
-    col_dict.to_csv('columns_after_conversion.csv')
+    col_dict.to_csv('9_columns_after_conversion.csv')
 
     convert_to_float32(main)
     main.to_csv('main.csv', index=False)
+    print('final shape:', main.shape)
     print(main['niq_qoq'].describe())
 
 
 if __name__ == "__main__":
-
-    # main(abs_version=True)
-    df1 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/abs_version/main_abs.csv')
-    pd.concat([df1.quantile(0.05), df1.quantile(0.95)], axis=1).to_csv('describe-abs5.csv')
-    pd.concat([df1.quantile(0.02), df1.quantile(0.98)], axis=1).to_csv('describe-abs2.csv')
-    pd.concat([df1.quantile(0.01), df1.quantile(0.99)], axis=1).to_csv('describe-abs1.csv')
-    # print(df1.quantile(0.01))
-
-    exit(0)
-    #
-    df2 = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/nom_version/main.csv')
-    # print(df2['niq_qoq'].describe())
-    # print(all([False, True]))
-    print(all(df1['niq_qoq']==df2['niq_qoq']))
-    # print(all(df1==df2))
-
-    # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    main()

@@ -17,7 +17,6 @@ import time
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from scipy import stats
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from sqlalchemy import create_engine
@@ -38,6 +37,7 @@ def convert_to_float32(df):
     ''''This def convert float64 to float32 to save memory usage.'''
 
     df.loc[:, df.dtypes == np.float64] = df.loc[:, df.dtypes == np.float64].astype(np.float32)
+    df.loc[:, df.dtypes == np.int64] = df.loc[:, df.dtypes == np.int64].astype(np.int32)
 
 def add_lag(df, lag_year): # df is TABLE main, lag_year for original model design is 5 years
 
@@ -88,25 +88,6 @@ def merge_dep_macro(df, sql_version):
     convert_to_float32(dep)
     convert_to_float32(macro)
     convert_to_float32(stock)
-
-    def remove_outliers(y_type, dep, by):  # remove outlier from both 'yoy' & 'qoq' y_type
-        y_series = dep[y_type].dropna()
-
-        if by == 'stv': # remove outlier by standard deviation
-            y_clean = y_series.where(np.abs(stats.zscore(y_series)) < 5).dropna()
-            idx = y_clean.index
-
-        elif by == 'quantile': # remove outlier by top/bottom percentage
-            Q1 = y_series.quantile(0.01)
-            Q3 = y_series.quantile(0.99)
-            y_clean = y_series.mask((y_series < Q1) | (y_series > Q3)).dropna()
-            idx = y_clean.index
-        else:
-            print("Error: 'by' can only be 'stv' or 'quantile'.")
-        return dep.loc[idx]
-
-    # dep = remove_outliers(y_type='qoq', dep=dep, by='stv')    # remove outlier for qoq
-    dep = remove_outliers(y_type='yoy', dep=dep, by='quantile')    # remove outlier for yoy
 
     dep['datacqtr'] = pd.to_datetime(dep['datacqtr'],format='%Y-%m-%d') # convert to timestamp
     macro['datacqtr'] = pd.to_datetime(macro['datacqtr'],format='%Y-%m-%d')
@@ -333,13 +314,7 @@ def final_check():
     # print(type(y_qoq), Counter(y_qoq))
 
 if __name__ == "__main__":
-    d = dt.datetime.today().strftime('%Y%M%d')
-    print('time{}'.format(d))
-
-
-
-
-
-
-
-
+    pass
+    # d = dt.datetime.today().strftime('%Y%M%d')
+    # print('time{}'.format(d))
+    

@@ -4,11 +4,18 @@ from LoadData import convert_to_float32
 from PrepareDatabase import drop_nonseq
 from sqlalchemy import create_engine
 
+def trim_outlier(df, prc=0.01):
+    pmax = df.quantile(q=(1-prc))
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(pmax)
+    df = df.mask(df>pmax,pmax)
+    return df
+
 def import_sp():
     try:
         import os
-        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
-        sp = pd.read_csv('macro_main.csv', usecols=['datacqtr', 'S&P_qoq'])
+        os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
+        sp = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/macro_main.csv', usecols=['datacqtr', 'S&P_qoq'])
         stock = pd.read_csv('stock_raw.csv', usecols=['gvkey', 'datadate', 'prccm'])
     except:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
@@ -37,13 +44,20 @@ def main():
     del stock['month']
 
     new = pd.merge(stock, sp, how='left', on='datacqtr')    # merge individual stock price & s&p500 from macro_main
+    new_ret = new['stock_price'].pct_change(periods=1)
+    new_ret.iloc[new.groupby('gvkey').head(1).index] = np.nan
 
-    new_ret = new.groupby('gvkey').apply(lambda x: x['stock_price'].pct_change(periods=1)).reset_index(drop=True)   # qoq return for stock
     new = pd.concat([new, new_ret], axis =1)
     new.columns = ['gvkey','datacqtr','stock_price','S&P_qoq','stock_ret']
-    new = new.replace([np.inf, -np.inf], np.nan)
+
+    # trim outlier by a maximum value
+    print(new.describe())
+    new['stock_ret'] = trim_outlier(new['stock_ret'])
+    print(new.describe())
+
     new['return'] = new['stock_ret'] - new['S&P_qoq']   # calculate relative return to equivalent S&P500 return
     convert_to_float32(new)
+
     new = new.filter(['gvkey','datacqtr','return'])
     print(new.info())
     new.to_csv('stock_main.csv', index=False)
