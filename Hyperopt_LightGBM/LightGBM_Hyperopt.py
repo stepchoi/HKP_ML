@@ -12,7 +12,7 @@ from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', [475, 573, 709]), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', [0.66, 0.70, 0.75]), # past: [508, 624, 757]
 
     # better accuracy
     'learning_rate': hp.choice('learning_rate', [0.01, 0.05, 0.1, 0.5, 1]),
@@ -39,8 +39,8 @@ space = {
 
 space_check = {
     # check
-    'num_boost_round': hp.choice('num_boost_round', [10, 100, 1000]),
-    'learning_rate': hp.choice('learning_rate', [0.0001, 0.001, 0.01, 0.1, 1, 5]),
+    'num_boost_round': hp.choice('num_boost_round', [100, 1000]),
+    'learning_rate': hp.choice('learning_rate', [0.1, 1, 5]),
 
     # dimension
     'reduced_dimension' : 573,
@@ -125,6 +125,7 @@ def LightGBM(space):
     method = None # change to 'PCA'/'AE'
 
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'])
+    print('x_train shape after PCA:', X_train.shape)
 
     params = space.copy()
     params.pop('reduced_dimension')
@@ -202,6 +203,8 @@ def main(space, max_evals):
     print(best)
 
 if __name__ == "__main__":
-    main(space=space_check_full, max_evals=1)
-    print(x.shape)
-    print(x.columns)
+    # main(space=space_check_full, max_evals=1)
+    main(space=space_check, max_evals=10)
+
+    print('x shape before PCA:', x.shape)
+    print('x columns before PCA:', x.columns)
