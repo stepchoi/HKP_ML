@@ -90,10 +90,14 @@ def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     print(main.describe())
     main = main.drop_duplicates(subset = ['gvkey','datacqtr'])
-    dfs = sample_from_main(main, y_type='yoy', part=1, q=3)  # part=1: i.e. test over entire 150k records
-    return dfs[0]
+    print(main.describe())
 
-x, y = load()
+    col = main.columns[2:-2]
+    print(len(col))
+    dfs = sample_from_main(main, y_type='yoy', part=1, q=3)  # part=1: i.e. test over entire 150k records
+    return dfs[0], col
+
+x, y, col = load()
 
 def Dimension_reduction(reduced_dimensions, method='PCA'):
 
@@ -142,8 +146,8 @@ def LightGBM(space):
 
     # print and save feature importance for model
     importance = gbm.feature_importance(importance_type='split')
-    feature_name = gbm.feature_name()
-    feature_importance = pd.DataFrame({'feature_name': feature_name, 'importance': importance})
+    print(col)
+    feature_importance = pd.DataFrame({'feature_name': col, 'importance': importance})
     print(feature_importance)
     feature_importance.to_csv('feature_importance.csv', index=False)
 
@@ -198,7 +202,7 @@ def main(space, max_evals):
             records.loc[row, i] = record['result'][i]
         row = row + 1
 
-    records.to_csv(save_name)
+    records.to_csv(os.getcwd()+'/records/' + save_name)
     print(best)
 
 if __name__ == "__main__":
