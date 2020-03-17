@@ -66,8 +66,8 @@ space_check = {
     }
 
 space_check_full = {
-    'num_boost_round': 10,
-    'reduced_dimension': 573,
+    'num_boost_round': 1000,
+    'reduced_dimension': 0.7,
     'learning_rate': 0.1,
     'boosting_type': 'gbdt',
     'max_bin': 255,
