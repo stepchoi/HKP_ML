@@ -176,7 +176,7 @@ def f(space):
     return result
 
 def main(space, max_evals, name=''):
-    print('-------------------- start hyperopt for lightgbm --------------------')
+    print('-------------------- start hyperopt for lightgbm {} --------------------'.format(name))
 
     d = dt.datetime.today().strftime('%Y%m%d')
     save_name = 'records_{}_{}.csv'.format(d, name)
