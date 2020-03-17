@@ -175,11 +175,11 @@ def f(space):
 
     return result
 
-def main(space, max_evals):
+def main(space, max_evals, name=''):
     print('-------------------- start hyperopt for lightgbm --------------------')
 
     d = dt.datetime.today().strftime('%Y%m%d')
-    save_name = 'records_{}.csv'.format(d)
+    save_name = 'records_{}_{}.csv'.format(d, name)
 
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals,
@@ -202,6 +202,6 @@ def main(space, max_evals):
 if __name__ == "__main__":
     x, y, col = load(q=7)
     # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=50)
+    main(space=space, max_evals=50, name='qcut7')
 
     print('x shape before PCA:', x.shape)
