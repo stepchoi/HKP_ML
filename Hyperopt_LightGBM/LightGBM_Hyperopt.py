@@ -12,28 +12,28 @@ from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', [0.66, 0.70, 0.75]), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', [0.66, 0.70, 0.75, 0.8]), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', [0.01, 0.05, 0.1, 0.5, 1]),
+    'learning_rate': hp.choice('learning_rate', [0.05, 0.075, 0.1, 0.3, 0.5]),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [200, 255, 300]),
-    'num_leaves': hp.choice('num_leaves', [100, 200, 300]),
+    'num_leaves': hp.choice('num_leaves', [50, 100, 150, 200]),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', [250, 500, 750]),
-    'feature_fraction': hp.choice('feature_fraction', [0.4, 0.6, 0.8]),
-    'bagging_fraction': hp.choice('bagging_fraction', [0.4, 0.6, 0.8]),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', [500, 750, 1200]),
+    'feature_fraction': hp.choice('feature_fraction', [0.2, 0.4, 0.6, 0.8]),
+    'bagging_fraction': hp.choice('bagging_fraction', [0.2, 0.4, 0.6, 0.8]),
     'bagging_freq': hp.choice('bagging_freq', [2, 5, 8]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', [0.05, 0.2, 0.4]),
-    'lambda_l1': hp.choice('lambda_l1', [0, 0.4, 1]),
-    'lambda_l2': hp.choice('lambda_l2', [0, 0.5, 1, 5]),
+    'min_gain_to_split': hp.choice('min_gain_to_split', [0.2, 0.3, 0.4, 0.8]),
+    'lambda_l1': hp.choice('lambda_l1', [0.4, 1, 2]),
+    'lambda_l2': hp.choice('lambda_l2', [1, 5, 15, 45]),
 
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 6,
     'metric': 'multi_error',
-    'num_boost_round': 100,
+    'num_boost_round': 1000,
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
@@ -205,6 +205,6 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
 
     # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=50, name='qcut{}'.format(qcut_q))
+    main(space=space, max_evals=100, name='qcut{}'.format(qcut_q))
 
     print('x shape before PCA:', x.shape)
