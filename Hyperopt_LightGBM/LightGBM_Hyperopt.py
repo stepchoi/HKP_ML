@@ -18,7 +18,7 @@ space = {
     'learning_rate': hp.choice('learning_rate', [0.01, 0.05, 0.1, 0.5, 1]),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [200, 255, 300]),
-    'num_leaves': hp.choice('num_leaves', [200, 300, 400]),
+    'num_leaves': hp.choice('num_leaves', [100, 200, 300]),
 
     # avoid overfit
     'min_data_in_leaf': hp.choice('min_data_in_leaf', [250, 500, 750]),
@@ -200,7 +200,7 @@ def main(space, max_evals, name=''):
     print(best)
 
 if __name__ == "__main__":
-    qcut_q = 15
+    qcut_q = 3
     x, y, col = load(q=qcut_q)
     space['num_class'] = qcut_q
 
