@@ -139,41 +139,43 @@ class clean_set:
             return self.train_x, None
 
     def yoy(self, q): # qcut y with train_y cut_bins
-        while q > 0:
+        label_q = q
+        while label_q > 0:
             try:
-                self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(q), retbins=True, duplicates='drop')
-                print(q, True)
+                self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(label_q), retbins=True, duplicates='drop')
+                print(label_q, True)
                 break
             except:
-                print(q, False)
-                q -= 1
+                print(label_q, False)
+                label_q -= 1
                 continue
 
         print('qcut labels:', set(self.train_yoy))
         print('y qcut label counts:', Counter(self.train_yoy))
         print('y qcut cut_bins:', cut_bins)
         try:
-            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
+            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(label_q), duplicates='drop') # can work without test set
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
             return self.train_yoy.astype(np.int8), None
 
     def qoq(self, q): # qcut y with train_y cut_bins
-        while q > 0:
+        label_q = q
+        while label_q > 0:
             try:
-                self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=q, labels=range(q), retbins=True,duplicates='drop')
-                print(q, True)
+                self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=q, labels=range(label_q), retbins=True,duplicates='drop')
+                print(label_q, True)
                 break
             except:
-                print(q, False)
-                q -= 1
+                print(label_q, False)
+                label_q -= 1
                 continue
         print('qcut labels:', set(self.train_qoq))
         print('y qcut label counts:', Counter(self.train_qoq))
         print('y qcut cut_bins:', cut_bins)
 
         try:
-            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
+            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(label_q), duplicates='drop') # can work without test set
             return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
         except:
             return self.train_qoq.astype(np.int8), None
