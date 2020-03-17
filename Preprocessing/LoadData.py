@@ -151,6 +151,7 @@ class clean_set:
 
         print('qcut labels:', set(self.train_yoy))
         print('y qcut label counts:', Counter(self.train_yoy))
+        print('y qcut cut_bins:', cut_bins)
         try:
             self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
@@ -169,6 +170,7 @@ class clean_set:
                 continue
         print('qcut labels:', set(self.train_qoq))
         print('y qcut label counts:', Counter(self.train_qoq))
+        print('y qcut cut_bins:', cut_bins)
 
         try:
             self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q), duplicates='drop') # can work without test set
