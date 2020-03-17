@@ -67,7 +67,7 @@ space_check = {
     }
 
 space_check_full = {
-    'num_boost_round': 1000,
+    'num_boost_round': 10,
     'reduced_dimension': 573,
     'learning_rate': 0.1,
     'boosting_type': 'gbdt',
@@ -90,7 +90,7 @@ def load():
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     print(main.describe())
     main = main.drop_duplicates(subset = ['gvkey','datacqtr'])
-    dfs = sample_from_main(main, y_type='yoy', part=1)  # part=1: i.e. test over entire 150k records
+    dfs = sample_from_main(main, y_type='yoy', part=1, q=3)  # part=1: i.e. test over entire 150k records
     return dfs[0]
 
 x, y = load()
@@ -144,9 +144,8 @@ def LightGBM(space):
     importance = booster.feature_importance(importance_type='split')
     feature_name = booster.feature_name()
     feature_importance = pd.DataFrame({'feature_name': feature_name, 'importance': importance})
+    print(feature_importance)
     feature_importance.to_csv('feature_importance.csv', index=False)
-    print('Feature importances:', list(gbm.feature_importance()))
-    feature_importance.append(list(gbm.feature_importance()), ignore_index=True)
 
     # predict Y
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
@@ -203,6 +202,6 @@ def main(space, max_evals):
     print(best)
 
 if __name__ == "__main__":
-    # main(space=space_check_full, max_evals=1)
+    main(space=space_check_full, max_evals=1)
     print(x.shape)
     print(x.columns)

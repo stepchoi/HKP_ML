@@ -137,19 +137,20 @@ class clean_set:
         except:
             return self.train_x, None
 
-    def yoy(self): # qcut y with train_y cut_bins
-        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=3, labels=[0, 1, 2], retbins=True)
+    def yoy(self, q): # qcut y with train_y cut_bins
+        self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(q), retbins=True)
+        print('qcut labels:', range(q))
 
         try:
-            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
+            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(q)) # can work without test set
             return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
         except:
             return self.train_yoy.astype(np.int8), None
 
-    def qoq(self): # qcut y with train_y cut_bins
-        self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=[0, 1, 2], retbins=True)
+    def qoq(self, q): # qcut y with train_y cut_bins
+        self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=3, labels=range(q), retbins=True)
         try:
-            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=[0, 1, 2]) # can work without test set
+            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(q)) # can work without test set
             return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
         except:
             return self.train_qoq.astype(np.int8), None
@@ -187,7 +188,7 @@ def load_data(lag_year = 5, sql_version = False):
 
     return main_lag # i.e. big table
 
-def train_test_clean(y_type, train, test = None): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
+def train_test_clean(y_type, train, test = None, q): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 
     '''This def consolidate steps 4 -> return (train_x, test_x, train_y, test_y)'''
 
@@ -203,13 +204,13 @@ def train_test_clean(y_type, train, test = None): # y_type = ['yoy','qoq']; trai
     train_x, test_x = main_period.standardize_x() # for x
 
     if y_type == 'yoy': # for y
-        train_y, test_y = main_period.yoy()
+        train_y, test_y = main_period.yoy(q=q)
     elif y_type == 'qoq':
-        train_y, test_y = main_period.qoq()
+        train_y, test_y = main_period.qoq(q=q)
 
     return train_x, test_x, train_y, test_y
 
-def sample_from_datacqtr(df, y_type, testing_period): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
+def sample_from_datacqtr(df, y_type, testing_period, q): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
 
     '''3.a. This def extract partial from big table with selected testing_period'''
 
@@ -219,9 +220,9 @@ def sample_from_datacqtr(df, y_type, testing_period): # df = big table; y_type =
     train = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]  # train df = 80 quarters
     test = df.loc[df['datacqtr'] == end]                                # test df = 1 quarter
 
-    return train_test_clean(y_type, train, test)
+    return train_test_clean(y_type, train, test, q=q)
 
-def sample_from_main(df, y_type, part=5): # df = big table; y_type = ['yoy','qoq']; part = cut big table into how many parts
+def sample_from_main(df, y_type, part=5, q=3): # df = big table; y_type = ['yoy','qoq']; part = cut big table into how many parts
 
     '''3.b. This def extract partial from big table by random sampling'''
 
@@ -233,7 +234,7 @@ def sample_from_main(df, y_type, part=5): # df = big table; y_type = ['yoy','qoq
 
     for i in range(part):
         set = df.iloc[s:(s + part_len)] # extract from big table
-        train_x, test_x, train_y, test_y = train_test_clean(y_type, set) # here has no test set, only enter each set as training sets
+        train_x, test_x, train_y, test_y = train_test_clean(y_type, set, q=q) # here has no test set, only enter each set as training sets
         dfs[i] = (train_x, train_y)
         s += part_len
 
