@@ -188,7 +188,7 @@ def load_data(lag_year = 5, sql_version = False):
 
     return main_lag # i.e. big table
 
-def train_test_clean(y_type, train, test = None, q): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
+def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 
     '''This def consolidate steps 4 -> return (train_x, test_x, train_y, test_y)'''
 
