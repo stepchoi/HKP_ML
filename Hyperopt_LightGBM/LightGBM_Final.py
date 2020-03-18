@@ -112,7 +112,12 @@ def eval(X_train, X_valid, X_test, Y_train, Y_valid, Y_test):
 
 def each_round(main, y_type, testing_period, n_components, valid_method, valid_no):
 
-    label_df = main.iloc[:, :2]
+    # retrieve gvkey, datacqtr columns for train_valid set from main
+    end = testing_period
+    start = testing_period - relativedelta(years=20) # define training period
+    label_df = main.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end),['gvkey','datacqtr']]
+    print(label_df.shape)
+
     X_train_valid, X_test, Y_train_valid, Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                         testing_period=testing_period, q=3)
 
