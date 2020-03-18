@@ -89,6 +89,6 @@ if __name__ == '__main__':
 
     # same_para('records_20200313')
     # eta_accuracy('records_20200313')
-    result_boxplot('records_20200315_PCA_abs100')
+    result_boxplot('records_20200317_qcut3')
     # round_eta_accuracy('records_eta_round_acc')
 

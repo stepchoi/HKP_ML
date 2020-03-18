@@ -159,7 +159,7 @@ class clean_set:
         except:
             return self.train_yoy.astype(np.int8), None
 
-    def qoq(self, q): # qcut y with train_y cut_bins
+    def qoq(self, q):
         label_q = q
         while label_q > 0:
             try:
