@@ -3,11 +3,11 @@ import gc
 
 import lightgbm as lgb
 import pandas as pd
-import tqdm
 from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, roc_auc_score, precision_score, recall_score, \
     accuracy_score
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
