@@ -6,19 +6,24 @@ from matplotlib import pyplot as plt
 from sklearn.linear_model import LinearRegression
 
 
-def result_boxplot(csv_name):
+def result_boxplot(csv_name, only_test = False):
     df = pd.read_csv(os.getcwd()+'/records/' + csv_name + '.csv')    # PCA_LightGBM_Hyperopt
+    df_num = df.iloc[:, 1:-8]
 
     # remove underfit
     # df = df.loc[df['learning_rate']==0.1]
 
     option = {}
-    for col in df:
+    scat = {}
+    for col in df_num:
         if len(set(df[col])) in np.arange(2,10,1):
             option[col] = set(df[col])
+        elif len(set(df[col])) > 10:
+            scat[col] = df[col]
 
-    fig = plt.figure(figsize=(20, 16), dpi=80)
-    n = round(len(option.keys())**0.5,0)+1
+
+    fig = plt.figure(figsize=(20, 16), dpi=120)
+    n = round((len(option.keys())+len(scat.keys()))**0.5,0)+1
     k = 1
     for i in option.keys():
         print(i, option[i])
@@ -41,9 +46,20 @@ def result_boxplot(csv_name):
                 patch.set(facecolor=fill_color)
 
         draw_plot(ax, data, label, 'red', 'tan')
-        draw_plot(ax, data2, label, 'blue', 'cyan')
+        if only_test == False:
+            draw_plot(ax, data2, label, 'blue', 'cyan')
+        else:
+            csv_name = csv_name+'_test'
         ax.set_title(i)
         k += 1
+
+    for i in scat.keys():
+        ax = fig.add_subplot(n, n, k)
+        ax.scatter(scat[i], df['accuracy_score_test'], df['accuracy_score_train'])
+        ax.set_title(i)
+        k+= 1
+
+
     fig.suptitle(csv_name, fontsize=14)
     fig.savefig(os.getcwd()+'/visuals/' + csv_name+'.png')
 
@@ -89,6 +105,6 @@ if __name__ == '__main__':
 
     # same_para('records_20200313')
     # eta_accuracy('records_20200313')
-    result_boxplot('records_20200317_qcut3')
+    result_boxplot('records_20200318_qcut3_200', only_test=True)
     # round_eta_accuracy('records_eta_round_acc')
 

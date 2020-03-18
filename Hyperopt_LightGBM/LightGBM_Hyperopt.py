@@ -17,17 +17,17 @@ space = {
     # better accuracy
     'learning_rate': hp.uniform('learning_rate', 0.075, 0.1),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
-    'max_bin': hp.choice('max_bin', [128, 200, 255]),
-    'num_leaves': hp.choice('num_leaves', [50, 75, 100, 125, 150]),
+    'max_bin': hp.choice('max_bin', [63, 127, 255]),
+    'num_leaves': hp.quniform('num_leaves', 50, 125, 5),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', [750, 1200, 1800]),
-    'feature_fraction': hp.choice('feature_fraction', [0.1, 0.2, 0.3, 0.4, 0.6]),
-    'bagging_fraction': hp.choice('bagging_fraction', [0.1, 0.2, 0.3, 0.4, 0.6]),
-    'bagging_freq': hp.choice('bagging_freq', [1, 2, 3, 5]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', [0.6, 0.8, 1.2, 2.4]),
-    'lambda_l1': hp.choice('lambda_l1', [2, 5, 10]),
-    'lambda_l2': hp.choice('lambda_l2', [15, 45, 135, 270]),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', [1800, 2400, 3200]),
+    'feature_fraction': hp.choice('feature_fraction', [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
+    'bagging_fraction': hp.uniform('bagging_fraction', 0.2, 0.4),
+    'bagging_freq': hp.choice('bagging_freq', [2, 3, 4, 5]),
+    'min_gain_to_split': hp.choice('min_gain_to_split', [0.5, 0.6, 0.7, 1.0, 1.2, 1.8, 3.2, 6.4]),
+    'lambda_l1': hp.choice('lambda_l1', [3, 5, 7, 15]),
+    'lambda_l2': hp.choice('lambda_l2', [270, 400, 540, 800]),
 
     # parameters won't change
     'objective': 'multiclass',
@@ -127,8 +127,8 @@ def LightGBM(space):
 
     params = space.copy()
     params.pop('reduced_dimension')
-    print(X_train.shape)
-    
+    params['num_leaves'] = int(params['num_leaves'])
+
     lgb_train = lgb.Dataset(X_train, Y_train,  free_raw_data=False)
     lgb_valid = lgb.Dataset(X_valid, Y_valid,  reference=lgb_train, free_raw_data=False)
 
