@@ -13,16 +13,16 @@ from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arrange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', np.arrange(0.75, 1.0, 0.05)),
+    'learning_rate': hp.choice('learning_rate', np.arange(0.75, 1.0, 0.05)),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [31, 63, 127, 255]),
     'num_leaves': hp.choice('num_leaves', [20, 30, 50, 100, 115, 125]),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arrange(750, 1800, 150, dtype=int)),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(750, 1800, 150, dtype=int)),
     'feature_fraction': hp.choice('feature_fraction', [0.3, 0.4, 0.5, 0.6]),
     'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.3, 0.4, 0.02)),
     'bagging_freq': hp.choice('bagging_freq', [3, 4]),
