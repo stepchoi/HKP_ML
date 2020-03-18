@@ -50,8 +50,8 @@ def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid):
     '''
 
     '''Training'''
-    lgb_train = lgb.Dataset(X_train, label=y_train, free_raw_data=False)
-    lgb_eval = lgb.Dataset(X_valid, label=y_valid, reference=lgb_train, free_raw_data=False)
+    lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
+    lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
 
     print('Starting training...')
     gbm = lgb.train(params_over,
@@ -116,7 +116,7 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
     end = testing_period
     start = testing_period - relativedelta(years=20) # define training period
     label_df = main.iloc[:,:2]
-    label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)]  # train df = 80 quarters
+    label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)].reset_index(drop=True)
     print(label_df.shape)
 
     X_train_valid, X_test, Y_train_valid, Y_test = sample_from_datacqtr(main, y_type=y_type,
@@ -128,7 +128,7 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
     '''2. train_test_split'''
     if valid_method == 'shuffle':
         test_size = valid_no/80
-        X_train, X_valid, y_train, y_valid = train_test_split(X_train_valid_PCA, Y_train_valid, test_size=test_size, random_state=666)
+        X_train, X_valid, Y_train, Y_valid = train_test_split(X_train_valid_PCA, Y_train_valid, test_size=test_size, random_state=666)
     elif valid_method == 'chron':
 
         def split_chron(df):
