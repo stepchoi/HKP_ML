@@ -15,7 +15,7 @@ space = {
     'reduced_dimension' : hp.uniform('reduced_dimension', 0.66, 0.75), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.uniform('learning_rate', 0.05, 0.1),
+    'learning_rate': hp.uniform('learning_rate', 0.075, 0.1),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [128, 200, 255]),
     'num_leaves': hp.choice('num_leaves', [50, 75, 100, 125, 150]),
