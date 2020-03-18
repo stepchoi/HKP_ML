@@ -150,7 +150,7 @@ def main(y_type, sample_no, n_components, valid_method, valid_no=None):
     period_1 = dt.datetime(2008, 3, 31)
     for i in tqdm(range(sample_no)):
         testing_period = period_1 + i * relativedelta(months=3)
-        results[testing_period] = each_round(main, y_type, valid_method, valid_no, n_components, testing_period)
+        results[testing_period] = each_round(main, y_type, testing_period, n_components, valid_method, valid_no)
     del main
     gc.collect()
 
