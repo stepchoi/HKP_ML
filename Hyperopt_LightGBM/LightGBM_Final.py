@@ -112,7 +112,7 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
 
     label_df = main.iloc[:, :2]
     X_train_valid, X_test, Y_train_valid, Y_test = sample_from_datacqtr(main, y_type=y_type,
-                                                                        testing_period=testing_period)
+                                                                        testing_period=testing_period, q=3)
 
     '''1. PCA on train_x, test_x'''
     X_train_valid_PCA, X_test_PCA = myPCA(n_components, X_train_valid, X_test)
