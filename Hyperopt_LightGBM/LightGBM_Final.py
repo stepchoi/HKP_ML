@@ -173,4 +173,4 @@ if __name__ == "__main__":
     valid_method = 'chron'
     valid_no = 1
 
-    main(y_type, sample_no, n_components, valid_method, valid_no=None)
+    main(y_type, sample_no, n_components, valid_method, valid_no=valid_no)
