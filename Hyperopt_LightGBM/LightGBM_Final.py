@@ -115,7 +115,8 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
     # retrieve gvkey, datacqtr columns for train_valid set from main
     end = testing_period
     start = testing_period - relativedelta(years=20) # define training period
-    label_df = main.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end),['gvkey','datacqtr']]
+    label_df = main.iloc[:,:2]
+    label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)]  # train df = 80 quarters
     print(label_df.shape)
 
     X_train_valid, X_test, Y_train_valid, Y_test = sample_from_datacqtr(main, y_type=y_type,
