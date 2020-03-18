@@ -3,6 +3,7 @@ import gc
 
 import lightgbm as lgb
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, roc_auc_score, precision_score, recall_score, \
     accuracy_score
@@ -140,7 +141,7 @@ def each_round(main, valid_method, valid_no, y_type, testing_period):
 
 def main(y_type, sample_no, n_components, valid_method, valid_no=None):
 
-    main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=1, sql_version=False)  # main = entire dataset before standardization/qcut
 
     results = {}
 
