@@ -30,6 +30,10 @@ space = {
     'lambda_l1': hp.choice('lambda_l1', [2,3,4, 13, 15, 17]),
     'lambda_l2': hp.choice('lambda_l2', np.arange(270, 540, 30, dtype=int)),
 
+    # Voting Parallel
+    'tree_learner': 'voting'
+    'top_k': 2
+
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 3,

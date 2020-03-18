@@ -211,7 +211,7 @@ def load_data(lag_year = 5, sql_version = False):
     # 2. add dependent variable & macro variables to main
     main_lag = merge_dep_macro(main_lag, sql_version) # i.e. big table
 
-    return main_lag # i.e. big table
+    return main_lag.reset_index(drop=True) # i.e. big table
 
 def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 

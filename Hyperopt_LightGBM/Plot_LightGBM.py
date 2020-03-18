@@ -31,7 +31,7 @@ def result_boxplot(csv_name, only_test = False):
         data2 = []
         label = []
         for name, g in df.groupby([i]):
-            label.append(name)
+            label.append(round(name,2))
             data.append(g['accuracy_score_test'])
             data2.append(g['accuracy_score_train'])
 
@@ -77,9 +77,15 @@ def eta_accuracy(csv_name):
     plt.savefig(csv_name + '_train_R2.png')
 
 def same_para(csv_name):
-    df = pd.read_csv(csv_name + '.csv')    # PCA_LightGBM_Hyperopt
-    para = df.columns[1:17].to_list()
-    print(df.groupby(para).filter(lambda x: len(x)>1))
+    df = pd.read_csv(os.getcwd()+'/records/' + csv_name + '.csv')    # PCA_LightGBM_Hyperopt
+    para = df.columns[1:18].to_list()
+    print(para)
+
+    df1 = df.groupby(para).mean().reset_index(drop=False)
+    df2 = df.groupby(para).count().reset_index(drop=True)['status']
+    df3 = pd.concat([df1, df2], axis=1)
+    print(df3)
+    df3.to_csv(os.getcwd()+'/records/' + csv_name+'_mean.csv')
 
 def round_eta_accuracy(csv_name):
     df = pd.read_csv(csv_name + '.csv')    # PCA_LightGBM_Hyperopt
@@ -103,8 +109,8 @@ if __name__ == '__main__':
     # os.chdir(os.getcwd()+'/records')
 
 
-    # same_para('records_20200313')
+    same_para('qcut3_all')
     # eta_accuracy('records_20200313')
-    result_boxplot('qcut3_all', only_test=False)
+    # result_boxplot('records_20200318_qcut3_200_3', only_test=True)
     # round_eta_accuracy('records_eta_round_acc')
 
