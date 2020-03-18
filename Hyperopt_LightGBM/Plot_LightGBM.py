@@ -16,9 +16,9 @@ def result_boxplot(csv_name, only_test = False):
     option = {}
     scat = {}
     for col in df_num:
-        if len(set(df[col])) in np.arange(2,10,1):
+        if len(set(df[col])) in np.arange(2,20,1):
             option[col] = set(df[col])
-        elif len(set(df[col])) > 10:
+        elif len(set(df[col])) > 20:
             scat[col] = df[col]
 
 
@@ -105,6 +105,6 @@ if __name__ == '__main__':
 
     # same_para('records_20200313')
     # eta_accuracy('records_20200313')
-    result_boxplot('records_20200318_qcut3_200', only_test=True)
+    result_boxplot('qcut3_all', only_test=False)
     # round_eta_accuracy('records_eta_round_acc')
 

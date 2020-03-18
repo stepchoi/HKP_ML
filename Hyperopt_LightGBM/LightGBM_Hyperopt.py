@@ -1,6 +1,7 @@
 import datetime as dt
 
 import lightgbm as lgb
+import numpy as np
 import pandas as pd
 from Autoencoder_for_LightGBM import AE_fitting, AE_predict
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
@@ -12,22 +13,22 @@ from Preprocessing.LoadData import load_data, sample_from_main
 
 space = {
     # dimension
-    'reduced_dimension' : hp.uniform('reduced_dimension', 0.66, 0.75), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arrange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.uniform('learning_rate', 0.075, 0.1),
+    'learning_rate': hp.choice('learning_rate', np.arrange(0.75, 1.0, 0.05)),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
-    'max_bin': hp.choice('max_bin', [63, 127, 255]),
-    'num_leaves': hp.quniform('num_leaves', 50, 125, 5),
+    'max_bin': hp.choice('max_bin', [31, 63, 127, 255]),
+    'num_leaves': hp.choice('num_leaves', [20, 30, 50, 100, 115, 125]),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', [1800, 2400, 3200]),
-    'feature_fraction': hp.choice('feature_fraction', [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
-    'bagging_fraction': hp.uniform('bagging_fraction', 0.2, 0.4),
-    'bagging_freq': hp.choice('bagging_freq', [2, 3, 4, 5]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', [0.5, 0.6, 0.7, 1.0, 1.2, 1.8, 3.2, 6.4]),
-    'lambda_l1': hp.choice('lambda_l1', [3, 5, 7, 15]),
-    'lambda_l2': hp.choice('lambda_l2', [270, 400, 540, 800]),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arrange(750, 1800, 150, dtype=int)),
+    'feature_fraction': hp.choice('feature_fraction', [0.3, 0.4, 0.5, 0.6]),
+    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.3, 0.4, 0.02)),
+    'bagging_freq': hp.choice('bagging_freq', [3, 4]),
+    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.7, 0.04)),
+    'lambda_l1': hp.choice('lambda_l1', [2,3,4, 13, 15, 17]),
+    'lambda_l2': hp.choice('lambda_l2', np.arange(270, 540, 30, dtype=int)),
 
     # parameters won't change
     'objective': 'multiclass',
