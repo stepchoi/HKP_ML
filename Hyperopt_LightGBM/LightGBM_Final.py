@@ -91,8 +91,6 @@ def eval(X_train, X_valid, X_test, Y_train, Y_valid, Y_test):
 
     Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid)
 
-    f1_score, r2_score, fbeta_score, roc_auc_score, precision_score, recall_score, accuracy_score
-
     result = {'loss': - accuracy_score(Y_test, Y_test_pred),
               'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
               'accuracy_score_valid': accuracy_score(Y_valid, Y_valid_pred),
@@ -100,9 +98,10 @@ def eval(X_train, X_valid, X_test, Y_train, Y_valid, Y_test):
               'precision_score_test': precision_score(Y_test, Y_test_pred, average='micro'),
               'recall_score_test': recall_score(Y_test, Y_test_pred, average='micro'),
               'f1_score_test': f1_score(Y_test, Y_test_pred, average='micro'),
-              'space': space,
-              'status': STATUS_OK}
-
+              'r2_score_test': r2_score(Y_test, Y_test_pred, average='micro'),
+              'fbeta_score_test': fbeta_score(Y_test, Y_test_pred, average='micro'),
+              'roc_auc_score_test': roc_auc_score(Y_test, Y_test_pred, average='micro'),
+              }
     print(space)
     print(result)
 
