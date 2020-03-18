@@ -2,6 +2,7 @@ import datetime as dt
 import gc
 
 import lightgbm as lgb
+import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
@@ -117,7 +118,6 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
     start = testing_period - relativedelta(years=20) # define training period
     label_df = main.iloc[:,:2]
     label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)].reset_index(drop=True)
-    print(label_df.shape)
 
     X_train_valid, X_test, Y_train_valid, Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                         testing_period=testing_period, q=3)
@@ -133,17 +133,17 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
 
         def split_chron(df):
             date_df = pd.concat([label_df, pd.DataFrame(df)], axis=1)
-            print(date_df)
             valid_period = testing_period - valid_no * relativedelta(months=3)
-            print(valid_period)
-
+            print('validation period start:', valid_period)
             train = date_df.loc[(date_df['datacqtr'] < valid_period), date_df.columns[2:]].values
             valid = date_df.loc[(date_df['datacqtr'] >= valid_period), date_df.columns[2:]].values
-            print(train, valid)
             return train, valid
 
-        X_train, X_valid = split_chron(X_train_valid)
+        X_train, X_valid = split_chron(X_train_valid_PCA)
+
         Y_train, Y_valid = split_chron(Y_train_valid)
+        Y_train = np.reshape(Y_train, -1)
+        Y_valid = np.reshape(Y_valid, -1)
 
     '''3. train & evaluate LightGBM'''
     return eval(X_train, X_valid, X_test_PCA, Y_train, Y_valid, Y_test)
