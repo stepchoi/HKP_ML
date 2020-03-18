@@ -11,25 +11,23 @@ from sklearn.model_selection import train_test_split
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
 params_over = {
-    'reduced_dimension': 0.66,
     'boosting_type': 'gbdt',
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
     'num_leaves': 30,  # 调小防止过拟合
     'max_bin': 255,  # 调小防止过拟合
-    # 'min_data_in_leaf': 500, #使用 min_data_in_leaf 和 min_sum_hessian_in_leaf防止过拟合
-    'learning_rate': 0.001,
-    # 'feature_fraction': 0.8, #特征子抽样
-    # 'bagging_fraction': 0.8, #bagging防止过拟合
-    'bagging_freq': 5,
-    # 'lambda_l1': 0.4, #正则化参数
-    # 'lambda_l2': 0.5, #正则化参数
-    # 'min_gain_to_split': 0.2, #正则化参数
+    'min_data_in_leaf': 500, #使用 min_data_in_leaf 和 min_sum_hessian_in_leaf防止过拟合
+    'learning_rate': 0.075,
+    'feature_fraction': 0.8, #特征子抽样
+    'bagging_fraction': 0.8, #bagging防止过拟合
+    'bagging_freq': 8,
+    'lambda_l1': 2, #正则化参数
+    'lambda_l2': 5, #正则化参数
+    'min_gain_to_split': 0.2, #正则化参数
     'verbose': 1,  # 一个整数，表示是否输出中间信息。默认值为1。如果小于0，则仅仅输出critical 信息；如果等于0，则还会输出error,warning 信息； 如果大于0，则还会输出info 信息。
     'num_threads': 12,
 }
-
 
 def myPCA(n_components, train_x, test_x):
 
@@ -52,7 +50,7 @@ def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid)
     lgb_eval = lgb.Dataset(X_valid, label=y_valid, reference=lgb_train, free_raw_data=False)
 
     print('Starting training...')
-    gbm = lgb.train(params,
+    gbm = lgb.train(params_over,
                     lgb_train,
                     num_boost_round=1000,
                     valid_sets=lgb_eval,  # eval training data
@@ -158,8 +156,8 @@ def main(y_type, sample_no, n_components, valid_method, valid_no=None):
 
 if __name__ == "__main__":
     y_type = 'yoy'
-    sample_no = 40
-    n_components = params['reduced_dimension']
+    sample_no = 1
+    n_components = 0.66
     valid_method = 'shuffle'
     valid_no = 1
 
