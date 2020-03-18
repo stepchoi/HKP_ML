@@ -152,13 +152,13 @@ def main(y_type, sample_no, n_components, valid_method, valid_no=None):
             records.loc[date, col] = results[date][col]
 
     print(records)
-    records.to_csv('records.csv')
+    records.to_csv('final_result_{}.csv'.format(valid_method))
 
 if __name__ == "__main__":
     y_type = 'yoy'
     sample_no = 1
     n_components = 0.66
-    valid_method = 'shuffle'
+    valid_method = 'chron'
     valid_no = 1
 
     main(y_type, sample_no, n_components, valid_method, valid_no=None)
