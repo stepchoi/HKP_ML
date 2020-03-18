@@ -38,6 +38,8 @@ def myPCA(n_components, train_x, test_x):
     pca.fit(train_x)
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
+    print('PCA components:', n_components)
+    print('after PCA train shape', new_train_x.shape)
     return new_train_x, new_test_x
 
 def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid):
