@@ -38,7 +38,7 @@ def myPCA(n_components, train_x, test_x):
     new_test_x = pca.transform(test_x)
     return new_train_x, new_test_x
 
-def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid)
+def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid):
 
     '''                                  X_train -> Y_train_pred
     X_train + Y_train -> gbm (model) ->  X_valid -> Y_valid_pred
@@ -99,6 +99,7 @@ def eval(X_train, X_valid, X_test, Y_train, Y_valid, Y_test):
               'r2_score_test': r2_score(Y_test, Y_test_pred, average='micro'),
               'fbeta_score_test': fbeta_score(Y_test, Y_test_pred, average='micro'),
               'roc_auc_score_test': roc_auc_score(Y_test, Y_test_pred, average='micro'),
+              'confusion_matrix': confusion_matrix(Y_test, Y_test_pred)
               }
     print(space)
     print(result)
@@ -118,21 +119,27 @@ def each_round(main, valid_method, valid_no, y_type, testing_period):
     if valid_method == 'shuffle':
         X_train, X_valid, y_train, y_valid = train_test_split(X_train_valid_PCA, Y_train_valid, test_size=0.2, random_state=666)
     elif valid_method == 'chron':
-        date_df = pd.concat([label_df, pd.DataFrame(X_train_valid)], axis=1)
-        print(date_X_train_valid)
-        valid_period = testing_period - valid_no * relativedelta(months=3)
-        print(valid_period)
 
-        X_train = date_df.loc[date_df['datacqtr'] < valid_period), date_df.columns[2:]].values
-        X_valid = date_df.loc[date_df['datacqtr'] >= valid_period), date_df.columns[2:]].values
-        print(X_train, X_valid)
+        def split_chron(df):
+            date_df = pd.concat([label_df, pd.DataFrame(df)], axis=1)
+            print(date_df)
+            valid_period = testing_period - valid_no * relativedelta(months=3)
+            print(valid_period)
+
+            train = date_df.loc[(date_df['datacqtr'] < valid_period), date_df.columns[2:]].values
+            valid = date_df.loc[(date_df['datacqtr'] >= valid_period), date_df.columns[2:]].values
+            print(train, valid)
+            return train, valid
+
+        X_train, X_valid = split_chron(X_train_valid)
+        Y_train, Y_valid = split_chron(Y_train_valid)
 
     '''3. train & evaluate LightGBM'''
-    return eval(X_train, X_valid, X_test_PCA, y_train, y_valid, Y_test)
+    return eval(X_train, X_valid, X_test_PCA, Y_train, Y_valid, Y_test)
 
 def main(y_type, sample_no, n_components, valid_method, valid_no=None):
 
-    main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=1, sql_version=False)  # main = entire dataset before standardization/qcut
 
     results = {}
 
