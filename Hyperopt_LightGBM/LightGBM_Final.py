@@ -64,7 +64,7 @@ def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid):
                     lgb_train,
                     num_boost_round=1000,
                     valid_sets=lgb_eval,  # eval training data
-                    verbose=1,
+                    # verbose=1,
                     early_stopping_rounds=150)
 
     '''save model'''
