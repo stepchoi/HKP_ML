@@ -7,7 +7,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, roc_auc_score, precision_score, recall_score, \
-    accuracy_score
+    accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
@@ -101,12 +101,14 @@ def eval(X_train, X_valid, X_test, Y_train, Y_valid, Y_test):
               'precision_score_test': precision_score(Y_test, Y_test_pred, average='micro'),
               'recall_score_test': recall_score(Y_test, Y_test_pred, average='micro'),
               'f1_score_test': f1_score(Y_test, Y_test_pred, average='micro'),
-              'r2_score_test': r2_score(Y_test, Y_test_pred, average='micro'),
-              'fbeta_score_test': fbeta_score(Y_test, Y_test_pred, average='micro'),
-              'roc_auc_score_test': roc_auc_score(Y_test, Y_test_pred, average='micro'),
-              'confusion_matrix': confusion_matrix(Y_test, Y_test_pred)
-              }
-    print(space)
+              'f0.5_score_test': fbeta_score(Y_test, Y_test_pred, beta=0.5, average='micro'),
+              'f2_score_test': fbeta_score(Y_test, Y_test_pred, beta=2, average='micro'),
+              'r2_score_test': r2_score(Y_test, Y_test_pred),
+              # 'roc_auc_score_test': roc_auc_score(Y_test, Y_test_pred, average='micro'),
+              # 'confusion_matrix': confusion_matrix(Y_test, Y_test_pred),
+              "cohen_kappa_score": cohen_kappa_score(Y_test, Y_test_pred, labels=None),
+              "hamming_loss": hamming_loss(Y_test, Y_test_pred),
+              "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro')}
     print(result)
 
     return result
@@ -150,7 +152,7 @@ def each_round(main, y_type, testing_period, n_components, valid_method, valid_n
 
 def main(y_type, sample_no, n_components, valid_method, valid_no=None):
 
-    main = load_data(lag_year=1, sql_version=False)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
     results = {}
 
@@ -165,18 +167,16 @@ def main(y_type, sample_no, n_components, valid_method, valid_no=None):
     records = pd.DataFrame()
     row = 0
     for date in results.keys():
-        print(results[date])
         for col in results[date].keys():
             records.loc[date, col] = results[date][col]
 
-    print(records)
-    records.to_csv('final_result_{}.csv'.format(valid_method))
+    records.to_csv('final_result_{}{}.csv'.format(valid_method, valid_no))
 
 if __name__ == "__main__":
     y_type = 'yoy'
-    sample_no = 1
+    sample_no = 40
     n_components = 0.66
-    valid_method = 'chron'
-    valid_no = 1
-
-    main(y_type, sample_no, n_components, valid_method, valid_no=valid_no)
+    for valid_method in ['chron', 'shuffle']:
+        for valid_no in [1,5,10]:
+            print(valid_method, valid_no)
+            main(y_type, sample_no, n_components, valid_method, valid_no=valid_no)
