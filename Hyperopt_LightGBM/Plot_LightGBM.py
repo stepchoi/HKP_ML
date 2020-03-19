@@ -121,6 +121,9 @@ def final_plot(dict_name):
             accuracy.append(acc)
 
     result_acc = pd.concat(accuracy,axis=1)
+    result_acc['max_test'] = result_acc.iloc[:,np.arange(1,12,2)].max(axis=1)
+    result_acc['max_test_idx'] = result_acc.iloc[:, np.arange(1, 12, 2)].idxmax(axis=1)
+
     result_average = pd.concat(aggre,axis=0)
     result_acc.to_csv('{}/{}/final_result_acc.csv'.format(os.getcwd(), dict_name))
     result_average.to_csv('{}/{}/final_result_average.csv'.format(os.getcwd(), dict_name))
