@@ -104,13 +104,38 @@ def round_eta_accuracy(csv_name):
     plt.legend()
     plt.show()
 
+def final_plot(dict_name):
+
+    results = {}
+    aggre = []
+    accuracy = []
+    for valid_method in ['chron', 'shuffle']:
+        for valid_no in [1,5,10]:
+            csv_name = '{}{}'.format(valid_method, valid_no)
+            results[csv_name] = pd.read_csv('{}/{}/final_result_{}.csv'.format(os.getcwd(), dict_name, csv_name))
+            avg = results[csv_name].describe()
+            acc = results[csv_name][['accuracy_score_train', 'accuracy_score_test']]
+            acc.columns = [csv_name+'_train', csv_name +'_test']
+            avg['Unnamed: 0'] = csv_name
+            aggre.append(avg)
+            accuracy.append(acc)
+
+    result_acc = pd.concat(accuracy,axis=1)
+    result_average = pd.concat(aggre,axis=0)
+    result_acc.to_csv('{}/{}/final_result_acc.csv'.format(os.getcwd(), dict_name))
+    result_average.to_csv('{}/{}/final_result_average.csv'.format(os.getcwd(), dict_name))
+
+    result_acc.iloc[:,np.arange(1,12,2)].plot(figsize=(10,5), grid=True)
+    plt.savefig('{}/{}/test_acc.png'.format(os.getcwd(), dict_name))
+
+    result_acc.iloc[:, np.arange(0, 11, 2)].plot(figsize=(10, 5), grid=True)
+    plt.savefig('{}/{}/train_acc.png'.format(os.getcwd(), dict_name))
+
 if __name__ == '__main__':
 
-    # os.chdir(os.getcwd()+'/records')
-
-
-    same_para('qcut3_all')
+    # same_para('qcut3_all')
     # eta_accuracy('records_20200313')
     # result_boxplot('records_20200318_qcut3_200_3', only_test=True)
     # round_eta_accuracy('records_eta_round_acc')
+    final_plot('final_results')
 

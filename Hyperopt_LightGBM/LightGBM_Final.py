@@ -6,31 +6,36 @@ import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
-from sklearn.metrics import f1_score, r2_score, fbeta_score, roc_auc_score, precision_score, recall_score, \
+from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
-params_over = {
-    'boosting_type': 'gbdt',
-    'objective': 'multiclass',
-    'num_class': 3,
-    'metric': 'multi_error',
-    'num_leaves': 30,  # 调小防止过拟合
-    'max_bin': 255,  # 调小防止过拟合
-    'min_data_in_leaf': 500, #使用 min_data_in_leaf 和 min_sum_hessian_in_leaf防止过拟合
-    'learning_rate': 0.075,
-    'feature_fraction': 0.8, #特征子抽样
-    'bagging_fraction': 0.8, #bagging防止过拟合
-    'bagging_freq': 8,
-    'lambda_l1': 2, #正则化参数
-    'lambda_l2': 5, #正则化参数
-    'min_gain_to_split': 0.2, #正则化参数
-    'verbose': 1,  # 一个整数，表示是否输出中间信息。默认值为1。如果小于0，则仅仅输出critical 信息；如果等于0，则还会输出error,warning 信息； 如果大于0，则还会输出info 信息。
-    'num_threads': 12,
-}
+params_over = '0.8	8	gbdt	0.8	2	5	0.075	255	multi_error	500	0.2	1000	3	200	12	multiclass	0.66'
+params_1 = '0.6	5	gbdt	0.6	2	15	0.060295296	255	multi_error	750	2.4	1000	3	50	12	multiclass	0.728340625'
+
+def set_params(params_fig):
+    params_name = 'bagging_fraction	bagging_freq	boosting_type	feature_fraction	lambda_l1	lambda_l2	learning_rate	max_bin	metric	min_data_in_leaf	min_gain_to_split	num_boost_round	num_class	num_leaves	num_threads	objective	reduced_dimension'
+    params_name = params_name.split()
+    params_fig = params_fig.split()
+
+    params = {}
+    for i in range(len(params_name)):
+        if params_name[i] in ['bagging_fraction', 'feature_fraction', 'lambda_l1', 'lambda_l2', 'learning_rate',
+                              'min_gain_to_split']:
+            params_fig[i] = float(params_fig[i])
+        if params_name[i] in ['bagging_freq', 'max_bin', 'min_data_in_leaf', 'num_boost_round', 'num_class',
+                              'num_leaves', 'num_threads']:
+            params_fig[i] = int(params_fig[i])
+        params[params_name[i]] = params_fig[i]
+
+    params.pop('reduced_dimension')
+    print(params)
+    return params
+
+params = set_params(params_1)
 
 def myPCA(n_components, train_x, test_x):
 
@@ -55,10 +60,11 @@ def myLightGBM(X_train, X_valid, X_test, Y_train, Y_valid):
     lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
 
     print('Starting training...')
-    gbm = lgb.train(params_over,
+    gbm = lgb.train(params,
                     lgb_train,
                     num_boost_round=1000,
                     valid_sets=lgb_eval,  # eval training data
+                    verbose=1,
                     early_stopping_rounds=150)
 
     '''save model'''
