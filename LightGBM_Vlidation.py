@@ -106,7 +106,7 @@ print("f1_score_macro:",f1_score(y_test, y_pred,average='macro') )
 print("f0.5_score:",fbeta_score(y_test, y_pred,beta=0.5,average='macro') )
 print("f2_score:",fbeta_score(y_test, y_pred,beta=2.0,average='macro') )
 
-print("cohen_kappa_score:", cohen_kappa_score(y_test, y_pred,labels=None))
-print("hamming_loss:", hamming_loss(y_test, y_pred))
-print("jaccard_score:", jaccard_score(y_test, y_pred,labels=None,average='macro'))
+"cohen_kappa_score:": cohen_kappa_score(y_test, y_pred,labels=None)),
+"hamming_loss:": hamming_loss(y_test, y_pred)),
+"jaccard_score:": jaccard_score(y_test, y_pred,labels=None,average='macro')),
 print("The rmse of loaded model's prediction is:", mean_squared_error(y_test, y_pred) ** 0.5)

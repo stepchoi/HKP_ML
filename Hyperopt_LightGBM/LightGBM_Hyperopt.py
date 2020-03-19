@@ -164,7 +164,6 @@ def f(space):
 
     Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred = LightGBM(space)
 
-    # why result is dictionary???????
     result = {'loss': - accuracy_score(Y_test, Y_test_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
             'accuracy_score_valid': accuracy_score(Y_valid, Y_valid_pred),
