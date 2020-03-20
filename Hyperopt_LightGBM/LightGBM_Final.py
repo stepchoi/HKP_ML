@@ -16,7 +16,7 @@ from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 params_over = '0.8	8	gbdt	0.8	2	5	0.075	255	multi_error	500	0.2	1000	3	200	12	multiclass	0.66'
 params_1 = '0.6	5	gbdt	0.6	2	15	0.060295296	255	multi_error	750	2.4	1000	3	50	12	multiclass	0.728340625'
 params_2 = '0.8	8	gbdt	0.8	2	1	0.1	255	multi_error	500	0.2	1000	3	200	12	multiclass	0.66'
-
+params_3 = '0.6	2	gbdt	0.3	2	45	0.085002592	128	multi_error	1200	0.6	1000	3	75	12	multiclass	0.710608306'
 
 def set_params(params_fig):
     params_name = 'bagging_fraction	bagging_freq	boosting_type	feature_fraction	lambda_l1	lambda_l2	learning_rate	max_bin	metric	min_data_in_leaf	min_gain_to_split	num_boost_round	num_class	num_leaves	num_threads	objective	reduced_dimension'
@@ -37,7 +37,7 @@ def set_params(params_fig):
     print(params)
     return params
 
-params = set_params(params_2)
+params = set_params(params_3)
 
 def myPCA(n_components, train_x, test_x):
 
