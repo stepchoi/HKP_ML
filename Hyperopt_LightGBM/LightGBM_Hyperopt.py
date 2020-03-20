@@ -16,85 +16,36 @@ space = {
     'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', np.arange(0.75, 1.0, 0.05)),
+    'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05)),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
-    'max_bin': hp.choice('max_bin', [31, 63, 127, 255]),
-    'num_leaves': hp.choice('num_leaves', [20, 30, 50, 100, 115, 125]),
+    'max_bin': hp.choice('max_bin', [127, 255]),
+    'num_leaves': hp.choice('num_leaves', np.arange(50,200,15,dtype=int)),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(750, 1800, 150, dtype=int)),
-    'feature_fraction': hp.choice('feature_fraction', [0.3, 0.4, 0.5, 0.6]),
-    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.3, 0.4, 0.02)),
-    'bagging_freq': hp.choice('bagging_freq', [3, 4]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.7, 0.04)),
-    'lambda_l1': hp.choice('lambda_l1', [2,3,4, 13, 15, 17]),
-    'lambda_l2': hp.choice('lambda_l2', np.arange(270, 540, 30, dtype=int)),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(500, 1400, 150, dtype=int)),
+    'feature_fraction': hp.choice('feature_fraction', np.arange(0.3, 0.8, 0.1)),
+    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.4, 0.8, 0.1)),
+    'bagging_freq': hp.choice('bagging_freq', [2,4,8]),
+    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.72, 0.02)),
+    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5)),
+    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 10)),
 
     # Voting Parallel
-    'tree_learner': 'voting'
-    'top_k': 2
+    # 'tree_learner': 'voting'
+    # 'top_k': 2
 
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
     'num_boost_round': 1000,
-    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
-    }
-
-space_check = {
-    # check
-    'num_boost_round': hp.choice('num_boost_round', [100, 1000]),
-    'learning_rate': hp.choice('learning_rate', [1, 5]),
-
-    # dimension
-    'reduced_dimension' : 0.7,
-
-    # better accuracy
-    'boosting_type': 'gbdt',
-    'max_bin': 255,
-    'num_leaves': 400,
-
-    # avoid overfit
-    'min_data_in_leaf': 250,
-    'feature_fraction': 0.8,
-    'bagging_fraction': 0.8,
-    'bagging_freq': 8,
-    'min_gain_to_split': 0.05,
-    'lambda_l1': 0,
-    'lambda_l2': 1,
-
-    # parameters won't change
-    'objective': 'multiclass',
-    'num_class': 3,
-    'metric': 'multi_error',
-    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
-    }
-
-space_check_full = {
-    'num_boost_round': 1000,
-    'reduced_dimension': 0.7,
-    'learning_rate': 0.1,
-    'boosting_type': 'gbdt',
-    'max_bin': 255,
-    'num_leaves': 400,
-    'min_data_in_leaf': 250,
-    'feature_fraction': 0.8,
-    'bagging_fraction': 0.8,
-    'bagging_freq': 8,
-    'min_gain_to_split': 0.05,
-    'lambda_l1': 0,
-    'lambda_l2': 1,
-    'objective': 'multiclass',
-    'num_class': 6,
-    'metric': 'multi_error',
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
 def load(q):
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
-    dfs = sample_from_main(main, y_type='yoy', part=1, q=q)  # part=1: i.e. test over entire 150k records
+    dfs = sample_from_main(main, y_type='qoq', part=1, q=q)  # part=1: i.e. test over entire 150k records
     x, y = dfs[0]
     return x, y, col
 
@@ -209,6 +160,6 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
 
     # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=200, name='qcut{}_200'.format(qcut_q))
+    main(space=space, max_evals=400, name='qcut{}_qoq'.format(qcut_q))
 
     print('x shape before PCA:', x.shape)
