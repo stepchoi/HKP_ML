@@ -35,17 +35,24 @@ def qoq_yoy(df, trim=False, pmax=None):
 
     df['qoq'] = df['next1_abs'].div(df['niq']).sub(1)  # T1/T0
 
+    df['next4'] = df.groupby('gvkey').apply(lambda x: x['niq'].shift(-4)).to_list()
+
+    df['yoy'] = df['next4'].div(df['niq']).sub(1)  # T4/T0
+
+
     df['past4_abs'] = df.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
     df['next4_abs'] = df.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
 
-    df['yoy'] = df['next4_abs'].div(df['past4_abs']).sub(1)  # T4/T0
-    df = df.filter(['gvkey', 'datacqtr', 'qoq', 'yoy'])
+    df['yoy_rolling'] = df['next4_abs'].div(df['past4_abs']).sub(1)  # T4/T0
+
+    df = df.filter(['gvkey', 'datacqtr', 'qoq', 'yoy', 'yoy_rolling'])
 
     # print('before trim:', df.describe())
 
     if trim == True:
         print(pmax)
-        df[['qoq','yoy']] = df[['qoq','yoy']].mask(df[['qoq','yoy']] > pmax[['qoq','yoy']], pmax[['qoq','yoy']], axis=1)
+        num_list = ['qoq','yoy','yoy_rolling']
+        df[num_list] = df[num_list].mask(df[num_list] > pmax[num_list], pmax[num_list], axis=1)
 
     # print('after trim:', df.describe())
 
@@ -75,7 +82,7 @@ def main(neg_to_zero=False):
     # convert datacqtr to timestamp
     dep = Timestamp(dep)
     convert_to_float32(dep)
-    dep.to_csv('niq.csv', index=False)
+    dep.to_csv('niq_main.csv', index=False)
     return dep
 
 if __name__ == '__main__':
