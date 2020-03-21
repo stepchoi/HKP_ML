@@ -140,5 +140,5 @@ if __name__ == '__main__':
     # eta_accuracy('records_20200313')
     # result_boxplot('records_20200318_qcut3_200_3', only_test=True)
     # round_eta_accuracy('records_eta_round_acc')
-    final_plot('final_results')
+    final_plot('final_results_3')
 
