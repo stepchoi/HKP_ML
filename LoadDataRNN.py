@@ -18,18 +18,18 @@ def main(sql_version=False, save_csv=False):
         engine = None
         print('local version running - main')
 
-    main = main.dropna(how='any',axis=0)
+    main = main.dropna(how='any',axis=0)    # drop rows with NaN on important columns e.g. niq, atq...
 
     rnn_dict = {}
 
     for datacqtr in set(main['datacqtr']):
-        rnn_dict[datacqtr] = main.loc[main['datacqtr']==datacqtr].set_index('gvkey')
-        rnn_dict_len[datacqtr] = len(main.loc[main['datacqtr']==datacqtr])
-        if save_csv == True:
+        rnn_dict[datacqtr] = main.loc[main['datacqtr']==datacqtr].set_index('gvkey')  # set gvkey as index for each quarterly DataFrame
+
+        if save_csv == True:    # if set save_csv==True, save each quarterly df into individual csv, named after 'datacqtr'
             rnn_dict[datacqtr].to_csv(datacqtr+'.csv', index=False)
 
     end = time.time()
-    print('LoadDataRNN running time {}'.format(end - start))
+    print('LoadDataRNN running time {}'.format(end - start))    # enrire processing takes about 20s
 
     return rnn_dict
 
