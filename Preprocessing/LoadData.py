@@ -82,7 +82,7 @@ def merge_dep_macro(df, sql_version):
         stock  = pd.read_sql("SELECT * FROM stock_main", engine)
     else: # local version read TABLE from local csv files -> faster
         macro = pd.read_csv('macro_main.csv')
-        dep = pd.read_csv('niq.csv')
+        dep = pd.read_csv('niq_main.csv')
         stock = pd.read_csv('stock_main.csv')
         print('local version running - niq, macro_main, stock_return')
 
@@ -255,6 +255,8 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
         train_y, test_y = main_period.yoy(q=q)
     elif y_type == 'qoq':
         train_y, test_y = main_period.qoq(q=q)
+    elif y_type == 'yoyr':
+        train_y, test_y = main_period.yoyr(q=q)
 
     return train_x, test_x, train_y, test_y
 
