@@ -14,7 +14,7 @@ def main(sql_version=False, save_csv=False):
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
     else:  # local version read TABLE from local csv files -> faster
-        main = pd.read_csv('main.csv')
+        main = pd.read_csv('Hyperopt_LightGBM/main.csv')
         engine = None
         print('local version running - main')
 
