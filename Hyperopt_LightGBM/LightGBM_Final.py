@@ -174,7 +174,6 @@ def main(y_type, sample_no, n_components, valid_method, valid_no=None):
     gc.collect()
 
     records = pd.DataFrame()
-    row = 0
     for date in results.keys():
         for col in results[date].keys():
             records.loc[date, col] = results[date][col]

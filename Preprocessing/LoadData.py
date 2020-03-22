@@ -201,9 +201,6 @@ class clean_set:
         except:
             return self.train_yoyr.astype(np.int8), None
 
-
-
-
 def load_data(lag_year = 5, sql_version = False):
 
     '''This def consolidate steps 1 & 2 -> return big table with max(row) * max(col)'''

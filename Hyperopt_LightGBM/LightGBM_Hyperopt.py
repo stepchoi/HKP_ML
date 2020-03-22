@@ -34,6 +34,10 @@ space = {
     # 'tree_learner': 'voting'
     # 'top_k': 2
 
+    # unbalanced qcut(>6)
+    'is_unbalance':
+    'scale_pos_weight':
+
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 3,
