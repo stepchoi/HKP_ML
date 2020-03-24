@@ -53,19 +53,20 @@ def load(q):
     x, y = dfs[0]
     return x, y, col
 
-def Dimension_reduction(reduced_dimensions, method='PCA'):
+def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method = 'shuffle'):
 
-    method = 'PCA'
-
-    x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
+    dimension_reduction_method='PCA'
     
-    if (method == 'AE'):
+    if (valid_method == 'shuffle'):
+        x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
+    
+    if (dimension_reduction_method == 'AE'):
         AE_model = AE_fitting(x_train, reduced_dimensions)
         compressed_x_train = AE_predict(x_train, AE_model)
         compressed_x_valid = AE_predict(x_valid, AE_model)
         compressed_x_test = AE_predict(x_test, AE_model)
 
-    elif (method == 'PCA'):
+    elif (dimension_reduction_method == 'PCA'):
         PCA_model = PCA_fitting(x_train, reduced_dimensions)
         compressed_x_train = PCA_predict(x_train, PCA_model)
         compressed_x_valid = PCA_predict(x_valid, PCA_model)
