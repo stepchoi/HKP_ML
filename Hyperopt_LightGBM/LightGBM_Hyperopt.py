@@ -57,9 +57,8 @@ def Dimension_reduction(reduced_dimensions, method='PCA'):
 
     method = 'PCA'
 
-    x_lgbm, x_test, y_lgbm, y_test = train_test_split(x, y, test_size=0.2)
-    x_train, x_valid, y_train, y_valid = train_test_split(x_lgbm, y_lgbm, test_size=0.25)
-
+    x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
+    
     if (method == 'AE'):
         AE_model = AE_fitting(x_train, reduced_dimensions)
         compressed_x_train = AE_predict(x_train, AE_model)
@@ -119,7 +118,7 @@ def f(space):
 
     Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred = LightGBM(space)
 
-    result = {'loss': - accuracy_score(Y_test, Y_test_pred),
+    result = {'loss': 1 - accuracy_score(Y_valid, Y_valid_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
             'accuracy_score_valid': accuracy_score(Y_valid, Y_valid_pred),
             'accuracy_score_test': accuracy_score(Y_test, Y_test_pred),
