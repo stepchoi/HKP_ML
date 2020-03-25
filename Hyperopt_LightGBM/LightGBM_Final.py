@@ -10,7 +10,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
-from sqlalchemy import Column, MetaData, Table, Integer, create_engine
+from sqlalchemy import Column, MetaData, Table, Integer, create_engine, DateTime
 from tqdm import tqdm
 
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
@@ -43,7 +43,7 @@ space = {
     'num_class': 3,
     'verbose': 1,
     'metric': 'multi_error',
-    'num_boost_round': 1000,
+    'num_boost_round': 10,
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
@@ -55,8 +55,7 @@ def myPCA(n_components, train_x, test_x):
     pca.fit(train_x)
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
-    print('PCA components:', n_components)
-    print('after PCA train shape', new_train_x.shape)
+    sql_result['pca_components'] = new_train_x.shape[1]
     return new_train_x, new_test_x
 
 class convert_main:
@@ -64,7 +63,7 @@ class convert_main:
     ''' split train, valid, test from main dataframe
         for given testing_period, y_type, valid_method, valid_no '''
 
-    def __init__(self, main, y_type, testing_period):
+    def __init__(self, main, space, y_type, testing_period):
 
         # 1. define end, start of training period
         end = testing_period
@@ -78,10 +77,8 @@ class convert_main:
         X_train_valid, X_test, self.Y_train_valid, self.Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                             testing_period=testing_period, q=3)
         sql_result.update({'train_valid_length': len(X_train_valid)})
-        print('# after add length:', sql_result)
 
         # 4. use PCA on X arrays
-        print('# check: pca dimension is ', space['reduced_dimension'])
         self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=space['reduced_dimension'],
                                                         train_x=X_train_valid, test_x=X_test)
 
@@ -115,10 +112,11 @@ def myLightGBM(main, space, y_type, testing_period, valid_method, valid_no):
     -> predict Y_pred using trained gbm model
     '''
 
+    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, space, y_type,
+                                                                      testing_period).split_valid(valid_method, valid_no)
+
     params = space.copy()
     params.pop('reduced_dimension')
-
-    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, y_type, testing_period).split_valid(valid_method, valid_no)
 
     '''Training'''
     lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
@@ -184,12 +182,6 @@ def f(space):
     sql_result.update({'id':i})
     print('# before write to db:', sql_result)
 
-
-    with engine.connect() as con:
-        for k in sql_result.keys():
-            print(k)
-            con.execute('ALTER TABLE lightgbm_results ADD COLUMN IF NOT EXISTS {} VARCHAR(50)'.format(k))
-
     pd.DataFrame.from_records([sql_result],index='id').to_sql('lightgbm_results', con=engine, if_exists='append')
 
     i+=1
@@ -212,29 +204,18 @@ def HPOT(space, sample_no, max_evals):
         ''' use hyperopt on each set '''
         trials = Trials()
         best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
-        print(best) '''??????????'''
-
-    del main
-    gc.collect()
-
+        print(best)
+        '''??????????'''
 
 if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    if not engine.dialect.has_table(engine, 'lightgbm_results'):  # If table don't exist, Create.
-        metadata = MetaData()
-        results = Table('lightgbm_results', metadata,
-                        Column('id', Integer, primary_key=True),
-                        Column('create_date', DateTime, default=func.now()),
-                        schemas='public')
-        metadata.create_all(engine)
-
     id = 0
     main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
-    sample_no = 40
+    sample_no = 2
     qcut_q = 3
 
     sql_result = {'qcut': qcut_q}
@@ -254,13 +235,5 @@ if __name__ == "__main__":
                     sql_result.update({'max_evals':max_evals})
 
                     HPOT(space, sample_no=sample_no, max_evals=max_evals)
-
-    with engine.connect() as con:
-        for k in sql_result.keys():
-            try:
-                con.execute('ALTER TABLE lightgbm_results ALTER COLUMN {} TYPE NUMERIC'.format(k))
-            except:
-                continue
-
 
     # print('x shape before PCA:', x.shape)

@@ -49,7 +49,7 @@ space = {
 def load(q):
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
-    dfs = sample_from_main(main, y_type='qoq', part=1, q=q)  # part=1: i.e. test over entire 150k records
+    dfs = sample_from_main(main, y_type='yoy', part=1, q=q)  # part=1: i.e. test over entire 150k records
     x, y = dfs[0]
     return x, y, col
 
@@ -164,6 +164,6 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
 
     # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=400, name='qcut{}_qoq'.format(qcut_q))
+    main(space=space, max_evals=50, name='qcut{}_yoy'.format(qcut_q))
 
     print('x shape before PCA:', x.shape)
