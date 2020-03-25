@@ -126,80 +126,56 @@ class clean_set:
         try:
             self.test_x, self.test_qoq, self.test_yoy, self.train_yoyr  = divide_set(test) # can work without test set
         except:
-            pass
+            self.test_x=self.test_qoq=self.test_yoy=self.train_yoyr=None
 
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
-
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
-            return self.train_x, self.test_x
+        return self.train_x, self.test_x
+
+    def y_qcut_unbalance(self, q, train_df, test_df):
+        label_q = q
+        while label_q > 0:
+            try:
+                train_df, cut_bins = pd.qcut(train_df, q=q, labels=range(label_q), retbins=True, duplicates='drop')
+            except:
+                label_q -= 1
+                continue
+        print('qcut labels:', set(train_df))
+        print('y qcut label counts:', Counter(train_df))
+        print('y qcut cut_bins:', cut_bins)
+
+        try:
+            test_df = pd.cut(test_df, bins=cut_bins, labels=range(label_q), duplicates='drop')  # can work without test set
+            return train_df.astype(np.int8), test_df.astype(np.int8)
         except:
-            return self.train_x, None
+            return train_df.astype(np.int8), None
+
+    def y_qcut(self, q, df_train, df_test):
+
+        if q > 6:
+            return self.y_qcut_unbalance(q, df_train, df_test)
+
+        df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
+        print('y qcut label counts:', Counter(train_df))
+        print('y qcut cut_bins:', cut_bins)
+
+        try:
+            df_test = pd.cut(df_test, bins=cut_bins, labels=range(q)) # can work without test set
+            return df_train.astype(np.int8), df_test.astype(np.int8)
+        except:
+            return df_train.astype(np.int8), None
 
     def qoq(self, q):
-        label_q = q
-        while label_q > 0:
-            try:
-                self.train_qoq, cut_bins = pd.qcut(self.train_qoq, q=q, labels=range(label_q), retbins=True,duplicates='drop')
-                print(label_q, True)
-                break
-            except:
-                print(label_q, False)
-                label_q -= 1
-                continue
-        print('qcut labels:', set(self.train_qoq))
-        print('y qcut label counts:', Counter(self.train_qoq))
-        print('y qcut cut_bins:', cut_bins)
-
-        try:
-            self.test_qoq = pd.cut(self.test_qoq, bins=cut_bins, labels=range(label_q), duplicates='drop') # can work without test set
-            return self.train_qoq.astype(np.int8), self.test_qoq.astype(np.int8)
-        except:
-            return self.train_qoq.astype(np.int8), None
+        return y_qcut(q, self.train_qoq, self.test_qoq)
 
     def yoy(self, q): # qcut y with train_y cut_bins
-        label_q = q
-        while label_q > 0:
-            try:
-                self.train_yoy, cut_bins = pd.qcut(self.train_yoy, q=q, labels=range(label_q), retbins=True, duplicates='drop')
-                print(label_q, True)
-                break
-            except:
-                print(label_q, False)
-                label_q -= 1
-                continue
-
-        print('qcut labels:', set(self.train_yoy))
-        print('y qcut label counts:', Counter(self.train_yoy))
-        print('y qcut cut_bins:', cut_bins)
-        try:
-            self.test_yoy = pd.cut(self.test_yoy, bins=cut_bins, labels=range(label_q), duplicates='drop') # can work without test set
-            return self.train_yoy.astype(np.int8), self.test_yoy.astype(np.int8)
-        except:
-            return self.train_yoy.astype(np.int8), None
+        return y_qcut(q, self.train_yoy, self.test_yoy)
 
     def yoyr(self, q): # qcut y with train_y cut_bins
-        label_q = q
-        while label_q > 0:
-            try:
-                self.train_yoyr, cut_bins = pd.qcut(self.train_yoyr, q=q, labels=range(label_q), retbins=True, duplicates='drop')
-                print(label_q, True)
-                break
-            except:
-                print(label_q, False)
-                label_q -= 1
-                continue
-
-        print('qcut labels:', set(self.train_yoyr))
-        print('y qcut label counts:', Counter(self.train_yoyr))
-        print('y qcut cut_bins:', cut_bins)
-        try:
-            self.test_yoyr = pd.cut(self.test_yoyr, bins=cut_bins, labels=range(label_q), duplicates='drop') # can work without test set
-            return self.train_yoyr.astype(np.int8), self.test_yoyr.astype(np.int8)
-        except:
-            return self.train_yoyr.astype(np.int8), None
+        return y_qcut(q, self.train_yoyr, self.test_yoyr)
 
 def load_data(lag_year = 5, sql_version = False):
 
