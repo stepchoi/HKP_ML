@@ -1,5 +1,4 @@
 import datetime as dt
-import gc
 
 import lightgbm as lgb
 import numpy as np
@@ -10,7 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
-from sqlalchemy import Column, MetaData, Table, Integer, create_engine, DateTime
+from sqlalchemy import create_engine
 from tqdm import tqdm
 
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
@@ -60,7 +59,7 @@ class convert_main:
     ''' split train, valid, test from main dataframe
         for given testing_period, y_type, valid_method, valid_no '''
 
-    def __init__(self, main, space, y_type, testing_period):
+    def __init__(self, main, y_type, testing_period):
         self.testing_period=testing_period
 
         # 1. define end, start of training period
@@ -77,7 +76,7 @@ class convert_main:
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
         # 4. use PCA on X arrays
-        self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=space['reduced_dimension'],
+        self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
                                                         train_x=X_train_valid, test_x=X_test)
 
     def split_chron(self, df, valid_no): # chron split of valid set
@@ -102,15 +101,14 @@ class convert_main:
 
         return X_train, X_valid, self.X_test_PCA, Y_train, Y_valid, self.Y_test
 
-def myLightGBM(main, space, y_type, testing_period, valid_method, valid_no):
+def myLightGBM(space, valid_method, valid_no):
 
     ''' X_train, X_valid, X_test, Y_train, Y_valid
     -> lightgbm for with params from hyperopt
     -> predict Y_pred using trained gbm model
     '''
 
-    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, space, y_type,
-                                                                      testing_period).split_valid(valid_method, valid_no)
+    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = converted_main.split_valid(valid_method, valid_no)
 
     params = space.copy()
     params.pop('reduced_dimension')
@@ -150,7 +148,9 @@ def f(space):
 
     ''' train & evaluate LightGBM on given space by hyperopt trails '''
 
-    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(main=main, space=space, **klass)
+    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(main, space,
+                                                                                   sql_result['valid_method'],
+                                                                                   sql_result['valid_no'])
 
     result = {'loss': 1 - accuracy_score(Y_valid, Y_valid_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
@@ -175,24 +175,13 @@ def f(space):
 
     return result
 
-def HPOT(space, sample_no, max_evals):
+def HPOT(space, max_evals):
 
-    # roll over each round
-    period_1 = dt.datetime(2008, 3, 31)
-
-    for i in tqdm(range(sample_no)):    # divide sets and return
-        testing_period = period_1 + i * relativedelta(months=3) # set sets in chronological order
-
-        klass['testing_period'] = testing_period
-        sql_result.update(klass)
-
-        ''' use hyperopt on each set '''
-        trials = Trials()
-        best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
-        print(best)
-        sql_result['trial'] += 1
-
-        '''??????????'''
+    ''' use hyperopt on each set '''
+    trials = Trials()
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
+    print(best)
+    sql_result['trial'] += 1
 
 if __name__ == "__main__":
 
@@ -212,23 +201,32 @@ if __name__ == "__main__":
     sql_result['name']='trial is # best given'
     sql_result['trial'] = 0
 
-    # PCA dimension
-    for reduced_dimension in [0.66, 0.7, 0.75]:
-        sql_result['reduced_dimension'] = reduced_dimension
+    # roll over each round
+    period_1 = dt.datetime(2008, 3, 31)
 
-        convert_main(main, space, y_type,
-                     testing_period)
+    for i in tqdm(range(sample_no)):    # divide sets and return
+        testing_period = period_1 + i * relativedelta(months=3) # set sets in chronological order
 
-        for y_type in ['yoyr']: # 'yoyr','qoq','yoy'
-            for max_evals in [10, 20, 30, 40, 50]:
-                for valid_method in ['chron', 'shuffle']:
-                    for valid_no in [1,5,10]:
+        # PCA dimension
+        for y_type in ['yoyr']:  # 'yoyr','qoq','yoy'
 
-                        klass = {'y_type': y_type,
-                                 'valid_method': valid_method,
-                                 'valid_no': valid_no}
-                        sql_result.update({'max_evals':max_evals})
+            for max_evals in [10, 20, 30]: # 40, 50
 
-                        HPOT(space, sample_no=sample_no, max_evals=max_evals)
+                for reduced_dimension in [0.66, 0.7, 0.75]:
+                    sql_result['reduced_dimension'] = reduced_dimension
+
+                    for valid_method in ['chron', 'shuffle']:
+                        for valid_no in [1,5,10]:
+
+                            klass = {'y_type': y_type,
+                                     'valid_method': valid_method,
+                                     'valid_no': valid_no,
+                                     'testing_period': testing_period}
+                            sql_result.update({'max_evals':max_evals})
+                            sql_result.update(klass)
+
+                            converted_main = convert_main(main, y_type, testing_period)
+
+                            HPOT(space, max_evals=max_evals)
 
     # print('x shape before PCA:', x.shape)
