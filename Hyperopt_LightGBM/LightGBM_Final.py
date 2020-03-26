@@ -16,23 +16,20 @@ from tqdm import tqdm
 from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
 space = {
-    # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
-
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05)),
+    'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05, dtype='d')),
     'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [127, 255]),
     'num_leaves': hp.choice('num_leaves', np.arange(50,200,30,dtype=int)),
 
     # avoid overfit
     'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(500, 1400, 300, dtype=int)),
-    'feature_fraction': hp.choice('feature_fraction', np.arange(0.3, 0.8, 0.1)),
-    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.4, 0.8, 0.1)),
+    'feature_fraction': hp.choice('feature_fraction', np.arange(0.3, 0.8, 0.1, dtype='d')),
+    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.4, 0.8, 0.1, dtype='d')),
     'bagging_freq': hp.choice('bagging_freq', [2,4,8]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.72, 0.02)),
-    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5)),
-    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 20)),
+    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.72, 0.02, dtype='d')),
+    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5, dtype='d')),
+    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 20, dtype='d')),
 
     # Voting Parallel
     # 'tree_learner': 'voting'
@@ -44,8 +41,7 @@ space = {
     'num_class': 3,
     'verbose': -1,
     'metric': 'multi_error',
-    'num_boost_round': 1000,
-    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 6  # for the best speed, set this to the number of real CPU cores
     }
 
 def myPCA(n_components, train_x, test_x):
@@ -125,10 +121,10 @@ def myLightGBM(main, space, y_type, testing_period, valid_method, valid_no):
 
     gbm = lgb.train(params,
                     lgb_train,
+                    valid_sets=lgb_eval,
                     num_boost_round=1000,
-                    valid_sets=lgb_eval,  # eval training data
-                    early_stopping_rounds=150)
-
+                    early_stopping_rounds=150,
+                    )
 
     '''print and save feature importance for model'''
     def feature_importance():
@@ -176,7 +172,6 @@ def f(space):
     sql_result['finish_timing'] = dt.datetime.now()
 
     pd.DataFrame.from_records([sql_result],index='trial').to_sql('lightgbm_results', con=engine, if_exists='append')
-    sql_result['trial']+=1
 
     return result
 
@@ -195,6 +190,8 @@ def HPOT(space, sample_no, max_evals):
         trials = Trials()
         best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
         print(best)
+        sql_result['trial'] += 1
+
         '''??????????'''
 
 if __name__ == "__main__":
@@ -207,24 +204,31 @@ if __name__ == "__main__":
     sample_no = 40
     qcut_q = 3
 
-    sql_result = {'qcut': qcut_q}
-    sql_result['name']='only yoyr'
-    # space['is_unbalance'] = True
-
     if qcut_q > 3:  # for 6, 9 qcut test
         space['num_class'] = qcut_q
+        # space['is_unbalance'] = True
 
-    for y_type in ['yoyr']: # 'qoq','yoy'
-        for max_evals in [10, 20, 30, 40, 50]:
-            for valid_method in ['chron', 'shuffle']:
-                for valid_no in [1,5,10]:
+    sql_result = {'qcut': qcut_q}
+    sql_result['name']='trial is # best given'
+    sql_result['trial'] = 0
 
-                    klass = {'y_type': y_type,
-                             'valid_method': valid_method,
-                             'valid_no': valid_no}
-                    sql_result['trial']=0
-                    sql_result.update({'max_evals':max_evals})
+    # PCA dimension
+    for reduced_dimension in [0.66, 0.7, 0.75]:
+        sql_result['reduced_dimension'] = reduced_dimension
 
-                    HPOT(space, sample_no=sample_no, max_evals=max_evals)
+        convert_main(main, space, y_type,
+                     testing_period)
+
+        for y_type in ['yoyr']: # 'yoyr','qoq','yoy'
+            for max_evals in [10, 20, 30, 40, 50]:
+                for valid_method in ['chron', 'shuffle']:
+                    for valid_no in [1,5,10]:
+
+                        klass = {'y_type': y_type,
+                                 'valid_method': valid_method,
+                                 'valid_no': valid_no}
+                        sql_result.update({'max_evals':max_evals})
+
+                        HPOT(space, sample_no=sample_no, max_evals=max_evals)
 
     # print('x shape before PCA:', x.shape)
