@@ -124,15 +124,17 @@ class clean_set:
         self.train_x, self.train_qoq, self.train_yoy, self.train_yoyr = divide_set(train)
 
         try:
-            self.test_x, self.test_qoq, self.test_yoy, self.train_yoyr  = divide_set(test) # can work without test set
+            self.test_x, self.test_qoq, self.test_yoy, self.test_yoyr = divide_set(test) # can work without test set
         except:
-            self.test_x=self.test_qoq=self.test_yoy=self.train_yoyr=None
+            self.test_x=self.test_qoq=self.test_yoy=self.test_yoyr=None
 
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
+        except:
+            pass
         return self.train_x, self.test_x
 
     def y_qcut_unbalance(self, q, train_df, test_df):
@@ -158,8 +160,10 @@ class clean_set:
         if q > 6:
             return self.y_qcut_unbalance(q, df_train, df_test)
 
+        df, bins = pd.qcut(df_train, q=3, labels=range(3), retbins=True)
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
-        print('y qcut label counts:', Counter(train_df))
+
+        print('y qcut label counts:', Counter(df_train))
         print('y qcut cut_bins:', cut_bins)
 
         try:
@@ -169,13 +173,13 @@ class clean_set:
             return df_train.astype(np.int8), None
 
     def qoq(self, q):
-        return y_qcut(q, self.train_qoq, self.test_qoq)
+        return self.y_qcut(q, self.train_qoq, self.test_qoq)
 
     def yoy(self, q): # qcut y with train_y cut_bins
-        return y_qcut(q, self.train_yoy, self.test_yoy)
+        return self.y_qcut(q, self.train_yoy, self.test_yoy)
 
     def yoyr(self, q): # qcut y with train_y cut_bins
-        return y_qcut(q, self.train_yoyr, self.test_yoyr)
+        return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
 def load_data(lag_year = 5, sql_version = False):
 
@@ -212,14 +216,6 @@ def load_data(lag_year = 5, sql_version = False):
 def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 
     '''This def consolidate steps 4 -> return (train_x, test_x, train_y, test_y)'''
-
-    class bcolors: # define color for waring
-        WARNING = '\033[93m'
-        FAIL = '\033[91m'
-
-    if not y_type in ('yoy', 'qoq'): # send warning if y_type not yoy or qoq
-        print(f"{bcolors.FAIL}y_type can only 'yoy' or 'qoq'.")
-        exit(1)
 
     main_period = clean_set(train, test) # create class
     train_x, test_x = main_period.standardize_x() # for x

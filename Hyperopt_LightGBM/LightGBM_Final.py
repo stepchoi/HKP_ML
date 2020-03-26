@@ -37,13 +37,14 @@ space = {
     # Voting Parallel
     # 'tree_learner': 'voting'
     # 'top_k': 2
+    # multi_error_top_k
 
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 3,
-    'verbose': 1,
+    'verbose': -1,
     'metric': 'multi_error',
-    'num_boost_round': 10,
+    'num_boost_round': 1000,
     'num_threads': 12  # for the best speed, set this to the number of real CPU cores
     }
 
@@ -64,6 +65,7 @@ class convert_main:
         for given testing_period, y_type, valid_method, valid_no '''
 
     def __init__(self, main, space, y_type, testing_period):
+        self.testing_period=testing_period
 
         # 1. define end, start of training period
         end = testing_period
@@ -82,10 +84,9 @@ class convert_main:
         self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=space['reduced_dimension'],
                                                         train_x=X_train_valid, test_x=X_test)
 
-    def split_chron(self, df): # chron split of valid set
+    def split_chron(self, df, valid_no): # chron split of valid set
         date_df = pd.concat([self.label_df, pd.DataFrame(df)], axis=1)
-        valid_period = testing_period - valid_no * relativedelta(months=3)
-        print('validation period start:', valid_period)
+        valid_period = self.testing_period - valid_no * relativedelta(months=3)
         train = date_df.loc[(date_df['datacqtr'] < valid_period), date_df.columns[2:]].values
         valid = date_df.loc[(date_df['datacqtr'] >= valid_period), date_df.columns[2:]].values
         return train, valid
@@ -98,8 +99,8 @@ class convert_main:
                                                                   test_size=test_size, random_state=666)
 
         elif valid_method == 'chron':   # split validation set by chron
-            X_train, X_valid = self.split_chron(self.X_train_valid_PCA)
-            Y_train, Y_valid = self.split_chron(self.Y_train_valid)
+            X_train, X_valid = self.split_chron(self.X_train_valid_PCA, valid_no)
+            Y_train, Y_valid = self.split_chron(self.Y_train_valid, valid_no)
             Y_train = np.reshape(Y_train, -1)   # transpose array for y
             Y_valid = np.reshape(Y_valid, -1)
 
@@ -122,7 +123,6 @@ def myLightGBM(main, space, y_type, testing_period, valid_method, valid_no):
     lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
     lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
 
-    print('Starting training...')
     gbm = lgb.train(params,
                     lgb_train,
                     num_boost_round=1000,
@@ -140,7 +140,6 @@ def myLightGBM(main, space, y_type, testing_period, valid_method, valid_no):
 
 
     '''Evaluation on Test Set'''
-    print('Loading model to predict...')
 
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
@@ -170,22 +169,14 @@ def f(space):
             "cohen_kappa_score": cohen_kappa_score(Y_test, Y_test_pred, labels=None),
             "hamming_loss": hamming_loss(Y_test, Y_test_pred),
             "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro'),
-            'space': space,
             'status': STATUS_OK}
 
-    print(result)
     sql_result.update(space)
-    sql_result.update(result.pop('space'))
-    print('# after add eval result & space:', sql_result)
+    sql_result.update(result)
+    sql_result['finish_timing'] = dt.datetime.now()
 
-    print('write to sql...')
-    sql_result.update({'id':i})
-    print('# before write to db:', sql_result)
-
-    pd.DataFrame.from_records([sql_result],index='id').to_sql('lightgbm_results', con=engine, if_exists='append')
-
-    i+=1
-    print('################## i', i)
+    pd.DataFrame.from_records([sql_result],index='trial').to_sql('lightgbm_results', con=engine, if_exists='append')
+    sql_result['trial']+=1
 
     return result
 
@@ -199,7 +190,6 @@ def HPOT(space, sample_no, max_evals):
 
         klass['testing_period'] = testing_period
         sql_result.update(klass)
-        print('# after add klass:', sql_result)
 
         ''' use hyperopt on each set '''
         trials = Trials()
@@ -212,19 +202,19 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    id = 0
     main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
-    sample_no = 2
+    sample_no = 40
     qcut_q = 3
 
     sql_result = {'qcut': qcut_q}
+    sql_result['name']='only yoyr'
+    # space['is_unbalance'] = True
 
     if qcut_q > 3:  # for 6, 9 qcut test
         space['num_class'] = qcut_q
-        space['is_unbalanced'] = True
 
-    for y_type in ['yoy','qoq','yoyr']:
+    for y_type in ['yoyr']: # 'qoq','yoy'
         for max_evals in [10, 20, 30, 40, 50]:
             for valid_method in ['chron', 'shuffle']:
                 for valid_no in [1,5,10]:
@@ -232,6 +222,7 @@ if __name__ == "__main__":
                     klass = {'y_type': y_type,
                              'valid_method': valid_method,
                              'valid_no': valid_no}
+                    sql_result['trial']=0
                     sql_result.update({'max_evals':max_evals})
 
                     HPOT(space, sample_no=sample_no, max_evals=max_evals)
