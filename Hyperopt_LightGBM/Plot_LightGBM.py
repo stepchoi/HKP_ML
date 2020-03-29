@@ -18,9 +18,7 @@ def result_boxplot(csv_name, only_test = False):
     for col in df_num:
         if len(set(df[col])) in np.arange(2,20,1):
             option[col] = set(df[col])
-        elif len(set(df[col])) > 20:
-            scat[col] = df[col]
-
+    print(option)
 
     fig = plt.figure(figsize=(20, 16), dpi=120)
     n = round((len(option.keys())+len(scat.keys()))**0.5,0)+1
@@ -135,10 +133,13 @@ def final_plot(dict_name):
     plt.savefig('{}/final_results/{}/train_acc.png'.format(os.getcwd(), dict_name))
 
 if __name__ == '__main__':
+    df = pd.read_csv('best.csv').drop_duplicates()
+    df['testing_period'] = pd.to_datetime(df['testing_period'])
 
-    # same_para('qcut3_all')
-    # eta_accuracy('records_20200313')
-    # result_boxplot('records_20200318_qcut3_200_3', only_test=True)
-    # round_eta_accuracy('records_eta_round_acc')
-    final_plot('final_results_qoq')
+    # print(df.iloc[0])
+    plt.scatter(df['trial'],df[['accuracy_score_test', 'accuracy_score_valid', 'accuracy_score_train']])
+    plt.show()
 
+    # for col in ['max_evals','valid_method','valid_no']
+    # for col in df.columns:
+    #     print(col,len(set(df[col])-set([np.nan])))
