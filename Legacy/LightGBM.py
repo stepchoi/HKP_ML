@@ -1,14 +1,13 @@
-import datetime as dt
 import gc
-
-import lightgbm as lgb
+import datetime as dt
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.metrics import cohen_kappa_score, hamming_loss, jaccard_score
-from sklearn.metrics import f1_score, fbeta_score, precision_score, recall_score, accuracy_score
-from sklearn.metrics import mean_squared_error
-
 from Preprocessing.LoadData import (load_data, clean_set)
+from sklearn.decomposition import PCA
+import lightgbm as lgb
+from sklearn.metrics import f1_score,r2_score,fbeta_score,roc_auc_score,precision_score,recall_score,accuracy_score
+from sklearn.metrics import cohen_kappa_score,hamming_loss,jaccard_score,hinge_loss
+import numpy as np
+from sklearn.metrics import mean_squared_error
 
 '''
 part_dict = sample_from_main(part=5)  # part_dict[0], part_dict[1], ... would be arrays after standardization
@@ -25,7 +24,7 @@ train_x, test_x = main_period.standardize_x(return_test_x = True)
 train_yoy, test_yoy = main_period.yoy()
 
 '''PCA'''
-pca = PCA(n_components=589)  # Threshold for dimension reduction,float or integer
+pca = PCA(n_components=650)  # Threshold for dimension reduction,float or integer
 #此处应添加直接引用PCA指定阈值ratio数量的参数
 pca.fit(train_x)
 new_train_x = pca.transform(train_x)

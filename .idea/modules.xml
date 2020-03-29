@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../FYP/.idea/FYP.iml" filepath="$PROJECT_DIR$/../FYP/.idea/FYP.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/HKP_ML_Git.iml" filepath="$PROJECT_DIR$/.idea/HKP_ML_Git.iml" />
     </modules>
   </component>

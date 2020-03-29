@@ -14,7 +14,7 @@ import time  # 2.1 import modules used in PCA codes
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from sklearn.decomposition import PCA
+from sklearn.decomposition import SparsePCA
 from tqdm import tqdm
 
 '''Step 2: write PCA codes'''
@@ -22,14 +22,14 @@ from tqdm import tqdm
 # 2.2 create def related to PCA
 def myPCA(X_std): # run PCA with no predetermined No. of components
 
-    pca = PCA()
+    pca = SparsePCA()
     pca.fit(X_std)
     ratio = pca.explained_variance_ratio_
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 
 
 '''Step 3: parts will be ran when running this py script '''
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     start = time.time() # timing function to record total running time
 

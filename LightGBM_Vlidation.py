@@ -63,6 +63,7 @@ params = {
     #'feature_fraction': 0.8, #特征子抽样
     #'bagging_fraction': 0.8, #bagging防止过拟合
     'bagging_freq': 5,
+    'is_provide_training_metric':'true',
     #'lambda_l1': 0.4, #正则化参数
     #'lambda_l2': 0.5, #正则化参数
     #'min_gain_to_split': 0.2, #正则化参数
