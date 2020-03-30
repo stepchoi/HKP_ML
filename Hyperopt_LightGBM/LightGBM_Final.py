@@ -91,7 +91,7 @@ class convert_main:
         if valid_method == 'shuffle':   # split validation set by random shuffle
             test_size = valid_no / 80
             X_train, X_valid, Y_train, Y_valid = train_test_split(self.X_train_valid_PCA, self.Y_train_valid,
-                                                                  test_size=test_size, random_state=666)
+                                                                  test_size=test_size)
 
         elif valid_method == 'chron':   # split validation set by chron
             X_train, X_valid = self.split_chron(self.X_train_valid_PCA, valid_no)
@@ -111,7 +111,6 @@ def myLightGBM(space, valid_method, valid_no):
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = converted_main.split_valid(valid_method, valid_no)
 
     params = space.copy()
-    params.pop('reduced_dimension')
 
     '''Training'''
     lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
@@ -148,8 +147,7 @@ def f(space):
 
     ''' train & evaluate LightGBM on given space by hyperopt trails '''
 
-    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(main, space,
-                                                                                   sql_result['valid_method'],
+    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(space, sql_result['valid_method'],
                                                                                    sql_result['valid_no'])
 
     result = {'loss': 1 - accuracy_score(Y_valid, Y_valid_pred),
@@ -188,6 +186,8 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
+    t = pd.read_sql('select trial from lightgbm_results', engine) # identify current # trials from past execution
+
     main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
     sample_no = 40
@@ -198,8 +198,9 @@ if __name__ == "__main__":
         # space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
-    sql_result['name']='trial is # best given'
-    sql_result['trial'] = 0
+    sql_result['name']='trial is # best given-new'
+    sql_result['trial'] = int(max(t['trial']))
+    resume = False
 
     # roll over each round
     period_1 = dt.datetime(2008, 3, 31)
@@ -208,11 +209,11 @@ if __name__ == "__main__":
         testing_period = period_1 + i * relativedelta(months=3) # set sets in chronological order
 
         # PCA dimension
-        for y_type in ['yoyr']:  # 'yoyr','qoq','yoy'
+        for y_type in ['qoq']:  # 'yoyr','qoq','yoy'
 
-            for max_evals in [10, 20, 30]: # 40, 50
+            for max_evals in [30]: # 40, 50
 
-                for reduced_dimension in [0.66, 0.7, 0.75]:
+                for reduced_dimension in [0.75]: # 0.66, 0.7
                     sql_result['reduced_dimension'] = reduced_dimension
 
                     for valid_method in ['chron', 'shuffle']:
@@ -222,6 +223,16 @@ if __name__ == "__main__":
                                      'valid_method': valid_method,
                                      'valid_no': valid_no,
                                      'testing_period': testing_period}
+
+                            if (i >= 9) & (valid_method=='chron') & (valid_no==10):
+                                resume=True
+                                print('resume', klass)
+                            elif resume == True:
+                                print(resume)
+                            else:
+                                continue
+
+
                             sql_result.update({'max_evals':max_evals})
                             sql_result.update(klass)
 

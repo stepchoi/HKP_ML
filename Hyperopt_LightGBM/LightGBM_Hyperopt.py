@@ -61,6 +61,7 @@ def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', va
         x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
     
     if (dimension_reduction_method == 'AE'):
+        from Autoencoder_for_LightGBM import AE_fitting, AE_predict
         AE_model = AE_fitting(x_train, reduced_dimensions)
         compressed_x_train = AE_predict(x_train, AE_model)
         compressed_x_valid = AE_predict(x_valid, AE_model)
