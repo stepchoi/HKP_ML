@@ -75,9 +75,16 @@ class convert_main:
                                                                             testing_period=testing_period, q=3)
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
-        # 4. use PCA on X arrays
-        self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
-                                                        train_x=X_train_valid, test_x=X_test)
+        # # 4. use PCA on X arrays
+        # self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
+        #                                                 train_x=X_train_valid, test_x=X_test)
+
+        # 4.1. use AE on X arrays
+        from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+        AE_model = AE_fitting(X_train_valid, reduced_dimensions)
+        self.X_train_valid_PCA = AE_predict(X_train_valid, AE_model)
+        self.X_test_PCA = AE_predict(X_test, AE_model)
+
 
     def split_chron(self, df, valid_no): # chron split of valid set
         date_df = pd.concat([self.label_df, pd.DataFrame(df)], axis=1)
