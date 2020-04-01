@@ -53,9 +53,8 @@ def myPCA(n_components, train_x, test_x):
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
     if feature_importance['return_importance'] == True:
-        pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns']))
+        pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
         pc_df['explained_variance_ratio_'] = np.cumsum(pca.explained_variance_ratio_).to_list()
-        print(pc_df)
         feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
@@ -141,10 +140,9 @@ def myLightGBM(space, valid_method, valid_no):
         importance = gbm.feature_importance(importance_type='split')
         name = gbm.feature_name()
         feature_importance_df = pd.DataFrame({'feature_name': name, 'importance': importance}).set_index('feature_name')
-        print(feature_importance_df)
         feature_importance['pc_df']['lightgbm_importance'] = feature_importance_df['importance'].to_list()
+        feature_importance['pc_df']['testing_period'] = sql_result['testing_period'].to_list()
         print(feature_importance['pc_df'])
-        feature_importance['pc_df'].to_sql('lightgbm_feature_importance', con=engine, if_exists='replace')
 
 
     '''Evaluation on Test Set'''
@@ -179,6 +177,10 @@ def f(space):
             "hamming_loss": hamming_loss(Y_test, Y_test_pred),
             "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro'),
             'status': STATUS_OK}
+
+    if feature_importance['return_importance'] == True:
+        if result['accuracy_score_test'] < sql_result['accuracy_score_test']:
+            feature_importance['pc_df'].to_sql('lightgbm_feature_importance', con=engine, if_exists='append')
 
     sql_result.update(space)
     sql_result.update(result)
