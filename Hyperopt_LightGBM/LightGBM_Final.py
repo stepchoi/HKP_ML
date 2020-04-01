@@ -53,12 +53,10 @@ def myPCA(n_components, train_x, test_x):
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
     if feature_importance['return_importance'] == True:
-        ratio = pca.explained_variance_ratio_
-        cumratio = pd.DataFrame(np.cumsum(ratio))
-        pc = pca.components_
-        print(pd.DataFrame(pc, columns=feature_importance['orginal_columns']))
-        print(cumratio)
-        cumratio.to_sql('lightgbm_pc_components', con=engine, if_exists='replace')
+        pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns']))
+        pc_df['explained_variance_ratio_'] = np.cumsum(pca.explained_variance_ratio_).to_list()
+        print(pc_df)
+        feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
 
@@ -142,9 +140,11 @@ def myLightGBM(space, valid_method, valid_no):
     if feature_importance['return_importance'] == True:
         importance = gbm.feature_importance(importance_type='split')
         name = gbm.feature_name()
-        feature_importance = pd.DataFrame({'feature_name': name, 'importance': importance})
-        print(feature_importance)
-        feature_importance.to_sql('lightgbm_feature_importance', con=engine, if_exists='replace')
+        feature_importance_df = pd.DataFrame({'feature_name': name, 'importance': importance}).set_index('feature_name')
+        print(feature_importance_df)
+        feature_importance['pc_df']['lightgbm_importance'] = feature_importance_df['importance'].to_list()
+        print(feature_importance['pc_df'])
+        feature_importance['pc_df'].to_sql('lightgbm_feature_importance', con=engine, if_exists='replace')
 
 
     '''Evaluation on Test Set'''
