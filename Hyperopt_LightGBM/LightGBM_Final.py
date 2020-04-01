@@ -52,11 +52,11 @@ def myPCA(n_components, train_x, test_x):
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
-    if sql_result['return_importance'] == True:
+    if feature_importance['return_importance'] == True:
         ratio = pca.explained_variance_ratio_
         cumratio = pd.DataFrame(np.cumsum(ratio))
         pc = pca.components_
-        print(pd.Dat)
+        print(pd.DataFrame(pc, columns=feature_importance['orginal_columns']))
         print(cumratio)
         cumratio.to_sql('lightgbm_pc_components', con=engine, if_exists='replace')
 
@@ -139,7 +139,7 @@ def myLightGBM(space, valid_method, valid_no):
                     )
 
     '''print and save feature importance for model'''
-    if sql_result['return_importance'] == True:
+    if feature_importance['return_importance'] == True:
         importance = gbm.feature_importance(importance_type='split')
         name = gbm.feature_name()
         feature_importance = pd.DataFrame({'feature_name': name, 'importance': importance})
@@ -183,7 +183,6 @@ def f(space):
     sql_result.update(space)
     sql_result.update(result)
     # sql_result.pop('is_unbalance')
-    sql_result.pop('return_importance')
     sql_result['finish_timing'] = dt.datetime.now()
 
 
@@ -218,7 +217,11 @@ if __name__ == "__main__":
     sql_result = {'qcut': qcut_q}
     sql_result['name']='yoyr-new'
     sql_result['trial'] = int(max(t['trial']))+1
-    sql_result['return_importance'] = True
+
+    feature_importance = {}
+    feature_importance['return_importance'] = True
+    feature_importance['orginal_columns'] = main.columns[2:-3]
+    print(feature_importance['orginal_columns'])
 
     resume = True
 

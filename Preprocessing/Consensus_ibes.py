@@ -103,18 +103,18 @@ class convert:
 
 def conver_qoq_yoy():
     try:
-        ann = pd.read_csv('ibes_ANN_last.csv')  # for annual forecast
-        # qtr = pd.read_csv('ibes_QTR_last.csv')  # for quarterly forecast
+        # ann = pd.read_csv('ibes_ANN_last.csv')  # for annual forecast
+        qtr = pd.read_csv('ibes_QTR_last.csv')  # for quarterly forecast
         print('local version run - ann_last, qtr_last')
     except:
         ann, qtr = filter_date()
 
-    # qtr = convert(qtr).qoq()
-    ann = convert(ann).yoy()
-    # df_full = evaluate(qtr).eval_all('qoq')
-    df_full_ann = evaluate(ann, 'yoy_rolling').eval_all()
-    # df_full.to_csv('consensus_qoq.csv')
-    df_full_ann.to_csv('consensus_yoyr.csv')
+    qtr = convert(qtr).qoq()
+    # ann = convert(ann).yoy()
+    df_full = evaluate(qtr, 'qoq').eval_all()
+    # df_full_ann = evaluate(ann, 'yoy_rolling').eval_all()
+    df_full.to_csv('consensus_qoq_6.csv')
+    # df_full_ann.to_csv('consensus_yoyr.csv')
 
 
 
@@ -144,13 +144,24 @@ class evaluate:
         self.y_type = y_type
 
     def qcut_y(self, df, col):  # qcut y with train_y cut_bins
+
+        self.qcut_q = 6
+
         bins = {}
         period_1 = dt.datetime(2008, 3, 31)
         for i in tqdm(range(40)):  # change to 40 for full 40 sets, change to False to stop saving csv
             end = period_1 + i * relativedelta(months=3)  # define testing period
             start = end - relativedelta(years=20)  # define training period
             train = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]  # train df = 80 quarters
-            train[col], cut_bins = pd.qcut(train[col], q=3, labels=range(3), retbins=True, duplicates='drop')
+            for i in range(self.qcut_q):
+                try:
+                    train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q-i),
+                                                   retbins=True, duplicates='drop')
+                    print('range', self.qcut_q-i)
+                    self.qcut_range = self.qcut_q-i
+                    break
+                except:
+                    continue
             bins[end.strftime('%Y-%m-%d')] = cut_bins
         # d = pd.DataFrame.from_dict(bins, orient='index',columns=[0,1,2,3])
         return bins
@@ -159,7 +170,7 @@ class evaluate:
         self.niq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv')
         self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
         all_bins = {}
-        for y in ['qoq', 'yoy', 'yoy_rolling']:
+        for y in ['qoq', 'yoy_rolling']: # 'yoy',
             all_bins[y] = self.qcut_y(self.niq, y)
         return all_bins
 
@@ -180,7 +191,7 @@ class evaluate:
                 cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]
 
                 for col in [self.y_type, 'medest','meanest']:    # qcut testing period (actual & consensus)
-                    testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(3))
+                    testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_range))
 
                 testing_period = testing_period.fillna(0)   # some '-1' will be qcut into NaN -> manual replace by 0 category
                 med_records[i.strftime('%Y-%m-%d')] = eval(testing_period[self.y_type], testing_period['medest'])
