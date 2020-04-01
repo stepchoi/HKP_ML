@@ -52,6 +52,14 @@ def myPCA(n_components, train_x, test_x):
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
+    if sql_result['return_importance'] == True:
+        ratio = pca.explained_variance_ratio_
+        cumratio = pd.DataFrame(np.cumsum(ratio))
+        pc = pca.components_
+        print(pd.Dat)
+        print(cumratio)
+        cumratio.to_sql('lightgbm_pc_components', con=engine, if_exists='replace')
+
     return new_train_x, new_test_x
 
 class convert_main:
@@ -72,18 +80,18 @@ class convert_main:
 
         # 3. extract array for X, Y for given y_type, testing_period
         X_train_valid, X_test, self.Y_train_valid, self.Y_test = sample_from_datacqtr(main, y_type=y_type,
-                                                                            testing_period=testing_period, q=3)
+                                                                            testing_period=testing_period, q=space['num_class'])
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
-        # # 4. use PCA on X arrays
-        # self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
-        #                                                 train_x=X_train_valid, test_x=X_test)
+        # 4. use PCA on X arrays
+        self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
+                                                        train_x=X_train_valid, test_x=X_test)
 
-        # 4.1. use AE on X arrays
-        from Autoencoder_for_LightGBM import AE_fitting, AE_predict
-        AE_model = AE_fitting(X_train_valid, reduced_dimensions)
-        self.X_train_valid_PCA = AE_predict(X_train_valid, AE_model)
-        self.X_test_PCA = AE_predict(X_test, AE_model)
+        # # 4.1. use AE on X arrays
+        # from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+        # AE_model = AE_fitting(X_train_valid, 310)
+        # self.X_train_valid_PCA = AE_predict(X_train_valid, AE_model)
+        # self.X_test_PCA = AE_predict(X_test, AE_model)
 
 
     def split_chron(self, df, valid_no): # chron split of valid set
@@ -131,12 +139,12 @@ def myLightGBM(space, valid_method, valid_no):
                     )
 
     '''print and save feature importance for model'''
-    def feature_importance():
+    if sql_result['return_importance'] == True:
         importance = gbm.feature_importance(importance_type='split')
         name = gbm.feature_name()
         feature_importance = pd.DataFrame({'feature_name': name, 'importance': importance})
         print(feature_importance)
-        feature_importance.to_csv('feature_importance.csv', index=False)
+        feature_importance.to_sql('lightgbm_feature_importance', con=engine, if_exists='replace')
 
 
     '''Evaluation on Test Set'''
@@ -174,7 +182,10 @@ def f(space):
 
     sql_result.update(space)
     sql_result.update(result)
+    # sql_result.pop('is_unbalance')
+    sql_result.pop('return_importance')
     sql_result['finish_timing'] = dt.datetime.now()
+
 
     pd.DataFrame.from_records([sql_result],index='trial').to_sql('lightgbm_results', con=engine, if_exists='append')
 
@@ -198,33 +209,35 @@ if __name__ == "__main__":
     main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
     sample_no = 40
-    qcut_q = 3
+    qcut_q =  3
 
     if qcut_q > 3:  # for 6, 9 qcut test
         space['num_class'] = qcut_q
-        # space['is_unbalance'] = True
+        space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
-    sql_result['name']='trial is # best given-new'
-    sql_result['trial'] = int(max(t['trial']))
-    resume = False
+    sql_result['name']='yoyr-new'
+    sql_result['trial'] = int(max(t['trial']))+1
+    sql_result['return_importance'] = True
+
+    resume = True
 
     # roll over each round
-    period_1 = dt.datetime(2008, 3, 31)
+    period_1 = dt.datetime(2018, 3, 31) # 2008
 
     for i in tqdm(range(sample_no)):    # divide sets and return
         testing_period = period_1 + i * relativedelta(months=3) # set sets in chronological order
 
         # PCA dimension
-        for y_type in ['qoq']:  # 'yoyr','qoq','yoy'
+        for y_type in ['yoyr']:  # 'yoyr','qoq','yoy'
 
             for max_evals in [30]: # 40, 50
 
                 for reduced_dimension in [0.75]: # 0.66, 0.7
                     sql_result['reduced_dimension'] = reduced_dimension
 
-                    for valid_method in ['chron', 'shuffle']:
-                        for valid_no in [1,5,10]:
+                    for valid_method in ['shuffle']: # 'chron'
+                        for valid_no in [10]: # 1,5
 
                             klass = {'y_type': y_type,
                                      'valid_method': valid_method,

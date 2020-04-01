@@ -14,7 +14,7 @@ import time  # 2.1 import modules used in PCA codes
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from sklearn.decomposition import SparsePCA
+from sklearn.decomposition import SparsePCA, PCA
 from tqdm import tqdm
 
 '''Step 2: write PCA codes'''
@@ -22,7 +22,7 @@ from tqdm import tqdm
 # 2.2 create def related to PCA
 def myPCA(X_std): # run PCA with no predetermined No. of components
 
-    pca = SparsePCA()
+    pca = PCA()
     pca.fit(X_std)
     ratio = pca.explained_variance_ratio_
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
@@ -43,31 +43,34 @@ if __name__ == '__main__':
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
     from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
-    y_type = 'yoy'
+    for y_type in ['yoyr','qoq']:
 
-    # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+        # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
+        main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
 
-    explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
+        explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
-    # 4.2. for loop -> roll over all time period from main dataset
-    period_1 = dt.datetime(2008, 3, 31)
+        # 4.2. for loop -> roll over all time period from main dataset
+        period_1 = dt.datetime(2008, 3, 31)
 
-    for i in tqdm(range(1)): # change to 40 for full 40 sets, change to False to stop saving csv
+        for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
 
-        testing_period = period_1 + i * relativedelta(months=3)  # define testing period
+            testing_period = period_1 + i * relativedelta(months=3)  # define testing period
 
-        train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = y_type, testing_period=testing_period, q=3)
+            train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'qoq', testing_period=testing_period, q=3)
+            train_x_1, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoyr', testing_period=testing_period, q=3)
+            print(train_x==train_x_1)
 
-        explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
 
-        del train_x, test_x, train_y, test_y  # delete this train_x and collect garbage -> release memory
-        gc.collect()
+            explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
 
-    # convert dictionary to csv and save to local
-    pd.DataFrame.from_dict(explanation_ratio_dict).to_csv('explanation_ratio_{}.csv'.format(y_type))
+            del train_x, test_x, train_y, test_y  # delete this train_x and collect garbage -> release memory
+            gc.collect()
 
-    end = time.time() # timing function to record total running time
-    print('PCA total running time: {}'.format(end - start))
+        # convert dictionary to csv and save to local
+        pd.DataFrame.from_dict(explanation_ratio_dict).to_csv('explanation_ratio_{}.csv'.format(y_type))
+
+        end = time.time() # timing function to record total running time
+        print('PCA total running time: {}'.format(end - start))
 
 

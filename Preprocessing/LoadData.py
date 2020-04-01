@@ -157,8 +157,8 @@ class clean_set:
 
     def y_qcut(self, q, df_train, df_test):
 
-        if q > 6:
-            return self.y_qcut_unbalance(q, df_train, df_test)
+        # if q > 6:
+        #     return self.y_qcut_unbalance(q, df_train, df_test)
 
         df, bins = pd.qcut(df_train, q=3, labels=range(3), retbins=True)
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
