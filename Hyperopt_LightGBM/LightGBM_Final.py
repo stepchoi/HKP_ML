@@ -141,7 +141,7 @@ def myLightGBM(space, valid_method, valid_no):
         name = gbm.feature_name()
         feature_importance_df = pd.DataFrame({'feature_name': name, 'importance': importance}).set_index('feature_name')
         feature_importance['pc_df']['lightgbm_importance'] = feature_importance_df['importance'].to_list()
-        feature_importance['pc_df']['testing_period'] = sql_result['testing_period'].to_list()
+        feature_importance['pc_df']['testing_period'] = sql_result['testing_period']
         print(feature_importance['pc_df'])
 
 
