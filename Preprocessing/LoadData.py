@@ -49,6 +49,9 @@ def add_lag(df, lag_year): # df is TABLE main, lag_year for original model desig
 
     convert_to_float32(df)
 
+    if lag_year == 0:
+        return df
+
     col = df.columns[2:]  # first three columns are gvkey, datacqtr(Timestamp), and sic which won't need lagging values
 
     lag_df = []  # create list for to be concated dataframes
@@ -181,6 +184,7 @@ class clean_set:
     def yoyr(self, q): # qcut y with train_y cut_bins
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
+
 def load_data(lag_year = 5, sql_version = False):
 
     '''This def consolidate steps 1 & 2 -> return big table with max(row) * max(col)'''
@@ -213,6 +217,7 @@ def load_data(lag_year = 5, sql_version = False):
 
     return main_lag.reset_index(drop=True) # i.e. big table
 
+
 def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 
     '''This def consolidate steps 4 -> return (train_x, test_x, train_y, test_y)'''
@@ -229,7 +234,7 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
 
     return train_x, test_x, train_y, test_y
 
-def sample_from_datacqtr(df, y_type, testing_period, q): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
+def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
 
     '''3.a. This def extract partial from big table with selected testing_period'''
 
@@ -238,6 +243,9 @@ def sample_from_datacqtr(df, y_type, testing_period, q): # df = big table; y_typ
 
     train = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]  # train df = 80 quarters
     test = df.loc[df['datacqtr'] == end]                                # test df = 1 quarter
+
+    if return_df == True:
+        return train_test_clean(y_type, train, test, q=q), train.iloc[:,:2]
 
     return train_test_clean(y_type, train, test, q=q)
 

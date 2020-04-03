@@ -1,49 +1,66 @@
 import datetime as dt
 
 import numpy as np
-import pandas as pd
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sqlalchemy import create_engine
+
+from Preprocessing.LoadData import load_data
 
 
-def main(sql_version=False):
+class clean_rnn:
+    '''df = big table; y_type = ['yoy','qoq']; testing_period are timestamp'''
 
-    if sql_version is True:  # sql version read TABLE from Postgre SQL
-        db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
-        engine = create_engine(db_string)
-        main = pd.read_sql('SELECT * FROM main', engine)
-    else:  # local version read TABLE from local csv files -> faster
-        main = pd.read_csv('Hyperopt_LightGBM/main.csv')
-        engine = None
-        print('local version running - main')
+    def __init__(self):
 
-    main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
-    main = main.dropna(how='any')
-    main = main.loc[(main['datacqtr']<= dt.datetime(2019, 1, 1))&(main['datacqtr']>= dt.datetime(1983, 1, 1))].reset_index(drop=True)
+        '''main = [gvkey, datacqtr + all_x] * [all_datacqtr]'''
+        self.main = load_data(lag_year=0, sql_version=True).iloc[:,:-3]
 
-    # standardize based on entire table
-    scaler = StandardScaler().fit(main.iloc[:, 2:])
-    main.iloc[:, 2:] = scaler.transform(main.iloc[:, 2:])
+        '''qtr_main = [gvkey, datacqtr + all_x] * [single datacqtr]'''
+        self.qtr_dict_df = self.split_by_datacqtr()
 
-    # pca on entire table
-    pca = PCA(n_components=0.75)
-    main_pca = pca.fit_transform(main.iloc[:, 2:])
-    main = pd.concat([main.iloc[:,:2],pd.DataFrame(main_pca)], axis=1)
+        self.col = main.columns[2:-3]
+        print(self.col)
 
-    # start construct 3d array
-    arr=[]
-    for name, g in main.groupby('datacqtr'):
-        print(name)
-        g = g.set_index('gvkey')
-        df = pd.DataFrame(index=list(set(main['gvkey'])))
-        df0 = pd.merge(df, g, left_index=True, right_index=True,how='outer').filter(main.columns[2:])
-        arr.append(np.array(df0))
+        self.x_dict = {}
+        self.y_dict = {}
 
-    arr3d = np.array(arr)   # arr3d is the 3d array
-    print(arr3d)
-    print(arr3d.shape)
-    return arr3d
+    def split_by_datacqtr(self):
+        qtr_dict_df = {}
+        for qtr in set(self.main['datacqtr']):
+            qtr_dict_df[qtr] = self.main.loc[self.main['datacqtr']==qtr]
+            print(qtr_dict_df)
+        return qtr_dict_df
+
+    def reshape_3d(self, sample_no):
+
+        period_1 = dt.datetime(1988, 3, 31)
+
+        arr_3d_dict = {}
+
+        for i in tqdm(range(sample_no)): # to be changed
+
+            start = period_1 + i * relativedelta(months=3)  # start period of training set
+
+            '''filter gvkey'''
+            gvkey = set(self.qtr_dict_df[start])
+            for k in tqdm(range(20)):
+                lag_period = start + (k-20)*relativedelta(months=3)
+                gvkey = gvkey & set(self.qtr_dict_df[lag_period])
+
+            print(len(gvkey), gvkey)
+
+            arr = []
+            for k in tqdm(range(20)):
+                lag_period = start + (k-20) * relativedelta(months=3)
+                period_df = self.qtr_dict_df[lag_period].loc[self.qtr_dict_df['gvkey'].isin(gvkey)]
+                print(period_df)
+                period_df_std = StandardScaler().fit(period_df.iloc[:,2:])
+                print(period_df_std)
+                arr.append(period_df_std)
+
+            arr_3d_dict[i] = np.array(arr)
+            print(arr_3d_dict[i].shape)
+
+        return arr_3d_dict
 
 if __name__ == '__main__':
-    arr3d = main()
+    arr_3d_dict = clean_rnn().reshape_3d(sample_no=1)
