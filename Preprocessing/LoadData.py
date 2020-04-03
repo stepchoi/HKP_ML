@@ -114,7 +114,6 @@ def merge_dep_macro(df, sql_version):
 
     return merge_3
 
-
 class clean_set:
 
     '''4. This def converts x -> std, y -> qcut'''
@@ -184,7 +183,6 @@ class clean_set:
     def yoyr(self, q): # qcut y with train_y cut_bins
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
-
 def load_data(lag_year = 5, sql_version = False):
 
     '''This def consolidate steps 1 & 2 -> return big table with max(row) * max(col)'''
@@ -206,6 +204,8 @@ def load_data(lag_year = 5, sql_version = False):
     print('(step 0/3) read local csv - main - running time: {}'.format(end - start))
 
     main['datacqtr'] = pd.to_datetime(main['datacqtr'],format='%Y-%m-%d')
+
+    # main = main.iloc[:,:4]
 
     # 1. add 20 lagging factors for each variable
     main_lag = add_lag(main, lag_year)

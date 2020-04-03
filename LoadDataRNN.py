@@ -1,7 +1,11 @@
 import datetime as dt
+import gc
+import os
 
 import numpy as np
+from dateutil.relativedelta import relativedelta
 from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 
 from Preprocessing.LoadData import load_data
 
@@ -9,58 +13,49 @@ from Preprocessing.LoadData import load_data
 class clean_rnn:
     '''df = big table; y_type = ['yoy','qoq']; testing_period are timestamp'''
 
-    def __init__(self):
+    def __init__(self,lag_year, sql_version):
 
-        '''main = [gvkey, datacqtr + all_x] * [all_datacqtr]'''
-        self.main = load_data(lag_year=0, sql_version=True).iloc[:,:-3]
+        main = load_data(lag_year=lag_year, sql_version=sql_version)
+        main.iloc[:,2:-3] = StandardScaler().fit_transform(main.iloc[:,2:-3])
 
-        '''qtr_main = [gvkey, datacqtr + all_x] * [single datacqtr]'''
-        self.qtr_dict_df = self.split_by_datacqtr()
+        self.fincol = main.columns[2:156].to_list()
+        self.ecocol = main.columns[-14:-3].to_list()
+        self.lag_year = lag_year
 
-        self.col = main.columns[2:-3]
-        print(self.col)
+        self.arr_3d_dict = self.reshape_3d(main)
 
-        self.x_dict = {}
-        self.y_dict = {}
+        del main
+        gc.collect()
 
-    def split_by_datacqtr(self):
-        qtr_dict_df = {}
-        for qtr in set(self.main['datacqtr']):
-            qtr_dict_df[qtr] = self.main.loc[self.main['datacqtr']==qtr]
-            print(qtr_dict_df)
-        return qtr_dict_df
-
-    def reshape_3d(self, sample_no):
-
-        period_1 = dt.datetime(1988, 3, 31)
-
+    def reshape_3d(self, main):
         arr_3d_dict = {}
 
-        for i in tqdm(range(sample_no)): # to be changed
-
-            start = period_1 + i * relativedelta(months=3)  # start period of training set
-
-            '''filter gvkey'''
-            gvkey = set(self.qtr_dict_df[start])
-            for k in tqdm(range(20)):
-                lag_period = start + (k-20)*relativedelta(months=3)
-                gvkey = gvkey & set(self.qtr_dict_df[lag_period])
-
-            print(len(gvkey), gvkey)
-
+        for qtr in tqdm(set(main['datacqtr'])):
             arr = []
-            for k in tqdm(range(20)):
-                lag_period = start + (k-20) * relativedelta(months=3)
-                period_df = self.qtr_dict_df[lag_period].loc[self.qtr_dict_df['gvkey'].isin(gvkey)]
-                print(period_df)
-                period_df_std = StandardScaler().fit(period_df.iloc[:,2:])
-                print(period_df_std)
-                arr.append(period_df_std)
-
-            arr_3d_dict[i] = np.array(arr)
-            print(arr_3d_dict[i].shape)
+            period = main.loc[main['datacqtr']==qtr]
+            arr.append(period[self.fincol + self.ecocol].values)
+            for lag in range(self.lag_year * 4 - 1):  # when lag_year is 5, here loop over past 19 quarter
+                x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] + self.ecocol
+                arr.append(period[x_col].values)
+            arr_3d_dict[qtr] = np.array(arr)
+            print(qtr, arr_3d_dict[qtr].shape)
 
         return arr_3d_dict
 
+    def sampling(self, sample_no):
+
+        period_1 = dt.datetime(2008, 3, 31)
+        samples = []
+        for i in tqdm(range(sample_no)):  # to be changed
+            end = period_1 + i * relativedelta(months=3)  # start period of training set
+            start = end - relativedelta(years=20)
+
+            for k in self.arr_3d_dict.keys():
+                if (k>=start) & (k<end):
+                    samples.append(self.arr_3d_dict[k])
+        print(len(samples))
+        return samples
+
 if __name__ == '__main__':
-    arr_3d_dict = clean_rnn().reshape_3d(sample_no=1)
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    arr_3d_dict = clean_rnn(lag_year=5, sql_version=True).sampling(1)
