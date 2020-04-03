@@ -1,6 +1,5 @@
 import datetime as dt
 import gc
-import os
 
 import numpy as np
 from dateutil.relativedelta import relativedelta
@@ -57,5 +56,4 @@ class clean_rnn:
         return samples
 
 if __name__ == '__main__':
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
     arr_3d_dict = clean_rnn(lag_year=5, sql_version=True).sampling(1)
