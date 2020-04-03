@@ -37,6 +37,7 @@ class clean_rnn:
                 x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] + self.ecocol
                 arr.append(period[x_col].values)
             arr_3d_dict[qtr] = np.array(arr)
+
             print(qtr, arr_3d_dict[qtr].shape)
 
         return arr_3d_dict
@@ -56,4 +57,8 @@ class clean_rnn:
         return samples
 
 if __name__ == '__main__':
-    arr_3d_dict = clean_rnn(lag_year=5, sql_version=True).sampling(1)
+    # samples_set1 equivalent to the first csv in LightGBM version
+    # it contains 80 3d_array
+    # each 3d_array = (20, companies, variables=154)
+
+    samples_set1 = clean_rnn(lag_year=5, sql_version=True).sampling(1)
