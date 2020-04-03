@@ -1,14 +1,13 @@
 import pandas as pd
 import numpy as np
 
-#from PCA_for_LightGBM import PCA_fitting, PCA_predict
-#from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+from PCA_for_RNN import PCA_fitting, PCA_predict
 
 from sklearn.model_selection import train_test_split
 
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 
-from keras.layers import Dense, GRU, Dropout
+from keras.layers import Dense, GRU, Dropout, Flatten
 from keras import models, callbacks
 
 from sklearn.decomposition import PCA
@@ -20,50 +19,67 @@ from Preprocessing.LoadData import load_data, sample_from_main
 space = {
     # dimension
     'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
-
     # number of layers
     'num_layer': hp.choice('num_layer', [1, 2, 3]),
 
     'verbosity': -1,
 
     # hyperparameter
-    'neurons_GRU)layer_1': hp.choice('neurons_GRU_layer_1', [4, 8, 16]),
+    'neurons_GRU_layer_1': hp.choice('neurons_GRU_layer_1', [4, 8, 16]),
     'neurons_GRU_layer_2': hp.choice('neurons_GRU_layer_2', [4, 8, 16]),
     'neurons_GRU_layer_3': hp.choice('neurons_GRU_layer_3', [4, 8, 16]),
-    #'neurons_Dense_layer': hp.choice('neurons_Dense_layer_2', [32, 128]),
+    'neurons_Dense_layer': hp.choice('neurons_Dense_layer_2', [16, 64]),
     'batch_size': hp.choice('batch_size', [512, 1024, 2048]),
     'dropout': hp.choice('dropout', [0, 0.2, 0.4])
 }
 
 
-def Data_Loading():
-
-    x = np.random.randn(10000000)
-    x = x.reshape(5000, 20, 100)
-    y = np.random.randint(3, size=5000)
 
 
-    x_RNN, x_test, y_RNN, y_test = train_test_split(x, y, test_size=0.2)
-    x_train, x_valid, y_train, y_valid = train_test_split(x_RNN, y_RNN, test_size=0.25)
+x = np.random.randn(60000000)
+x = x.reshape(20000, 20, 150)
+y = np.random.randint(3, size=20000)
 
-    return x_train, x_valid, x_test, y_train, y_valid, y_test
 
 
+
+def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method='shuffle'):
+    dimension_reduction_method = 'PCA'
+
+    if (valid_method == 'shuffle'):
+        x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.25, stratify=y)
+
+    if (dimension_reduction_method == 'PCA'):
+        PCA_model = PCA_fitting(x_train, reduced_dimensions)
+        compressed_x_train = PCA_predict(x_train, PCA_model)
+        compressed_x_valid = PCA_predict(x_valid, PCA_model)
+        #compressed_x_test = PCA_predict(x_test, PCA_model)
+        print('reduced_dimensions:', reduced_dimensions)
+        print('x_train shape after PCA:', compressed_x_train.shape)
+
+    else:
+        compressed_x_train = x_train
+        compressed_x_valid = x_valid
+        #compressed_x_test = x_test
+
+    return compressed_x_train, compressed_x_valid, y_train, y_valid
 
 
 def RNN(space):
 
-    x_train, x_valid, x_test, y_train, y_valid, y_test = Data_Loading()
+    X_train, X_valid, Y_train, Y_valid = Dimension_reduction(space['reduced_dimension'])
 
     model = models.Sequential()
-    model.add(GRU(space['neurons_layer_1'], input_shape=(X_train.shape[1], X_train.shape[2]), return_sequence = True))
+    model.add(GRU(space['neurons_GRU_layer_1'], input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = True))
     model.add(Dropout(space['dropout']))
     if (space['num_layer'] >= 2):
-        model.add(GRU(space['neurons_layer_2']))
+        model.add(GRU(space['neurons_GRU_layer_2'], return_sequences = True))
         model.add(Dropout(space['dropout']))
     if (space['num_layer'] >= 3):
-        model.add(GRU(space['neurons_layer_3']))
+        model.add(GRU(space['neurons_GRU_layer_3'], return_sequences = True))
         model.add(Dropout(space['dropout']))
+    model.add(Flatten())
+    model.add(Dense(space['neurons_Dense_layer']))
     model.add(Dense(3, activation='softmax'))
     model.summary()
 
@@ -74,29 +90,29 @@ def RNN(space):
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
 
-    model.fit(x_train,
-              y_train,
+    model.fit(X_train,
+              Y_train,
               epochs=60,
               batch_size=space['batch_size'],
-              validation_data=(x_valid, y_valid),
+              validation_data=(X_valid, Y_valid),
               callbacks=[reduce_lr],
               verbose=1)
 
-    loss_train, accuracy_train = model.evaluate(x_train, y_train, space['batch_size'], verbose=1)
-    loss_valid, accuracy_valid = model.evaluate(x_valid, y_valid, space['batch_size'], verbose=1)
-    loss_valid, accuracy_test = model.evaluate(x_test, y_test, space['batch_size'], verbose=1)
+    loss_train, accuracy_train = model.evaluate(X_train, Y_train, space['batch_size'], verbose=1)
+    loss_valid, accuracy_valid = model.evaluate(X_valid, Y_valid, space['batch_size'], verbose=1)
+    #loss_valid, accuracy_test = model.evaluate(X_test, Y_test, space['batch_size'], verbose=1)
 
-    return accuracy_train, accuracy_valid, accuracy_test
+    return accuracy_train, accuracy_valid
 
 
 def f(space):
 
-    accuracy_train, accuracy_valid, accuracy_test = RNN(space)
+    accuracy_train, accuracy_valid = RNN(space)
 
     result = {'loss': 1 - accuracy_valid,
               'accuracy_train': accuracy_train,
               'accuracy_valid': accuracy_valid,
-              'accuracy_test': accuracy_test,
+              #'accuracy_test': accuracy_test,
               'space': space,
               'status': STATUS_OK}
 
@@ -108,24 +124,10 @@ def f(space):
 
 if __name__ == "__main__":
 
-    x = np.random.randn(10000000)
-    x = x.reshape(5000, 20, 100)
-    y = np.random.randint(3, size=5000)
-    #pca = PCA(n_components=0.66)
-    #x_new = pca.fit_transform(x)
-
-    x_new_np.rot90(x)
-    print(x_new.shape)
-
-
-
-"""
-
-    print(data.head(5))
-    print(data.shape)
+    print(x.shape)
 
     trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals,
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=1,
                 trials=trials)  # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()
@@ -140,4 +142,3 @@ if __name__ == "__main__":
         row = row + 1
     records.to_csv('records.csv')
     print(best)
-"""
