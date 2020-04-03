@@ -80,7 +80,7 @@ def merge_dep_macro(df, sql_version):
     if sql_version is True: # sql version read TABLE from Postgre SQL
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
-        dep = pd.read_sql('SELECT * FROM niq', engine)
+        dep = pd.read_sql('SELECT * FROM niq_main', engine)
         macro = pd.read_sql("SELECT * FROM macro_main", engine)
         stock  = pd.read_sql("SELECT * FROM stock_main", engine)
     else: # local version read TABLE from local csv files -> faster
