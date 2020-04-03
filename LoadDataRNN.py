@@ -38,6 +38,11 @@ class clean_rnn:
                 arr.append(period[x_col].values)
             arr_3d_dict[qtr] = np.array(arr)
 
+            # (20, company, v) -> (company, 20, v)
+            print(qtr, arr_3d_dict[qtr].shape)
+
+            arr_3d_dict[qtr] = np.rot90(arr_3d_dict[qtr], axes=(0, 1))
+
             print(qtr, arr_3d_dict[qtr].shape)
 
         return arr_3d_dict
@@ -58,6 +63,10 @@ class clean_rnn:
         return samples
 
 if __name__ == '__main__':
+
+    # import os
+    # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+
     # samples_set1 equivalent to the first csv in LightGBM version
     # it contains 80 3d_array
     # each 3d_array = (20, companies, variables=165)
