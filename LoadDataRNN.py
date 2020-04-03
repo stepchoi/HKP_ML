@@ -75,3 +75,5 @@ if __name__ == '__main__':
         samples_set1 = clean_rnn(lag_year=5, sql_version=True).sampling(i)
 
         pass
+    print(type(samples_set1))
+    print(samples_set1.shape)
