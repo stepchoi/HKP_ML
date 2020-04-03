@@ -45,20 +45,24 @@ class clean_rnn:
     def sampling(self, sample_no):
 
         period_1 = dt.datetime(2008, 3, 31)
-        samples = []
-        for i in tqdm(range(sample_no)):  # to be changed
-            end = period_1 + i * relativedelta(months=3)  # start period of training set
-            start = end - relativedelta(years=20)
 
-            for k in self.arr_3d_dict.keys():
-                if (k>=start) & (k<end):
-                    samples.append(self.arr_3d_dict[k])
+        end = period_1 + sample_no * relativedelta(months=3)  # start period of training set
+        start = end - relativedelta(years=20)
+
+        samples = []
+        for k in self.arr_3d_dict.keys():
+            if (k>=start) & (k<end):
+                samples.append(self.arr_3d_dict[k])
+
         print(len(samples))
         return samples
 
 if __name__ == '__main__':
     # samples_set1 equivalent to the first csv in LightGBM version
     # it contains 80 3d_array
-    # each 3d_array = (20, companies, variables=154)
+    # each 3d_array = (20, companies, variables=165)
 
-    samples_set1 = clean_rnn(lag_year=5, sql_version=True).sampling(1)
+    for i in range(1): # set = 40 if return 40 samples
+        samples_set1 = clean_rnn(lag_year=5, sql_version=True).sampling(i)
+
+        pass
