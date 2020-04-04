@@ -1,20 +1,12 @@
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from PCA_for_RNN import PCA_fitting, PCA_predict
-
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from keras import models, callbacks
+from keras.layers import Dense, GRU, Dropout, Flatten
 from sklearn.model_selection import train_test_split
 
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-
-from keras.layers import Dense, GRU, Dropout, Flatten
-from keras import models, callbacks
-
-from sklearn.decomposition import PCA
-
-
-
-from Preprocessing.LoadData import load_data, sample_from_main
+from Preprocessing.LoadDataRNN import load_data_rnn
 
 space = {
     # dimension
@@ -33,14 +25,13 @@ space = {
     'dropout': hp.choice('dropout', [0, 0.2, 0.4])
 }
 
+sample_class = load_data_rnn(lag_year=5, sql_version=True)
 
+for i in range(1):  # set = n if return 40 samples
+    samples_set1 = sample_class.sampling(i, y_type='qoq') # the first sample set -> include 80 quarter's samples -> x(3d), y(categorical)
 
-
-x = np.random.randn(60000000)
-x = x.reshape(20000, 20, 150)
-y = np.random.randint(3, size=20000)
-
-
+x = samples_set1['x'][0]
+y = samples_set1['y'][0]
 
 
 def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method='shuffle'):

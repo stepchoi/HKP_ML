@@ -11,7 +11,7 @@ from tqdm import tqdm
 from Preprocessing.LoadData import load_data
 
 
-class clean_rnn:
+class load_data_rnn:
     '''df = big table; y_type = ['yoy','qoq']; testing_period are timestamp'''
 
     def __init__(self,lag_year, sql_version):
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # it contains 80 3d_array
     # each 3d_array = (20, companies, variables=165)
 
-    sample_class = clean_rnn(lag_year=5, sql_version=True)
+    sample_class = load_data_rnn(lag_year=5, sql_version=True)
 
     for i in range(1): # set = 40 if return 40 samples
         samples_set1 = sample_class.sampling(i, y_type='qoq')
