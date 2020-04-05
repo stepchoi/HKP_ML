@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import argparse
 import pandas as pd
 from PCA_for_RNN import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
@@ -10,7 +12,7 @@ from Preprocessing.LoadDataRNN import load_data_rnn
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.85)), # past: [508, 624, 757]
     # number of layers
     'num_layer': hp.choice('num_layer', [1, 2, 3]),
 
@@ -117,8 +119,15 @@ def f(space):
 
 if __name__ == "__main__":
 
-    print(x.shape)
+    #GPU assignment part:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu_number', type=int, default=None)
+    args = parser.parse_args()
+    if args.gpu_number is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_number)
 
+
+    print(x.shape)
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=1,
                 trials=trials)  # space = space for normal run; max_evals = 50
