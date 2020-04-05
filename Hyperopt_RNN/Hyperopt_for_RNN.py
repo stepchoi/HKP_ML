@@ -32,7 +32,9 @@ for i in range(1):  # set = n if return 40 samples
 
 x = samples_set1['x'][0]
 y = samples_set1['y'][0]
-
+for q in range(39):
+    x = np.concatenate((x, samples_set1['x'][q+1]))
+    y = np.concatenate((y, samples_set1['y'][q+1]))
 
 def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method='shuffle'):
     dimension_reduction_method = 'PCA'

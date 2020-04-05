@@ -99,7 +99,6 @@ class load_data_rnn:
         # sample for y
         cut_bins = self.all_bins[y_type][end.strftime('%Y-%m-%d')]
 
-
         # sample for x
         samples = {}
         samples['x'] = []

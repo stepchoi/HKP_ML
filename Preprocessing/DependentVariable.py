@@ -7,16 +7,16 @@ from PrepareDatabase import drop_nonseq
 from sqlalchemy import create_engine
 
 
-def load_data_y(y='niq'):
+def load_data_y():
     # import engine, select variables, import raw database
     try:
         os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
-        dep = pd.read_csv('raw.csv', usecols=['gvkey', 'datacqtr', y])
+        dep = pd.read_csv('raw.csv', usecols=['gvkey', 'datacqtr', 'niq', 'atq'])
         print('local version')
     except:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
-        dep = pd.read_sql('SELECT gvkey, datacqtr, ' + y + ' FROM raw', engine)
+        dep = pd.read_sql('SELECT gvkey, datacqtr, niq, atq FROM raw', engine)
 
     return dep
 
