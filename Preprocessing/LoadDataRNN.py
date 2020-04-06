@@ -19,6 +19,8 @@ class load_data_rnn:
         self.all_bins = self.get_all_bins(sql_version)
 
         main = load_data(lag_year=lag_year, sql_version=sql_version)
+        # print(main.isnull().sum())
+
         main.iloc[:,2:-3] = StandardScaler().fit_transform(main.iloc[:,2:-3])
 
         self.fincol = main.columns[2:156].to_list()
@@ -44,11 +46,14 @@ class load_data_rnn:
                 try:
                     train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q-i),
                                                    retbins=True, duplicates='drop')
-                    print('range', self.qcut_q-i)
+                    # print('range', self.qcut_q-i)
                     self.qcut_range = self.qcut_q-i
                     break
                 except:
                     continue
+            cut_bins[0] -= 0.1
+            cut_bins[3] += 0.1
+            # print(cut_bins[0])
             bins[end.strftime('%Y-%m-%d')] = cut_bins
         # d = pd.DataFrame.from_dict(bins, orient='index',columns=[0,1,2,3])
         return bins
@@ -76,6 +81,8 @@ class load_data_rnn:
         for qtr in tqdm(set(main['datacqtr'])):
             arr = []
             period = main.loc[main['datacqtr']==qtr]
+            # print(period.isnull().sum())
+
             arr.append(period[self.fincol + self.ecocol].values)
             for lag in range(self.lag_year * 4 - 1):  # when lag_year is 5, here loop over past 19 quarter
                 x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] + self.ecocol
@@ -107,6 +114,12 @@ class load_data_rnn:
         for k in self.arr_3d_dict.keys():
             if (k>=start) & (k<end):
                 y = pd.cut(self.y_dict[y_type][k], bins=cut_bins, labels=range(self.qcut_range))
+
+                # db = pd.DataFrame(self.y_dict[y_type][k])
+                da = pd.DataFrame(y)
+                # print(db.loc[da.isnull()])
+                print(da.isnull().sum())
+
                 samples['y'].append(y)
                 samples['x'].append(self.arr_3d_dict[k])
 
@@ -115,17 +128,27 @@ class load_data_rnn:
 
 if __name__ == '__main__':
 
-    # import os
-    # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
     # samples_set1 equivalent to the first csv in LightGBM version
     # it contains 80 3d_array
     # each 3d_array = (20, companies, variables=165)
 
-    sample_class = load_data_rnn(lag_year=5, sql_version=True)
+    sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
     for i in range(1): # set = 40 if return 40 samples
         samples_set1 = sample_class.sampling(i, y_type='qoq')
-        print(samples_set1['x'])
-        print(samples_set1['y'])
+
+        x = samples_set1['x'][0]
+        y = samples_set1['y'][0]
+        for q in range(39):
+            x = np.concatenate((x, samples_set1['x'][q + 1]))
+            y = np.concatenate((y, samples_set1['y'][q + 1]))
+
+        print(np.isnan(x).sum())
+        print(np.isnan(y).sum())
+
+        print(x.shape)
+        print(y.shape)
         pass

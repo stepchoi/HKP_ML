@@ -342,6 +342,8 @@ def final_check():
     # print(type(y_qoq), Counter(y_qoq))
 
 if __name__ == "__main__":
-    pass
-    # d = dt.datetime.today().strftime('%Y%M%d')
-    # print('time{}'.format(d))
+    import os
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+
+    main = load_data(lag_year=1, sql_version=False)
+    print(main.isnull().sum().sum())

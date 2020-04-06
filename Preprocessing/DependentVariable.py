@@ -3,15 +3,16 @@ import os
 import numpy as np
 import pandas as pd
 from LoadData import convert_to_float32
-from PrepareDatabase import drop_nonseq
 from sqlalchemy import create_engine
+
+from Preprocessing.Miscellaneous import check_print
 
 
 def load_data_y():
     # import engine, select variables, import raw database
     try:
         os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
-        dep = pd.read_csv('raw.csv', usecols=['gvkey', 'datacqtr', 'niq', 'atq'])
+        dep = pd.read_csv('raw_main.csv', usecols=['gvkey', 'datacqtr', 'niq', 'atq'])
         print('local version')
     except:
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
@@ -28,26 +29,45 @@ def trim_outlier(df, prc=0.10):
 
 def qoq_yoy(df, trim=False, pmax=None):
 
-    df = drop_nonseq(df)
+    # fig = plt.figure(figsize=(20, 16), dpi=120)
+    print(df['atq'].isnull().sum())
+    df['atq'] = df['atq'].mask(df['atq'] == 0, np.nan)
+    check_print([df.head(1000)])
+
+    print(df.loc[df['atq']==0])
+
+    print(df['atq'].isnull().sum())
+    # plt.hist(np.log(df['atq']), bins=100)
+    # ax2 = fig.add_subplot(1, 2, 2)
+    # ax2.hist(df['niq'], bins=100)
 
     # convert to qoq, yoy
-    df['next1_abs'] = df.groupby('gvkey').apply(lambda x: x['niq'].shift(-1)).to_list()
+    df['next1'] = df.groupby('gvkey').apply(lambda x: x['niq'].shift(-1)).to_list()
 
-    df['qoq'] = df['next1_abs'].div(df['niq']).sub(1)  # T1/T0
+    df['qoq'] = df['next1'].sub(df['niq']).div(df['atq'])  # T1/T0
 
     df['next4'] = df.groupby('gvkey').apply(lambda x: x['niq'].shift(-4)).to_list()
 
-    df['yoy'] = df['next4'].div(df['niq']).sub(1)  # T4/T0
+    df['yoy'] = df['next4'].sub(df['niq']).div(df['atq'])  # T4/T0
 
 
-    df['past4_abs'] = df.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
-    df['next4_abs'] = df.groupby('gvkey').apply(lambda x: x['past4_abs'].shift(-4)).to_list()  # rolling next 4 quarter
+    df['past4_sum'] = df.groupby('gvkey').apply(lambda x: x['niq'].rolling(4, min_periods=4).sum()).to_list()  # rolling past 4 quarter
+    df['next4_sum'] = df.groupby('gvkey').apply(lambda x: x['past4_sum'].shift(-4)).to_list()  # rolling next 4 quarter
 
-    df['yoy_rolling'] = df['next4_abs'].div(df['past4_abs']).sub(1)  # T4/T0
+    df['yoyr'] = df['next4_sum'].sub(df['past4_sum']).div(df['atq'])   # T4/T0
 
-    df = df.filter(['gvkey', 'datacqtr', 'qoq', 'yoy', 'yoy_rolling'])
+    df = df.filter(['gvkey', 'datacqtr', 'niq', 'atq', 'qoq', 'yoy', 'yoyr'])
 
-    # print('before trim:', df.describe())
+    print('before trim:', df.describe())
+
+    '''check extreme numbers...
+    still trim?
+    qcut bins...
+    '''
+
+    # check_print([df.describe()])
+
+    check_print([df.head(1000)])
 
     if trim == True:
         print(pmax)
@@ -69,8 +89,9 @@ def main(neg_to_zero=False):
     dep = load_data_y()
 
     # use all positive value to decide the maximum
-    pre_dep = pd.concat([dep[['gvkey','datacqtr']], dep['niq'].mask(dep['niq'] <= 0, np.nan)],axis=1)
-    pre_dep = qoq_yoy(pre_dep, trim=False)
+    # pre_dep = pd.concat([dep[['gvkey','datacqtr']], dep['niq'].mask(dep['niq'] <= 0, np.nan)],axis=1)
+    pre_dep = qoq_yoy(dep, trim=False)
+
     pmax_95 = pre_dep.quantile(0.95, axis=0)
     print(pmax_95)
 
