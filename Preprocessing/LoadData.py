@@ -166,7 +166,9 @@ class clean_set:
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         self.qcut={}
-        self.qcut['counts'] = Counter(df_train)
+        self.qcut['counts'] = dict(Counter(df_train)).items()
+        print(self.qcut['counts'])
+
         self.qcut['cut_bins'] = cut_bins
 
         try:
@@ -193,7 +195,7 @@ class clean_set:
             df_test=None
 
         self.qcut = {}
-        self.qcut['counts'] = Counter(df_train)
+        self.qcut['counts'] = dict(Counter(df_train)).items()
         self.qcut['cut_bins'] = bins
 
         return df_train, df_test, self.qcut
