@@ -5,8 +5,6 @@ import pandas as pd
 from LoadData import convert_to_float32
 from sqlalchemy import create_engine
 
-from Preprocessing.Miscellaneous import check_print
-
 
 def load_data_y():
     # import engine, select variables, import raw database
@@ -32,7 +30,7 @@ def qoq_yoy(df, trim=False, pmax=None):
     # fig = plt.figure(figsize=(20, 16), dpi=120)
     print(df['atq'].isnull().sum())
     df['atq'] = df['atq'].mask(df['atq'] == 0, np.nan)
-    check_print([df.head(1000)])
+    # check_print([df.head(1000)])
 
     print(df.loc[df['atq']==0])
 
@@ -56,25 +54,36 @@ def qoq_yoy(df, trim=False, pmax=None):
 
     df['yoyr'] = df['next4_sum'].sub(df['past4_sum']).div(df['atq'])   # T4/T0
 
-    df = df.filter(['gvkey', 'datacqtr', 'niq', 'atq', 'qoq', 'yoy', 'yoyr'])
+    print(df.isnull().sum())
+    print(df.shape)
+
+    df = df.dropna(subset=['atq','niq'], how='any')
+
+    print(df.isnull().sum())
+    print(df.shape)
+
+    df = df.filter(['gvkey', 'datacqtr', 'atq', 'niq', 'qoq', 'yoy', 'yoyr'])
+
+    # print(df.head(10000).describe())
+    # check_print([df.head(10000)])
+
 
     print('before trim:', df.describe())
 
-    '''check extreme numbers...
-    still trim?
-    qcut bins...
-    '''
+
+    bins = pd.DataFrame()
+    for i in ['yoy','qoq','yoyr']:
+        cut_df, cut_bins = pd.qcut(df[i], q=9, labels=range(9), retbins=True)
+        bins[i] = list(cut_bins)
+
+    bins.round(4).to_csv('y_qcut9.csv',index=False)
+
 
     # check_print([df.describe()])
 
-    check_print([df.head(1000)])
-
-    if trim == True:
-        print(pmax)
-        num_list = ['qoq','yoy','yoy_rolling']
-        df[num_list] = df[num_list].mask(df[num_list] > pmax[num_list], pmax[num_list], axis=1)
-
-    # print('after trim:', df.describe())
+    # print(pmax)
+    # num_list = ['qoq','yoy','yoy_rolling']
+    # df[num_list] = df[num_list].mask(df[num_list] > pmax[num_list], pmax[num_list], axis=1)
 
     return df
 
@@ -92,19 +101,20 @@ def main(neg_to_zero=False):
     # pre_dep = pd.concat([dep[['gvkey','datacqtr']], dep['niq'].mask(dep['niq'] <= 0, np.nan)],axis=1)
     pre_dep = qoq_yoy(dep, trim=False)
 
-    pmax_95 = pre_dep.quantile(0.95, axis=0)
-    print(pmax_95)
-
-    # clean negative value -> 0 (use 0.000001 to facilitate calculation)
-    dep['niq'] = dep['niq'].mask(dep['niq']<0,float(1e-6))
-    dep = qoq_yoy(dep, trim=True, pmax=pmax_95)
-    print(dep.describe())
+    # pmax_95 = pre_dep.quantile(0.95, axis=0)
+    # print(pmax_95)
+    #
+    # # clean negative value -> 0 (use 0.000001 to facilitate calculation)
+    # dep['niq'] = dep['niq'].mask(dep['niq']<0,float(1e-6))
+    # dep = qoq_yoy(dep, trim=True, pmax=pmax_95)
+    # print(dep.describe())
 
     # convert datacqtr to timestamp
-    dep = Timestamp(dep)
-    convert_to_float32(dep)
-    dep.to_csv('niq_main.csv', index=False)
-    return dep
+    # pre_dep = Timestamp(pre_dep)
+    convert_to_float32(pre_dep)
+    print(pre_dep.info())
+    pre_dep.to_csv('niq_main.csv', index=False)
+    return pre_dep
 
 if __name__ == '__main__':
     main()

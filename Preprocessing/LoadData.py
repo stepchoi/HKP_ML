@@ -121,14 +121,14 @@ class clean_set:
     def __init__(self, train, test):
 
         def divide_set(df): # this funtion cut main df into df for x_variables, y_yoy, y_qoq by columns position
-            return df.iloc[:, 2:-3].values, df.iloc[:, -3].values, df.iloc[:, -2].values, df.iloc[:, -1].values
+            return df.iloc[:, 2:-3].values, df.iloc[:, -4].values, df.iloc[:, -3].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
-        self.train_x, self.train_qoq, self.train_yoy, self.train_yoyr = divide_set(train)
+        self.train_x, self.train_niq, self.train_qoq, self.train_yoy, self.train_yoyr = divide_set(train)
 
         try:
-            self.test_x, self.test_qoq, self.test_yoy, self.test_yoyr = divide_set(test) # can work without test set
+            self.test_x, self.test_niq, self.test_qoq, self.test_yoy, self.test_yoyr = divide_set(test) # can work without test set
         except:
-            self.test_x=self.test_qoq=self.test_yoy=self.test_yoyr=None
+            self.test_x=self.test_niq=self.test_qoq=self.test_yoy=self.test_yoyr=None
 
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
@@ -162,7 +162,7 @@ class clean_set:
         # if q > 6:
         #     return self.y_qcut_unbalance(q, df_train, df_test)
 
-        df, bins = pd.qcut(df_train, q=3, labels=range(3), retbins=True)
+        df, bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         print('y qcut label counts:', Counter(df_train))
@@ -182,6 +182,15 @@ class clean_set:
 
     def yoyr(self, q): # qcut y with train_y cut_bins
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
+
+    def niq(self):
+        df_train = pd.cut(self.train_niq, bins=[-float("inf"), 0,0, float("inf")], labels=range(3))
+        try:
+            df_test = pd.cut(self.test_niq, bins=[-float("inf"), 0,0, float("inf")], labels=range(3))
+        except:
+            df_test=None
+        return df_train, df_test
+
 
 def load_data(lag_year = 5, sql_version = False):
 
