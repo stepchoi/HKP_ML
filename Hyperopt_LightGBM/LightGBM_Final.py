@@ -54,7 +54,7 @@ def myPCA(n_components, train_x, test_x):
     sql_result['pca_components'] = new_train_x.shape[1]
     if feature_importance['return_importance'] == True:
         pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
-        pc_df['explained_variance_ratio_'] = np.cumsum(pca.explained_variance_ratio_).to_list()
+        pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
         feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
@@ -179,12 +179,13 @@ def f(space):
             'status': STATUS_OK}
 
     if feature_importance['return_importance'] == True:
-        if result['accuracy_score_test'] < sql_result['accuracy_score_test']:
-            feature_importance['pc_df'].to_sql('lightgbm_feature_importance', con=engine, if_exists='append')
+        print(feature_importance['pc_df'].info())
+
+        feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
 
     sql_result.update(space)
     sql_result.update(result)
-    # sql_result.pop('is_unbalance')
+    sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
 
@@ -217,39 +218,38 @@ if __name__ == "__main__":
         space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
-    sql_result['name']='yoyr-new'
+    sql_result['name']='after update y to /atq'
     sql_result['trial'] = int(max(t['trial']))+1
 
     feature_importance = {}
-    feature_importance['return_importance'] = True
+    feature_importance['return_importance'] = False
     feature_importance['orginal_columns'] = main.columns[2:-3]
-    print(feature_importance['orginal_columns'])
 
     resume = True
 
     # roll over each round
-    period_1 = dt.datetime(2018, 3, 31) # 2008
+    period_1 = dt.datetime(2008, 3, 31) # 2008
 
     for i in tqdm(range(sample_no)):    # divide sets and return
         testing_period = period_1 + i * relativedelta(months=3) # set sets in chronological order
 
         # PCA dimension
-        for y_type in ['yoyr']:  # 'yoyr','qoq','yoy'
+        for y_type in ['qoq']:  # 'yoyr','qoq','yoy'
 
             for max_evals in [30]: # 40, 50
 
-                for reduced_dimension in [0.75]: # 0.66, 0.7
+                for reduced_dimension in [0.66, 0.75]: # 0.66, 0.7
                     sql_result['reduced_dimension'] = reduced_dimension
 
-                    for valid_method in ['shuffle']: # 'chron'
-                        for valid_no in [10]: # 1,5
+                    for valid_method in ['shuffle','chron']: # 'chron'
+                        for valid_no in [10, 20]: # 1,5
 
                             klass = {'y_type': y_type,
                                      'valid_method': valid_method,
                                      'valid_no': valid_no,
                                      'testing_period': testing_period}
 
-                            if (i >= 9) & (valid_method=='chron') & (valid_no==10):
+                            if (valid_method=='shuffle') & (valid_no==10) & (reduced_dimension==0.75):
                                 resume=True
                                 print('resume', klass)
                             elif resume == True:

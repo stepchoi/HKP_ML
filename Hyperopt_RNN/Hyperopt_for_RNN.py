@@ -27,7 +27,9 @@ space = {
     'dropout': hp.choice('dropout', [0, 0.2, 0.4])
 }
 
-sample_class = load_data_rnn(lag_year=5, sql_version=True)
+import os
+os.chdir('/home/loratech/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
 for i in range(1):  # set = n if return 40 samples
     samples_set1 = sample_class.sampling(i, y_type='qoq') # the first sample set -> include 80 quarter's samples -> x(3d), y(categorical)

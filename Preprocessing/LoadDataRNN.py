@@ -42,15 +42,10 @@ class load_data_rnn:
             end = period_1 + i * relativedelta(months=3)  # define testing period
             start = end - relativedelta(years=20)  # define training period
             train = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]  # train df = 80 quarters
-            for i in range(self.qcut_q):
-                try:
-                    train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q-i),
-                                                   retbins=True, duplicates='drop')
-                    # print('range', self.qcut_q-i)
-                    self.qcut_range = self.qcut_q-i
-                    break
-                except:
-                    continue
+
+            train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q), retbins=True)
+            print(cut_bins)
+
             cut_bins[0] -= 0.1
             cut_bins[3] += 0.1
             # print(cut_bins[0])
@@ -68,7 +63,7 @@ class load_data_rnn:
 
         self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
         all_bins = {}
-        for y in ['qoq', 'yoy_rolling']: # 'yoy',
+        for y in ['qoq', 'yoyr']: # 'yoy',
             all_bins[y] = self.qcut_y(self.niq, y)
         return all_bins
 
@@ -92,7 +87,7 @@ class load_data_rnn:
             # (20, company, v) -> (company, 20, v)
             arr_3d_dict[qtr] = np.rot90(arr_3d_dict[qtr], axes=(0, 1))
             y_dict['qoq'][qtr] = period['qoq'].values
-            y_dict['yoyr'][qtr] = period['yoy_rolling'].values
+            y_dict['yoyr'][qtr] = period['yoyr'].values
 
         return arr_3d_dict, y_dict
 
