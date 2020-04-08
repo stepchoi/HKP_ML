@@ -85,7 +85,7 @@ def merge_dep_macro(df, sql_version):
         stock  = pd.read_sql("SELECT * FROM stock_main", engine)
     else: # local version read TABLE from local csv files -> faster
         macro = pd.read_csv('macro_main.csv')
-        dep = pd.read_csv('niq_main.csv')
+        dep = pd.read_csv('niq_main.csv', usecols=['gvkey','datacqtr','niq','qoq','yoy','yoyr'])
         stock = pd.read_csv('stock_main.csv')
         print('local version running - niq, macro_main, stock_return')
 
@@ -166,10 +166,10 @@ class clean_set:
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         self.qcut={}
-        self.qcut['counts'] = dict(Counter(df_train)).items()
-        print(self.qcut['counts'])
+        d=dict(Counter(df_train))
+        self.qcut['counts'] = list(d.values())
 
-        self.qcut['cut_bins'] = cut_bins
+        self.qcut['cut_bins'] = list(cut_bins)
 
         try:
             df_test = pd.cut(df_test, bins=cut_bins, labels=range(q)) # can work without test set
@@ -195,8 +195,10 @@ class clean_set:
             df_test=None
 
         self.qcut = {}
-        self.qcut['counts'] = dict(Counter(df_train)).items()
-        self.qcut['cut_bins'] = bins
+        d=dict(Counter(df_train))
+        self.qcut['counts'] = list(d.values())
+
+        self.qcut['cut_bins'] = list(bins)
 
         return df_train, df_test, self.qcut
 
@@ -269,8 +271,7 @@ def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df =
     train_x, test_x, train_y, test_y, qcut = train_test_clean(y_type, train, test, q=q)
     qcut['date'] = testing_period.strftime('%Y-%m-%d')
     qcut['qcut'] = q
-
-    print(qcut)
+    qcut['y_type'] = y_type
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)

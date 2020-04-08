@@ -7,6 +7,7 @@ from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from keras import models, callbacks
 from keras.layers import Dense, GRU, Dropout, Flatten
 from sklearn.model_selection import train_test_split
+from sqlalchemy import create_engine
 
 from Preprocessing.LoadDataRNN import load_data_rnn
 
@@ -31,14 +32,19 @@ import os
 os.chdir('/home/loratech/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
-for i in range(1):  # set = n if return 40 samples
-    samples_set1 = sample_class.sampling(i, y_type='qoq') # the first sample set -> include 80 quarter's samples -> x(3d), y(categorical)
+# for i in range(1):  # set = n if return 40 samples
+samples_set1 = sample_class.sampling(1, y_type='qoq') # the first sample set -> include 80 quarter's samples -> x(3d), y(categorical)
+
+sql_result = {'time': 1}
 
 x = samples_set1['x'][0]
 y = samples_set1['y'][0]
+# print(x.shape, y.shape)
+
 for q in range(39):
     x = np.concatenate((x, samples_set1['x'][q+1]))
     y = np.concatenate((y, samples_set1['y'][q+1]))
+print(x.shape, y.shape)
 
 def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method='shuffle'):
     dimension_reduction_method = 'PCA'
@@ -115,6 +121,14 @@ def f(space):
 
     print(space)
     print(result)
+    sql_result.update(result)
+    sql_result.pop('space')
+    sql_result.update(space)
+
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
+    pd.DataFrame.from_records([sql_result]).to_sql('rnn_results', con=engine, if_exists='append')
+
 
     return result
 
@@ -128,10 +142,9 @@ if __name__ == "__main__":
     if args.gpu_number is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_number)
 
-
     print(x.shape)
     trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=1,
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=20,
                 trials=trials)  # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()

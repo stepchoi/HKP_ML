@@ -19,12 +19,17 @@ class load_data_rnn:
         self.all_bins = self.get_all_bins(sql_version)
 
         main = load_data(lag_year=lag_year, sql_version=sql_version)
-        # print(main.isnull().sum())
+        print(main.columns)
 
-        main.iloc[:,2:-3] = StandardScaler().fit_transform(main.iloc[:,2:-3])
+        scaler = StandardScaler().fit(main.iloc[:,2:-4])
+        main = pd.concat([main.iloc[:,:2],
+                          pd.DataFrame(scaler.transform(main.iloc[:,2:-4]), columns=main.columns[2:-4]),
+                          main.iloc[:,-4:]], axis=1)
+        # print(main)
 
         self.fincol = main.columns[2:156].to_list()
-        self.ecocol = main.columns[-14:-3].to_list()
+        self.ecocol = main.columns[-15:-4].to_list()
+        # print(self.fincol, self.ecocol)
         self.lag_year = lag_year
 
         self.arr_3d_dict, self.y_dict = self.reshape_3d(main)
@@ -108,12 +113,12 @@ class load_data_rnn:
 
         for k in self.arr_3d_dict.keys():
             if (k>=start) & (k<end):
-                y = pd.cut(self.y_dict[y_type][k], bins=cut_bins, labels=range(self.qcut_range))
+                y = pd.cut(self.y_dict[y_type][k], bins=cut_bins, labels=range(self.qcut_q))
 
                 # db = pd.DataFrame(self.y_dict[y_type][k])
                 da = pd.DataFrame(y)
                 # print(db.loc[da.isnull()])
-                print(da.isnull().sum())
+                # print(da.isnull().sum())
 
                 samples['y'].append(y)
                 samples['x'].append(self.arr_3d_dict[k])
@@ -141,9 +146,9 @@ if __name__ == '__main__':
             x = np.concatenate((x, samples_set1['x'][q + 1]))
             y = np.concatenate((y, samples_set1['y'][q + 1]))
 
-        print(np.isnan(x).sum())
-        print(np.isnan(y).sum())
+        # print(np.isnan(x).sum())
+        # print(np.isnan(y).sum())
 
-        print(x.shape)
-        print(y.shape)
+        # print(x.shape)
+        # print(y.shape)
         pass

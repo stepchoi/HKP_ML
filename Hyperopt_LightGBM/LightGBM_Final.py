@@ -218,7 +218,8 @@ if __name__ == "__main__":
 
     if qcut_q > 3:  # for 6, 9 qcut test
         space['num_class'] = qcut_q
-        space['is_unbalance'] = True
+
+    space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
     sql_result['name'] = 'after update y to /atq'
@@ -253,8 +254,8 @@ if __name__ == "__main__":
                                      'testing_period': testing_period,
                                      'reduced_dimension': reduced_dimension}
 
-                            # print(klass, type(klass))
-                            # print(db_last_klass, type(db_last_klass))
+                            print(klass, type(klass))
+                            print(db_last_klass, type(db_last_klass))
 
                             if db_last_klass == klass:
                                 resume = True
