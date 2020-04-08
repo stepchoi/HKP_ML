@@ -67,8 +67,20 @@ def qoq_yoy(df, trim=False, pmax=None):
     # print(df.head(10000).describe())
     # check_print([df.head(10000)])
 
+    from matplotlib import pyplot as plt
+    for i in ['qoq', 'yoy', 'yoyr']:
+        test = df[i]
+        tail = 0.99
+        pmax = test.quantile(tail)
+        pmin = test.quantile(1-tail)
+        print(pmax, pmin)
+        test = test.mask(test > pmax, pmax)
+        test = test.mask(test < pmin, pmin)
+        plt.hist(test, bins=100)
+        plt.savefig('y_distribution_{}{}.png'.format(i, tail))
 
     print('before trim:', df.describe())
+    exit(0)
 
 
     bins = pd.DataFrame()

@@ -166,6 +166,7 @@ class clean_set:
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         print('y qcut label counts:', Counter(df_train))
+        qcut['counts'] = Counter(df_train)
         print('y qcut cut_bins:', cut_bins)
 
         try:
@@ -184,9 +185,10 @@ class clean_set:
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
     def niq(self):
-        df_train = pd.cut(self.train_niq, bins=[-float("inf"), 0,0, float("inf")], labels=range(3))
+        bins = pd.IntervalIndex.from_tuples([(-float("inf"), 0), [0,0], (0, float("inf"))])
+        df_train = pd.cut(self.train_niq, bins=bins, labels=range(3))
         try:
-            df_test = pd.cut(self.test_niq, bins=[-float("inf"), 0,0, float("inf")], labels=range(3))
+            df_test = pd.cut(self.test_niq, bins=bins, labels=range(3))
         except:
             df_test=None
         return df_train, df_test
@@ -246,6 +248,10 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
 def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
 
     '''3.a. This def extract partial from big table with selected testing_period'''
+
+    qcut = {}
+    qcut['date'] = testing_period
+    qcut['qcut'] = q
 
     end = testing_period
     start = testing_period - relativedelta(years=20) # define training period
