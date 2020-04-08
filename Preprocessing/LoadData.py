@@ -165,15 +165,15 @@ class clean_set:
         df, bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
         df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
-        print('y qcut label counts:', Counter(df_train))
-        qcut['counts'] = Counter(df_train)
-        print('y qcut cut_bins:', cut_bins)
+        self.qcut={}
+        self.qcut['counts'] = Counter(df_train)
+        self.qcut['cut_bins'] = cut_bins
 
         try:
             df_test = pd.cut(df_test, bins=cut_bins, labels=range(q)) # can work without test set
-            return df_train.astype(np.int8), df_test.astype(np.int8)
+            return df_train.astype(np.int8), df_test.astype(np.int8), self.qcut
         except:
-            return df_train.astype(np.int8), None
+            return df_train.astype(np.int8), None, self.qcut
 
     def qoq(self, q):
         return self.y_qcut(q, self.train_qoq, self.test_qoq)
@@ -191,7 +191,12 @@ class clean_set:
             df_test = pd.cut(self.test_niq, bins=bins, labels=range(3))
         except:
             df_test=None
-        return df_train, df_test
+
+        self.qcut = {}
+        self.qcut['counts'] = Counter(df_train)
+        self.qcut['cut_bins'] = bins
+
+        return df_train, df_test, self.qcut
 
 
 def load_data(lag_year = 5, sql_version = False):
@@ -237,21 +242,17 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
     train_x, test_x = main_period.standardize_x() # for x
 
     if y_type == 'yoy': # for y
-        train_y, test_y = main_period.yoy(q=q)
+        train_y, test_y, qcut = main_period.yoy(q=q)
     elif y_type == 'qoq':
-        train_y, test_y = main_period.qoq(q=q)
+        train_y, test_y, qcut = main_period.qoq(q=q)
     elif y_type == 'yoyr':
-        train_y, test_y = main_period.yoyr(q=q)
+        train_y, test_y, qcut = main_period.yoyr(q=q)
 
-    return train_x, test_x, train_y, test_y
+    return
 
 def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
 
     '''3.a. This def extract partial from big table with selected testing_period'''
-
-    qcut = {}
-    qcut['date'] = testing_period
-    qcut['qcut'] = q
 
     end = testing_period
     start = testing_period - relativedelta(years=20) # define training period
@@ -262,7 +263,18 @@ def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df =
     if return_df == True:
         return train_test_clean(y_type, train, test, q=q), train.iloc[:,:2]
 
-    return train_test_clean(y_type, train, test, q=q)
+    train_x, test_x, train_y, test_y, qcut = train_test_clean(y_type, train, test, q=q)
+    qcut['date'] = testing_period.strftime('%Y-%m-%d')
+    qcut['qcut'] = q
+
+    print(qcut)
+
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
+
+    pd.DataFrame.from_records([qcut], index='trial').to_sql('cut_bins', con=engine, if_exists='append')
+
+    return train_x, test_x, train_y, test_y
 
 def sample_from_main(df, y_type, part=5, q=3): # df = big table; y_type = ['yoy','qoq']; part = cut big table into how many parts
 
