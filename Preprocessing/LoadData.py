@@ -184,7 +184,7 @@ class clean_set:
     def yoyr(self, q): # qcut y with train_y cut_bins
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
-    def niq(self):
+    def nom(self):
         bins = pd.IntervalIndex.from_tuples([(-float("inf"), 0), [0,0], (0, float("inf"))])
         df_train = pd.cut(self.train_niq, bins=bins, labels=range(3))
         try:
@@ -247,8 +247,9 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
         train_y, test_y, qcut = main_period.qoq(q=q)
     elif y_type == 'yoyr':
         train_y, test_y, qcut = main_period.yoyr(q=q)
-
-    return
+    elif y_type == 'nom':
+        train_y, test_y, qcut = main_period.nom()
+    return train_x, test_x, train_y, test_y, qcut
 
 def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df = big table; y_type = ['yoy','qoq']; testing_period are timestamp
 
