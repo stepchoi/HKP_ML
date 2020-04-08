@@ -273,7 +273,7 @@ def sample_from_datacqtr(df, y_type, testing_period, q, return_df=False): # df =
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    pd.DataFrame.from_records([qcut], index='trial').to_sql('cut_bins', con=engine, if_exists='append')
+    pd.DataFrame.from_records([qcut]).to_sql('cut_bins', con=engine, if_exists='append')
 
     return train_x, test_x, train_y, test_y
 
