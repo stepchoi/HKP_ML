@@ -206,11 +206,10 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    db_last = pd.read_sql('SELECT * FROM ObjectRes WHERE id IN (SELECT MAX(id) FROM ObjectRes)',
+    db_last = pd.read_sql('SELECT * FROM lightgbm_results order by finish_timing desc LIMIT 1',
                           engine)  # identify current # trials from past execution
-    print(db_last)
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
-        'records')
+        'records')[0]
 
     main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
 
@@ -254,8 +253,8 @@ if __name__ == "__main__":
                                      'testing_period': testing_period,
                                      'reduced_dimension': reduced_dimension}
 
-                            print(klass, type(klass))
-                            print(db_last_klass, type(db_last_klass))
+                            # print(klass, type(klass))
+                            # print(db_last_klass, type(db_last_klass))
 
                             if db_last_klass == klass:
                                 resume = True
