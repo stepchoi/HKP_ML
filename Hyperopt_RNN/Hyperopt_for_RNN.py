@@ -15,7 +15,8 @@ space = {
     # dimension
     'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.85)), # past: [508, 624, 757]
     # number of layers
-    'num_layer': hp.choice('num_layer', [1, 2, 3]),
+    'num_GRU_layer': hp.choice('num_GRU_layer', [1, 2, 3]),
+    'num_Dense_layer': hp.choice('num_Dense_layer', [1, 2]),
 
     'verbosity': -1,
 
@@ -23,7 +24,8 @@ space = {
     'neurons_GRU_layer_1': hp.choice('neurons_GRU_layer_1', [4, 8, 16]),
     'neurons_GRU_layer_2': hp.choice('neurons_GRU_layer_2', [4, 8, 16]),
     'neurons_GRU_layer_3': hp.choice('neurons_GRU_layer_3', [4, 8, 16]),
-    'neurons_Dense_layer': hp.choice('neurons_Dense_layer_2', [16, 64]),
+    'neurons_Dense_layer_1': hp.choice('neurons_Dense_layer_1', [16, 64, 256, 1024]),
+    'neurons_Dense_layer_2': hp.choice('neurons_Dense_layer_2', [16, 64, 256, 1024]),
     'batch_size': hp.choice('batch_size', [512, 1024, 2048]),
     'dropout': hp.choice('dropout', [0, 0.2, 0.4])
 }
@@ -74,15 +76,18 @@ def RNN(space):
 
     model = models.Sequential()
     model.add(GRU(space['neurons_GRU_layer_1'], input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = True))
-    model.add(Dropout(space['dropout']))
-    if (space['num_layer'] >= 2):
+    #model.add(Dropout(space['dropout']))
+    if (space['num_GRU_layer'] >= 2):
         model.add(GRU(space['neurons_GRU_layer_2'], return_sequences = True))
-        model.add(Dropout(space['dropout']))
-    if (space['num_layer'] >= 3):
+        #model.add(Dropout(space['dropout']))
+    if (space['num_GRU_layer'] >= 3):
         model.add(GRU(space['neurons_GRU_layer_3'], return_sequences = True))
-        model.add(Dropout(space['dropout']))
+        #model.add(Dropout(space['dropout']))
     model.add(Flatten())
-    model.add(Dense(space['neurons_Dense_layer']))
+    model.add(Dense(units=space['neurons_Dense_layer_1'], activation='tanh'))
+    if (space['num_Dense_layer'] >= 2):
+        model.add(Dense(units=space['neurons_Dense_layer_2'], activation='tanh'))
+        #model.add(Dropout(space['dropout']))
     model.add(Dense(3, activation='softmax'))
     model.summary()
 
@@ -95,7 +100,7 @@ def RNN(space):
 
     model.fit(X_train,
               Y_train,
-              epochs=60,
+              epochs=100,
               batch_size=space['batch_size'],
               validation_data=(X_valid, Y_valid),
               callbacks=[reduce_lr],
