@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ def prepare():
 
     ibes = pd.read_csv('ibes_summary.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
                                                     'MEANEST'])  # ibes consensus data
+
     ibes.columns = [x.lower() for x in ibes.columns]
     ibes['cusip'] = ibes['cusip'].astype(str).apply(lambda x: x.zfill(8))
 
@@ -65,60 +67,49 @@ def filter_date():
 
 class convert:
     def __init__(self, df):
+        ''' input last observation estimation -> rename columns -> drop_nonseq -> add 'atq' '''
+        atq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv',
+                          usecols=['gvkey','datacqtr','atq'])
+        atq['datacqtr'] = pd.to_datetime(atq['datacqtr']) # prepare atq from original db
+
         df = df.filter(['gvkey','fpedats', 'medest','meanest'])
-        df.columns = ['gvkey','datacqtr', 'medest','meanest']
+        df.columns = ['gvkey','datacqtr', 'medest','meanest'] # filter and rename
 
+        df = self.drop_nonseq(df)
+        self.df = pd.merge(atq, df, on=['gvkey','datacqtr'], how='right') # add 'atq'
         self.num_col = ['medest', 'meanest']
-        df[self.num_col] = df[self.num_col].mask(df[self.num_col] < 0, float(1e-6))
-        self.df = df
-        self.pmax = {'qoq': 2.912091, 'yoy': 3.894995, 'yoy_rolling': 1.392811}
 
-    def drop_nonseq(self, df, interval):
-        '''drop non-sequential records'''
+    def drop_nonseq(self, df):
+        ''' fill in NaN for no recording period '''
 
         df['datacqtr'] = pd.to_datetime(df['datacqtr'])
-        if interval == 'q':
-            i = relativedelta(months=3)
-        elif interval == 'y':
-            i = relativedelta(months=12)
-        drop_idx = df.loc[df['datacqtr'] != df['datacqtr'].shift(1).apply(lambda x: x + relativedelta(days=1)
-                                                                    + i - relativedelta(days=1))].index.to_list()
-        first_idx = df.groupby('gvkey').head().index.to_list()
-        drop_idx = list(set(drop_idx) - set(first_idx))
-        df.iloc[drop_idx, -2:] = np.nan
-        self.drop_idx = drop_idx
+        df_med = df.pivot(index='datacqtr',columns='gvkey',values='medest').unstack(0).reset_index(drop=False)
+        df_mean = df.pivot(index='datacqtr',columns='gvkey',values='meanest').unstack(0).reset_index(drop=False)
+        df = pd.merge(df_med, df_mean, on=['gvkey','datacqtr'], how='outer')
+        df.columns = ['gvkey','datacqtr','medest','meanest']
+        print('after drop non seq: ', df.shape)
         return df
 
     def qoq(self):
-        self.df = self.drop_nonseq(self.df,'q')
-        self.df[self.num_col] = self.df.groupby('gvkey').apply(lambda x: x[self.num_col].shift(-1).div(x[self.num_col]).sub(1))
-        self.df[self.num_col] = self.df[self.num_col].mask(self.df[self.num_col] > self.pmax['qoq'], self.pmax['qoq'])
+        ''' for QTR estimation -> convert to qoq format '''
+        print('start qoq')
+        d = self.df[self.num_col].shift(-1) - self.df[self.num_col]
+        self.df[['medest', 'meanest']] = d.apply(lambda x: x.div(self.df['atq'])) # convert to qoq
+        self.df.iloc[self.df.groupby('gvkey').tail(1).index, 2:] = np.nan   # remove effect due to cross gvkey operation
         return self.df
 
     def yoy(self):
-        self.df = self.drop_nonseq(self.df,'y')
-        self.df[self.num_col] = self.df.groupby('gvkey').apply(lambda x: x[self.num_col].shift(-1).div(x[self.num_col]).sub(1))
-        self.df[self.num_col] = self.df[self.num_col].mask(self.df[self.num_col] > self.pmax['yoy_rolling'], self.pmax['yoy_rolling'])
+        ''' for ANN estimation -> convert to yoy format '''
+        print('start yoy')
+        d = self.df[self.num_col].shift(-4) - self.df[self.num_col]
+        self.df[['medest', 'meanest']] = d.apply(lambda x: x.div(self.df['atq']))
+        self.df.iloc[self.df.groupby('gvkey').tail(4).index, 2:] = np.nan
         return self.df
-
-def conver_qoq_yoy():
-    try:
-        # ann = pd.read_csv('ibes_ANN_last.csv')  # for annual forecast
-        qtr = pd.read_csv('ibes_QTR_last.csv')  # for quarterly forecast
-        print('local version run - ann_last, qtr_last')
-    except:
-        ann, qtr = filter_date()
-
-    qtr = convert(qtr).qoq()
-    # ann = convert(ann).yoy()
-    df_full = evaluate(qtr, 'qoq').eval_all()
-    # df_full_ann = evaluate(ann, 'yoy_rolling').eval_all()
-    df_full.to_csv('consensus_qoq_6.csv')
-    # df_full_ann.to_csv('consensus_yoyr.csv')
-
 
 
 def eval(Y_test, Y_test_pred):
+    ''' calculate accuracy score with actual & concensus estimation (after qcut) '''
+
     result = {'loss': - accuracy_score(Y_test, Y_test_pred),
               'accuracy_score_test': accuracy_score(Y_test, Y_test_pred),
               'precision_score_test': precision_score(Y_test, Y_test_pred, average='micro'),
@@ -137,44 +128,62 @@ def eval(Y_test, Y_test_pred):
     return result
 
 class evaluate:
-    def __init__(self, ibes_df, y_type):
-        self.all_bins = self.get_all_bins()
-        self.ibes_df = pd.merge(self.niq[['gvkey', 'datacqtr', y_type]], ibes_df, on=['gvkey', 'datacqtr'], how='inner')
-        self.ibes_df = self.ibes_df.dropna(how='any')
+
+    '''input converted estimation (qoq, yoy) -> qcut estimation/actual -> evaluate score'''
+
+    def __init__(self, ibes_df, y_type, q):
+
+        '''input converted estimation (qoq, yoy) -> add 'niq' actual values'''
+
+        self.qcut_q = q # define class objects
         self.y_type = y_type
+
+        self.niq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv',
+                               usecols=['gvkey', 'datacqtr', 'qoq', 'yoyr'])  # read actual niq
+        self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
+
+        self.all_bins = self.get_all_bins() # get qcut bins for all rolling period
+
+        self.ibes_df = pd.merge(self.niq[['gvkey', 'datacqtr', y_type]], ibes_df, on=['gvkey', 'datacqtr'], how='right')
+        print(ibes_df.shape)
+        print(self.ibes_df.shape)
+
 
     def qcut_y(self, df, col):  # qcut y with train_y cut_bins
 
-        self.qcut_q = 6
+        ''' qcut each training set period -> return cut_bins for each training set '''
 
         bins = {}
         period_1 = dt.datetime(2008, 3, 31)
+
         for i in tqdm(range(40)):  # change to 40 for full 40 sets, change to False to stop saving csv
+
             end = period_1 + i * relativedelta(months=3)  # define testing period
             start = end - relativedelta(years=20)  # define training period
             train = df.loc[(start <= df['datacqtr']) & (df['datacqtr'] < end)]  # train df = 80 quarters
-            for i in range(self.qcut_q):
-                try:
-                    train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q-i),
-                                                   retbins=True, duplicates='drop')
-                    print('range', self.qcut_q-i)
-                    self.qcut_range = self.qcut_q-i
-                    break
-                except:
-                    continue
-            bins[end.strftime('%Y-%m-%d')] = cut_bins
-        # d = pd.DataFrame.from_dict(bins, orient='index',columns=[0,1,2,3])
+            train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q), retbins=True)
+
+            bins[end.strftime('%Y-%m-%d')] = {}
+            bins[end.strftime('%Y-%m-%d')]['cut_bins'] = cut_bins
+
+            cut_bins[0] = -np.inf
+            cut_bins[-1] = np.inf
+
         return bins
 
     def get_all_bins(self):
-        self.niq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv')
-        self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
+
+        ''' qcut for 'qoq' and 'yoyr' '''
+
         all_bins = {}
-        for y in ['qoq', 'yoy_rolling']: # 'yoy',
+        for y in ['qoq', 'yoyr']: # 'yoy',
             all_bins[y] = self.qcut_y(self.niq, y)
         return all_bins
 
     def dict_to_df(self, dict, measure):
+
+        ''' convert dictionary to dataframe for to_csv '''
+
         df = pd.DataFrame()
         for date in dict.keys():
             for score in dict[date].keys():
@@ -183,25 +192,74 @@ class evaluate:
         return df
 
     def eval_all(self):
+
+        ''' cut actual/estimation testing for each set period (*40) '''
+
         med_records = {}
         mean_records = {}
+
+        r2 = {}
+
         for i in tqdm(set(self.ibes_df['datacqtr'])):  # evaluate all testing period
+
             if (i <= pd.Timestamp(2018, 1, 1, 1)) & (i >= pd.Timestamp(2008, 1, 1, 1)):
+
                 testing_period = self.ibes_df.loc[self.ibes_df['datacqtr'] == i]
-                cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]
+
+                cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['cut_bins']
+
+                self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_act'] = testing_period[self.y_type].notnull().sum()
+                self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_est'] = testing_period['medest'].notnull().sum()
+
+                testing_period = testing_period.dropna(how='any')
+
+                df_print = testing_period.copy()
+
+                r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
 
                 for col in [self.y_type, 'medest','meanest']:    # qcut testing period (actual & consensus)
-                    testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_range))
+                    testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_q))
+                    self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_count_{}'.format(col)] = list(
+                        dict(Counter(testing_period[col].to_list())).values())
 
-                testing_period = testing_period.fillna(0)   # some '-1' will be qcut into NaN -> manual replace by 0 category
+                # if i == pd.Timestamp(2017, 9, 30, 0, 0, 0):
+                #     check_print([df_print, testing_period], sort=False)
+
                 med_records[i.strftime('%Y-%m-%d')] = eval(testing_period[self.y_type], testing_period['medest'])
                 mean_records[i.strftime('%Y-%m-%d')] = eval(testing_period[self.y_type], testing_period['meanest'])
+
+        print(pd.DataFrame.from_records(r2, index=[0]).transpose())
         df_full = pd.concat([self.dict_to_df(med_records, 'medest'), self.dict_to_df(mean_records, 'meanest')], axis=0)
+
+        pd.DataFrame(self.all_bins[self.y_type]).transpose().to_csv('cutbins_{}_test_act_est.csv'.format(self.y_type))
+
         return df_full
 
-if __name__ == '__main__':
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw')
+def main():
+    try:
+        ann = pd.read_csv('ibes_ANN_last.csv')  # for annual forecast
+        qtr = pd.read_csv('ibes_QTR_last.csv')  # for quarterly forecast
+        print('local version run - ann_last, qtr_last')
+    except:
+        ann, qtr = filter_date()
 
-    conver_qoq_yoy()
-    # filter_quarters()
-    # main()
+    q = 3   # define qcut bins
+
+    # # convert QTR estimation to qoq and evaluate
+    qtr = convert(qtr).qoq()
+    df_full = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
+    exit(0)
+
+    df_full.sort_index().to_csv('consensus_qoq.csv')
+
+    # convert ANN estimation to yoy and evaluate
+    ann = convert(ann).yoy()
+    df_full_ann = evaluate(ibes_df=ann, y_type='yoyr', q=q).eval_all()
+    df_full_ann.sort_index().to_csv('consensus_yoyr.csv')
+
+if __name__ == '__main__':
+    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes')
+
+    # prepare()
+    # filter_date()
+    main()
