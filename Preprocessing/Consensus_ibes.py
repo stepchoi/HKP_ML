@@ -243,19 +243,17 @@ def main():
     except:
         ann, qtr = filter_date()
 
-    q = 3   # define qcut bins
+    q = 6   # define qcut bins
 
     # # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
     df_full = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
-    exit(0)
-
-    df_full.sort_index().to_csv('consensus_qoq.csv')
+    df_full.sort_index().to_csv('consensus_qoq{}.csv'.format(q))
 
     # convert ANN estimation to yoy and evaluate
     ann = convert(ann).yoy()
     df_full_ann = evaluate(ibes_df=ann, y_type='yoyr', q=q).eval_all()
-    df_full_ann.sort_index().to_csv('consensus_yoyr.csv')
+    df_full_ann.sort_index().to_csv('consensus_yoyr{}.csv'.format(q))
 
 if __name__ == '__main__':
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes')
