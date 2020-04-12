@@ -12,7 +12,8 @@ from sklearn.model_selection import train_test_split
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
+#from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
+from LoadData import (load_data, sample_from_datacqtr)
 
 space = {
     # better accuracy
