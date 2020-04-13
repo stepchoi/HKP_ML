@@ -238,7 +238,7 @@ if __name__ == "__main__":
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
 
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=0, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
