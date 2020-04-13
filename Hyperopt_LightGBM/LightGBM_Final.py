@@ -36,8 +36,8 @@ space = {
     'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.4, 0.8, 0.1, dtype='d')),
     'bagging_freq': hp.choice('bagging_freq', [2, 4, 8]),
     'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.72, 0.02, dtype='d')),
-    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5, dtype='d')),
-    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 20, dtype='d')),
+    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5, dtype=int)),
+    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 20, dtype=int)),
 
     # Voting Parallel
     # 'tree_learner': 'voting'
