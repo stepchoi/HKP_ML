@@ -195,6 +195,10 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
     print(pt)
+
+    import time
+    time.sleep(60)
+
     pt.to_sql('lightgbm_results', con=engine, if_exists='append')
 
     return result
