@@ -19,7 +19,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser()
 parser.add_argument('--bins', type=int, default=3)
 parser.add_argument('--sql_version', default=False, action='store_true')
-parser.add_argument('--resume', type=bool, default=False)
+parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
