@@ -130,6 +130,8 @@ class clean_set:
         except:
             self.test_x=self.test_niq=self.test_qoq=self.test_yoy=self.test_yoyr=None
 
+        self.pn_bins = [-np.inf, 0, np.inf]
+
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
@@ -159,11 +161,10 @@ class clean_set:
 
     def y_qcut(self, q, df_train, df_test):
 
-        # if q > 6:
-        #     return self.y_qcut_unbalance(q, df_train, df_test)
-
-        df, bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
-        df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
+        if q == 2:
+            df_train, cut_bins = pd.cut(df_train, bins=self.pn_bins, labels=range(2), retbins=True)
+        else:
+            df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         self.qcut={}
         d=dict(Counter(df_train))
@@ -187,10 +188,10 @@ class clean_set:
         return self.y_qcut(q, self.train_yoyr, self.test_yoyr)
 
     def nom(self):
-        bins = pd.IntervalIndex.from_tuples([(-float("inf"), 0), [0,0], (0, float("inf"))])
-        df_train = pd.cut(self.train_niq, bins=bins, labels=range(3))
+
+        df_train = pd.cut(self.train_niq, bins=self.pn_bins, labels=range(2))
         try:
-            df_test = pd.cut(self.test_niq, bins=bins, labels=range(3))
+            df_test = pd.cut(self.test_niq, bins=self.pn_bins, labels=range(2))
         except:
             df_test=None
 
@@ -198,7 +199,8 @@ class clean_set:
         d=dict(Counter(df_train))
         self.qcut['counts'] = list(d.values())
 
-        self.qcut['cut_bins'] = list(bins)
+        self.qcut['cut_bins'] = list(self.pn_bins)
+        print(d, self.qcut)
 
         return df_train, df_test, self.qcut
 
@@ -228,7 +230,12 @@ def load_data(lag_year = 5, sql_version = False):
     # main = main.iloc[:,:4]
 
     # 1. add 20 lagging factors for each variable
-    main_lag = add_lag(main, lag_year)
+    if lag_year != 0:
+        main_lag = add_lag(main, lag_year)
+    else:
+        main_lag = main
+        print('no lag')
+
     del main
     gc.collect()
 
@@ -376,5 +383,7 @@ if __name__ == "__main__":
     import os
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
-    main = load_data(lag_year=1, sql_version=False)
+    main = load_data(lag_year=0, sql_version=False)
+    a,b,c,d = sample_from_datacqtr(main, y_type='nom', testing_period=dt.datetime(2008, 3, 31), q=3)
+    print(a, b, c, d)
     print(main.isnull().sum().sum())

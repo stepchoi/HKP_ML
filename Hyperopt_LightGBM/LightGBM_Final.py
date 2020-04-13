@@ -1,8 +1,11 @@
+import argparse
 import datetime as dt
 
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+# from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
+from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from sklearn.decomposition import PCA
@@ -12,8 +15,13 @@ from sklearn.model_selection import train_test_split
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-#from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
-from LoadData import (load_data, sample_from_datacqtr)
+# define parser use for server running
+parser = argparse.ArgumentParser()
+parser.add_argument('--bins', type=int, default=3)
+parser.add_argument('--sql_version', type=bool, default=True)
+parser.add_argument('--resume', type=bool, default=False)
+parser.add_argument('--y_type', type=str, default='qoq')
+args = parser.parse_args()
 
 space = {
     # better accuracy
@@ -44,7 +52,6 @@ space = {
     'num_threads': 6  # for the best speed, set this to the number of real CPU cores
 }
 
-
 def myPCA(n_components, train_x, test_x):
     ''' PCA for given n_components on train_x, test_x'''
 
@@ -59,7 +66,6 @@ def myPCA(n_components, train_x, test_x):
         feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
-
 
 class convert_main:
     ''' split train, valid, test from main dataframe
@@ -115,7 +121,6 @@ class convert_main:
 
         return X_train, X_valid, self.X_test_PCA, Y_train, Y_valid, self.Y_test
 
-
 def myLightGBM(space, valid_method, valid_no):
     ''' X_train, X_valid, X_test, Y_train, Y_valid
     -> lightgbm for with params from hyperopt
@@ -157,7 +162,6 @@ def myLightGBM(space, valid_method, valid_no):
 
     return Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred
 
-
 def f(space):
     ''' train & evaluate LightGBM on given space by hyperopt trails '''
 
@@ -193,14 +197,12 @@ def f(space):
 
     return result
 
-
 def HPOT(space, max_evals):
     ''' use hyperopt on each set '''
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
     print(best)
     sql_result['trial'] += 1
-
 
 if __name__ == "__main__":
 
@@ -212,14 +214,12 @@ if __name__ == "__main__":
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
         'records')[0]
 
-    main = load_data(lag_year=5, sql_version=False)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
 
     sample_no = 40
-    qcut_q = 3
+    qcut_q = args.bins
 
-    if qcut_q > 3:  # for 6, 9 qcut test
-        space['num_class'] = qcut_q
-
+    space['num_class'] = qcut_q
     space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     feature_importance['return_importance'] = False
     feature_importance['orginal_columns'] = main.columns[2:-3]
 
-    resume = True
+    resume = args.resume
 
     # roll over each round
     period_1 = dt.datetime(2008, 3, 31)  # 2008
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         testing_period = period_1 + i * relativedelta(months=3)  # set sets in chronological order
 
         # PCA dimension
-        for y_type in ['qoq']:  # 'yoyr','qoq','yoy'
+        for y_type in args.y_type:  # 'yoyr','qoq','yoy'
 
             for max_evals in [30]:  # 40, 50
 
@@ -259,9 +259,9 @@ if __name__ == "__main__":
                             print(db_last_klass, type(db_last_klass))
 
                             if db_last_klass == klass:
-                                resume = True
+                                resume = False
                                 print('resume from params', klass)
-                            elif resume == True:
+                            elif resume == False:
                                 print(resume)
                             else:
                                 continue
