@@ -198,16 +198,8 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(pt, pt.dtypes)
-
-    pt[['name','y_type', 'valid_method','boosting_type','metric','objective','status']] \
-        = pt[['name','y_type', 'valid_method','boosting_type','metric','objective','status']].astype(str)
-
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(pt, pt.dtypes)
-
-    sql_result['qcut'] = float(args.bins)
+    pt = pt.concat([pt,pt],axis=0)
+    print(pt)
 
     pt.to_sql('lightgbm_results', con=engine, if_exists='append', dtype=types)
 
