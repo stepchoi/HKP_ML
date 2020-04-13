@@ -188,6 +188,8 @@ def f(space):
 
         feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
 
+    print(result, type(result))
+
     sql_result.update(space)
     sql_result.update(result)
     sql_result.pop('is_unbalance')
@@ -201,7 +203,7 @@ def f(space):
 
     pt.to_sql('lightgbm_results', con=engine, if_exists='append')
 
-    return result
+    return result['loss']
 
 def HPOT(space, max_evals):
     ''' use hyperopt on each set '''
