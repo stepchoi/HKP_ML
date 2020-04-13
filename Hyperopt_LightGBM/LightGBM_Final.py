@@ -193,7 +193,9 @@ def f(space):
     sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
-    pd.DataFrame.from_records([sql_result], index='trial').to_sql('lightgbm_results', con=engine, if_exists='append')
+    pt = pd.DataFrame.from_records([sql_result], index='trial')
+    print(pt)
+    pt.to_sql('lightgbm_results', con=engine, if_exists='append')
 
     return result
 
