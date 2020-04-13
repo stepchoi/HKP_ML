@@ -1,3 +1,6 @@
+import pandas as pd
+from sqlalchemy import create_engine
+
 db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
 engine = create_engine(db_string)
 main = pd.read_sql('SELECT * FROM main', engine)
