@@ -189,6 +189,7 @@ def f(space):
         feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
 
     print(result, type(result))
+    print(sql_result, type(sql_result))
 
     sql_result.update(space)
     sql_result.update(result)
@@ -196,7 +197,8 @@ def f(space):
     sql_result['finish_timing'] = dt.datetime.now()
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
-    print(pt.transpose())
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(pt)
 
     sql_result['qcut'] = float(args.bins)
     print(sql_result['qcut'], type(sql_result['qcut']))
