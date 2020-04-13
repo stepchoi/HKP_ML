@@ -201,7 +201,7 @@ def f(space):
     # pt = pd.concat([pt,pt],axis=0)
     # print(pt)
 
-    pt.to_sql('lightgbm_results_aws', con=engine, if_exists='append'])
+    pt.to_sql('lightgbm_results_aws', con=engine, if_exists='append')
 
     return result
 
