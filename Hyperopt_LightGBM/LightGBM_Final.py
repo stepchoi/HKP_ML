@@ -198,12 +198,12 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
 
-    pt = pd.concat([pt,pt],axis=0).reset_index(drop=False)
-    print(pt)
+    # pt = pd.concat([pt,pt],axis=0)
+    # print(pt)
 
-    pt.to_sql('lightgbm_results', con=engine, if_exists='append', dtype=types)
+    pt.to_sql('lightgbm_results_aws', con=engine, if_exists='append'])
 
-    return result['loss']
+    return result
 
 def HPOT(space, max_evals):
     ''' use hyperopt on each set '''
