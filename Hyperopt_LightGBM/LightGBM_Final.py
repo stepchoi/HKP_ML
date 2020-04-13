@@ -13,7 +13,6 @@ from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, re
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from sqlalchemy import create_engine, MetaData, Table
-from sqlalchemy.types import Text, TIMESTAMP, BIGINT, Numeric
 from tqdm import tqdm
 
 # define parser use for server running
@@ -204,6 +203,10 @@ def f(space):
     sql_result['qcut'] = float(args.bins)
     print(sql_result['qcut'], type(sql_result['qcut']))
 
+    print(types)
+    print(types.keys(), len(types.keys()))
+    print(sql_result.keys(), len(sql_result.keys()))
+
     pt.to_sql('lightgbm_results', con=engine, if_exists='append', dtype=types)
 
     return result['loss']
@@ -227,27 +230,18 @@ if __name__ == "__main__":
     print(args)
     # print(db_last.dtypes)
 
+    # define columns for each python
     meta = MetaData()
-    # conn = engine.connect()
     table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
     columns = table.c
-
-    remap = {'BIGINT': BIGINT(),
-             'TEXT': Text(),
-             'TIMESTAMP WITHOUT TIME ZONE': TIMESTAMP(),
-             'DOUBLE PRECISION': Numeric(),
-             }
-
     types = {}
     for c in columns:
         types[c.name] = c.type
     types.pop('early_stopping_rounds')
     types.pop('num_boost_round')
-    print(types)
 
     sample_no = 40
     qcut_q = int(args.bins)
-    print(type(qcut_q))
     y_type = args.y_type  # 'yoyr','qoq','yoy'
 
     main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
