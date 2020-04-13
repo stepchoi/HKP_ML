@@ -194,7 +194,7 @@ def f(space):
     sql_result['finish_timing'] = dt.datetime.now()
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
-    print(pt)
+    print(pt.transpose())
 
     import time
     time.sleep(60)
