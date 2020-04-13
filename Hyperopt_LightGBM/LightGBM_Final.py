@@ -219,6 +219,7 @@ if __name__ == "__main__":
 
     sample_no = 40
     qcut_q = args.bins
+    y_type = args.y_type  # 'yoyr','qoq','yoy'
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
@@ -240,37 +241,36 @@ if __name__ == "__main__":
         testing_period = period_1 + i * relativedelta(months=3)  # set sets in chronological order
 
         # PCA dimension
-        for y_type in args.y_type:  # 'yoyr','qoq','yoy'
 
-            for max_evals in [30]:  # 40, 50
+        for max_evals in [30]:  # 40, 50
 
-                for reduced_dimension in [0.66, 0.75]:  # 0.66, 0.7
-                    sql_result['reduced_dimension'] = reduced_dimension
+            for reduced_dimension in [0.66, 0.75]:  # 0.66, 0.7
+                sql_result['reduced_dimension'] = reduced_dimension
 
-                    for valid_method in ['shuffle', 'chron']:  # 'chron'
-                        for valid_no in [10, 20]:  # 1,5
+                for valid_method in ['shuffle', 'chron']:  # 'chron'
+                    for valid_no in [10, 20]:  # 1,5
 
-                            klass = {'y_type': y_type,
-                                     'valid_method': valid_method,
-                                     'valid_no': valid_no,
-                                     'testing_period': testing_period,
-                                     'reduced_dimension': reduced_dimension}
+                        klass = {'y_type': y_type,
+                                 'valid_method': valid_method,
+                                 'valid_no': valid_no,
+                                 'testing_period': testing_period,
+                                 'reduced_dimension': reduced_dimension}
 
-                            if db_last_klass == klass:
-                                resume = False
-                                print('resume from params', klass)
-                            elif resume == False:
-                                print(resume)
-                            else:
-                                continue
+                        if db_last_klass == klass:
+                            resume = False
+                            print('resume from params', klass)
+                        elif resume == False:
+                            print(resume)
+                        else:
+                            continue
 
-                            print(klass, type(klass))
+                        print(klass, type(klass))
 
-                            sql_result.update({'max_evals': max_evals})
-                            sql_result.update(klass)
+                        sql_result.update({'max_evals': max_evals})
+                        sql_result.update(klass)
 
-                            converted_main = convert_main(main, y_type, testing_period)
+                        converted_main = convert_main(main, y_type, testing_period)
 
-                            HPOT(space, max_evals=max_evals)
+                        HPOT(space, max_evals=max_evals)
 
     # print('x shape before PCA:', x.shape)
