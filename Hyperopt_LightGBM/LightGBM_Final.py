@@ -185,12 +185,7 @@ def f(space):
 
     if feature_importance['return_importance'] == True:
         print(feature_importance['pc_df'].info())
-
         feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
-
-    print(result, type(result))
-    # print(sql_result, type(sql_result))
-    print(space, type(space))
 
     sql_result.update(space)
     sql_result.update(result)
@@ -201,11 +196,11 @@ def f(space):
 
     # pt = pd.concat([pt,pt],axis=0)
     # print(pt)
-    pt = pt.astype(str)
+    # pt = pt.astype(str)
 
-    print(pt.dtypes)
+    # print(pt.dtypes)
 
-    print(types)
+    # print(types)
     pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='replace', dtype=types)
 
     return result
