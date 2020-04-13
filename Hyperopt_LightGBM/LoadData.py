@@ -213,6 +213,7 @@ def load_data(lag_year = 5, sql_version = False):
     start = time.time()
 
     if sql_version is True: # sql version read TABLE from Postgre SQL
+        print('from postgres database')
         db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
         engine = create_engine(db_string)
         main = pd.read_sql('SELECT * FROM main', engine)
