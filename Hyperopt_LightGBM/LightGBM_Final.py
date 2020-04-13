@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--bins', type=int, default=3)
 parser.add_argument('--sql_version', type=bool, default=True)
 parser.add_argument('--resume', type=bool, default=False)
-parser.add_argument('--y_type', type=str, default='qoq')
+parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
 space = {
