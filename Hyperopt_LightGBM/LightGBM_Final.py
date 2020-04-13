@@ -12,7 +12,8 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.types import Text, TIMESTAMP, BIGINT, Numeric
 from tqdm import tqdm
 
 # define parser use for server running
@@ -203,7 +204,7 @@ def f(space):
     sql_result['qcut'] = float(args.bins)
     print(sql_result['qcut'], type(sql_result['qcut']))
 
-    pt.to_sql('lightgbm_results', con=engine, if_exists='append')
+    pt.to_sql('lightgbm_results', con=engine, if_exists='append', dtype=types)
 
     return result['loss']
 
@@ -223,9 +224,26 @@ if __name__ == "__main__":
                           engine)  # identify current # trials from past execution
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
         'records')[0]
-    # print(args)
+    print(args)
     # print(db_last.dtypes)
-    # exit(0)
+
+    meta = MetaData()
+    # conn = engine.connect()
+    table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
+    columns = table.c
+
+    remap = {'BIGINT': BIGINT(),
+             'TEXT': Text(),
+             'TIMESTAMP WITHOUT TIME ZONE': TIMESTAMP(),
+             'DOUBLE PRECISION': Numeric(),
+             }
+
+    types = {}
+    for c in columns:
+        types[c.name] = c.type
+    types.pop('early_stopping_rounds')
+    types.pop('num_boost_round')
+    print(types)
 
     sample_no = 40
     qcut_q = int(args.bins)
