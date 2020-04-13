@@ -213,6 +213,7 @@ if __name__ == "__main__":
                           engine)  # identify current # trials from past execution
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
         'records')[0]
+    print(args)
 
     main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
 
