@@ -193,11 +193,10 @@ def f(space):
     sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
+    sql_result['qcut'] = float(sql_result['qcut'])
+
     pt = pd.DataFrame.from_records([sql_result], index='trial')
     print(pt.transpose())
-
-    import time
-    time.sleep(60)
 
     pt.to_sql('lightgbm_results', con=engine, if_exists='append')
 
