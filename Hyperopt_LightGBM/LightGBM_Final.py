@@ -195,7 +195,7 @@ def f(space):
     pt = pd.DataFrame.from_records([sql_result], index='trial')
 
     pt = pt.astype(str)
-    pt.to_sql('lightgbm_results_aws', con=engine, if_exists='replace', dtype=types)
+    pt.to_sql('lightgbm_results_aws', con=engine, index=False,if_exists='replace', dtype=types)
 
     return result
 
