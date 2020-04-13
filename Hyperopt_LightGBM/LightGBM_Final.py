@@ -192,13 +192,11 @@ def f(space):
     sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
-    pt = pd.DataFrame.from_records([sql_result], index=[0]).reset_index(drop=False)
+    pt = pd.DataFrame.from_records([sql_result], index=[0])
 
     pt['trial'] = pt['trial'].astype(int)
-    print(pt.dtypes)
-
     pt = pt.astype(str)
-    pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='replace', dtype=types)
+    pt.to_sql('lightgbm_results', con=engine, index=False, if_exists='append', dtype=types)
 
     return result
 
@@ -231,10 +229,12 @@ if __name__ == "__main__":
     types.pop('early_stopping_rounds')
     types.pop('num_boost_round')
 
+    # parser
     sample_no = 40
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
 
+    # load data for entire period
     main = load_data(lag_year=0, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
 
     space['num_class'] = qcut_q
