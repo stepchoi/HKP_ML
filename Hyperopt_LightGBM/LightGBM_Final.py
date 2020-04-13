@@ -194,14 +194,7 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
 
-    # pt = pd.concat([pt,pt],axis=0)
-    # print(pt)
-    # pt = pt.astype(str)
-
-    # print(pt.dtypes)
-
-    # print(types)
-    pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='replace', dtype=types)
+    pt.to_sql('lightgbm_results_aws', con=engine, if_exists='append', dtype=types)
 
     return result
 
