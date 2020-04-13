@@ -255,9 +255,6 @@ if __name__ == "__main__":
                                      'testing_period': testing_period,
                                      'reduced_dimension': reduced_dimension}
 
-                            print(klass, type(klass))
-                            print(db_last_klass, type(db_last_klass))
-
                             if db_last_klass == klass:
                                 resume = False
                                 print('resume from params', klass)
@@ -265,6 +262,8 @@ if __name__ == "__main__":
                                 print(resume)
                             else:
                                 continue
+
+                            print(klass, type(klass))
 
                             sql_result.update({'max_evals': max_evals})
                             sql_result.update(klass)
