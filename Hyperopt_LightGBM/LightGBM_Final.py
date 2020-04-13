@@ -192,9 +192,10 @@ def f(space):
     sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
-    pt = pd.DataFrame.from_records([sql_result], index='trial')
+    pt = pd.DataFrame.from_records([sql_result], index='trial').reset_index(drop=False)
+    pt['trail'] = pt['trail'].astype(int)
 
-    pt = pt.astype(str)
+    # pt = pt.astype(str)
     pt.to_sql('lightgbm_results_aws', con=engine, index=False,if_exists='replace', dtype=types)
 
     return result
