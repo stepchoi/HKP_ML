@@ -200,7 +200,6 @@ class clean_set:
         self.qcut['counts'] = list(d.values())
 
         self.qcut['cut_bins'] = list(self.pn_bins)
-        print(d, self.qcut)
 
         return df_train, df_test, self.qcut
 
@@ -384,6 +383,6 @@ if __name__ == "__main__":
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
     main = load_data(lag_year=0, sql_version=False)
-    a,b,c,d = sample_from_datacqtr(main, y_type='nom', testing_period=dt.datetime(2008, 3, 31), q=3)
+    a,b,c,d = sample_from_datacqtr(main, y_type='qoq', testing_period=dt.datetime(2008, 3, 31), q=2)
     print(a, b, c, d)
     print(main.isnull().sum().sum())
