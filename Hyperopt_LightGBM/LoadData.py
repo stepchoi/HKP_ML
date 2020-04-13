@@ -252,6 +252,8 @@ def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq'];
     main_period = clean_set(train, test) # create class
     train_x, test_x = main_period.standardize_x() # for x
 
+    print('y_type using:',y_type)
+
     if y_type == 'yoy': # for y
         train_y, test_y, qcut = main_period.yoy(q=q)
     elif y_type == 'qoq':
