@@ -198,7 +198,7 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(pt, type(pt))
+        print(pt, pt.dtypes)
 
     sql_result['qcut'] = float(args.bins)
     print(sql_result['qcut'], type(sql_result['qcut']))
@@ -223,7 +223,9 @@ if __name__ == "__main__":
                           engine)  # identify current # trials from past execution
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
         'records')[0]
-    print(args)
+    # print(args)
+    # print(db_last.dtypes)
+    # exit(0)
 
     sample_no = 40
     qcut_q = int(args.bins)
