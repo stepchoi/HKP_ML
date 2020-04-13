@@ -203,7 +203,8 @@ def f(space):
     pt = pt.astype(str)
     print(pt.dtypes)
 
-    pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='append', dtype=types)
+    print(types)
+    pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='replace', dtype=types)
 
     return result
 
