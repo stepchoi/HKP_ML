@@ -197,7 +197,7 @@ def f(space):
     # pt['trail'] = pt['trail'].astype(int)
     print(pt.dtypes)
 
-    # pt = pt.astype(str)
+    pt = pt.astype(str)
     pt.to_sql('lightgbm_results_aws', con=engine, index=False, if_exists='replace', dtype=types)
 
     return result
