@@ -198,7 +198,7 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index='trial')
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(pt)
+        print(pt, type(pt))
 
     sql_result['qcut'] = float(args.bins)
     print(sql_result['qcut'], type(sql_result['qcut']))
