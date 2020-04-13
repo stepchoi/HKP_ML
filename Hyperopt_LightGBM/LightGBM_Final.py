@@ -189,7 +189,8 @@ def f(space):
         feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
 
     print(result, type(result))
-    print(sql_result, type(sql_result))
+    # print(sql_result, type(sql_result))
+    print(space, type(space))
 
     sql_result.update(space)
     sql_result.update(result)
@@ -201,6 +202,7 @@ def f(space):
     # pt = pd.concat([pt,pt],axis=0)
     # print(pt)
     pt = pt.astype(str)
+
     print(pt.dtypes)
 
     print(types)
