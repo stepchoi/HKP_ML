@@ -235,7 +235,7 @@ if __name__ == "__main__":
     y_type = args.y_type  # 'yoyr','qoq','yoy'
 
     # load data for entire period
-    main = load_data(lag_year=0, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
