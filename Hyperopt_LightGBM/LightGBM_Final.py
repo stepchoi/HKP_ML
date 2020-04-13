@@ -194,7 +194,7 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index=[0]).reset_index(drop=False)
 
-    pt['trail'] = pt['trail'].astype(int)
+    # pt['trail'] = pt['trail'].astype(int)
     print(pt.dtypes)
 
     # pt = pt.astype(str)
