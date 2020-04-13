@@ -209,7 +209,7 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    db_last = pd.read_sql('SELECT * FROM lightgbm_results order by finish_timing desc LIMIT 1',
+    db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' order by finish_timing desc LIMIT 1".format(args.y_type),
                           engine)  # identify current # trials from past execution
     db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
         'records')[0]
