@@ -5,15 +5,16 @@ import pandas as pd
 from PCA_for_RNN import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from keras import models, callbacks
-from keras.layers import Dense, GRU, Dropout, Flatten
+from keras.layers import Dense, GRU, Dropout, Flatten, Concatenate, Input
 from sklearn.model_selection import train_test_split
 from sqlalchemy import create_engine
+from keras.models import Model
 
 from Preprocessing.LoadDataRNN import load_data_rnn
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.75)), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(1)), # past: [508, 624, 757]
     # number of layers
     'num_GRU_layer': hp.choice('num_GRU_layer', [1]),
     'num_Dense_layer': hp.choice('num_Dense_layer', [1]),
@@ -21,7 +22,7 @@ space = {
     'verbosity': -1,
 
     # hyperparameter
-    'batch_size': hp.choice('batch_size', [512]),
+    'batch_size': hp.choice('batch_size', [128, 512]),
 }
 
 import os
@@ -69,10 +70,23 @@ def RNN(space):
     X_train, X_valid, Y_train, Y_valid = Dimension_reduction(space['reduced_dimension'], dimension_reduction_method='None', valid_method='shuffle')
     print(X_train.shape, X_valid.shape, Y_train.shape, Y_valid.shape,)
 
-    model = models.Sequential()
-    model.add(GRU(4, input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = False))
-    model.add(Dense(units=21, activation='tanh'))
-    model.add(Dense(3, activation='softmax'))
+    # model = models.Sequential()
+    # model.add(GRU(4, input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences = True))
+    # model.add((GRu))
+    # model.add(Dense(units=21, activation='tanh'))
+    # model.add(Dense(3, activation='softmax'))
+
+    # split the model - need FUNCTIONAL
+    input_shape = (X_train.shape[1], X_train.shape[2])
+    input_img = Input(shape=input_shape)
+    gru1 = GRU(4, return_sequences = True) (input_img)
+    gru2 = GRU(1, return_sequences=True)(gru1)  #returns the sequence - input is first GRU output - ONE node bc we just want 1X20 output
+    gru2 = Flatten()(gru2)
+    gru1 = GRU(4, return_sequences = False)(gru1) #returns the hidden state forecast from first GRU output
+    comb = Concatenate(axis=1)([gru2, gru1]) #combine the guess (gru1) with the sequence of hidden nodes (gru2)
+    comb = Dense(21, activation='tanh')(comb) #that combined vector goes through a Dense layer - "keeps" some time seq
+    comb = Dense(3, activation='softmax')(comb) #softmax choose
+    model = Model(input_img, comb)
     model.summary()
 
     model.compile(optimizer='adam',
@@ -81,7 +95,7 @@ def RNN(space):
 
     model.fit(X_train,
               Y_train,
-              epochs=200,
+              epochs=20,
               batch_size=space['batch_size'],
               validation_data=(X_valid, Y_valid),
               verbose=1)
