@@ -133,6 +133,7 @@ class load_data_rnn:
         print(Counter(samples['y']))
 
         samples['y'] = pd.cut(samples['y'], bins=cut_bins, labels=range(self.qcut_q))
+        print(Counter(samples['y']))
 
         # print(len(samples), len(samples['x']), len(samples['y']), len(samples['x'][0]), len(samples['y'][0]))
         return samples
