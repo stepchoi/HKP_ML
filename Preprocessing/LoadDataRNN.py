@@ -114,18 +114,18 @@ class load_data_rnn:
 
         # sample for x
         samples = {}
+        samples['x'] = self.arr_3d_dict[start]
+        samples['y'] = self.y_dict[y_type][start]
 
         for k in self.arr_3d_dict.keys():
-            if (k>=start) & (k<end):
+            if (k>start) & (k<end):
                 # db = pd.DataFrame(self.y_dict[y_type][k])
                 # da = pd.DataFrame(y)
                 # print(db.loc[da.isnull()])
                 # print(da.isnull().sum())
-                y_list.append(y)
-                x_list.append(self.arr_3d_dict[k])
+                samples['x'] = np.concatenate((samples['x'], self.arr_3d_dict[k]))
+                samples['y'] = np.concatenate((samples['y'], self.y_dict[y_type][k]))
 
-        samples['x'] = pd.concat(x_list)
-        samples['y'] = pd.concat(y_list)
         print(samples['x'].shape)
         print(samples['y'].shape)
 
