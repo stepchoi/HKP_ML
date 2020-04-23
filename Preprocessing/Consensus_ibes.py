@@ -16,32 +16,46 @@ def prepare_act():
     name_map = pd.read_csv('name_map2.csv', usecols=['gvkey','datadate','cusip']).drop_duplicates()  # use to map cusip to gvkey
     name_map['cusip'] = name_map['cusip'].astype(str).apply(lambda x: x.zfill(9)[:-1])  # convert cusip9 -> cusip8
 
-    ibes = pd.read_csv('ibes_summary.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
-                                                    'MEANEST','ACTUAL'])  # ibes consensus data
+    # ibes = pd.read_csv('ibes_summary.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
+    #                                                 'MEANEST','ACTUAL'])  # ibes consensus data
+
+    ibes = pd.read_csv('ibes_actual.csv')
+    ibes = ibes.dropna(subset=['INT0DATS','CUSIP'])
+    ibes['INT0DATS'] =  ibes['INT0DATS'].astype(int)
+    print(ibes.describe())
+
 
     ibes.columns = [x.lower() for x in ibes.columns]
     ibes['cusip'] = ibes['cusip'].astype(str).apply(lambda x: x.zfill(8))
 
-    ibes = pd.merge(ibes, name_map, left_on=['fpedats', 'cusip'], right_on=['datadate','cusip'], how='inner')  # map cusip to gvkey
+    # ibes = pd.merge(ibes, name_map, left_on=['fpedats', 'cusip'], right_on=['datadate','cusip'], how='inner')  # map cusip to gvkey
+    ibes = pd.merge(ibes, name_map, left_on=['int0dats', 'cusip'], right_on=['datadate','cusip'], how='inner')  # map cusip to gvkey
+
     ibes = ibes.loc[ibes['gvkey'].isin(gvkey)]  # filter gvkey we used
-    ibes = ibes.loc[ibes['measure']=='NET']  # filter NET (net income) as measure
+    # ibes = ibes.loc[ibes['measure']=='NET']  # filter NET (net income) as measure
+
+    # for name, g in ibes.groupby(['measure']):
+    #     print(name, len(g))
+    # exit(0)
+
 
     niq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv', usecols=['gvkey', 'datacqtr', 'niq'])  # read actual niq
     niq['datacqtr'] = pd.to_datetime(niq['datacqtr'], format='%Y-%m-%d').dt.strftime('%Y%m%d').astype(int)
-    print(niq['datacqtr'] )
-    ibes = pd.merge(ibes, niq, left_on=['fpedats','gvkey'], right_on=['datacqtr','gvkey'], how='inner')
+    print('niq shape', niq.shape)
+    ibes = pd.merge(ibes, niq, left_on=['int0dats','gvkey'], right_on=['datacqtr','gvkey'], how='inner')
 
-    ibes = ibes.loc[ibes['actual']==ibes['niq']]
-    print(ibes, ibes.shape)
+    print('all', ibes.shape)
+    ibes = ibes.loc[ibes['int0a']==ibes['niq']]
+    print('same', ibes.shape)
 
     # ibes.to_csv('ibes_act.csv', index=False)
 
-    ibes_dict = {}
-    for name, g in ibes.groupby('fiscalp'):
-        # g.to_csv('ibes_{}.csv'.format(name))
-        ibes_dict[name] = g
+    # ibes_dict = {}
+    # for name, g in ibes.groupby('fiscalp'):
+    #     # g.to_csv('ibes_{}.csv'.format(name))
+    #     ibes_dict[name] = g
 
-    return ibes_dict['ANN'], ibes_dict['QTR']
+    # return ibes_dict['ANN'], ibes_dict['QTR']
 
 
 def prepare():
@@ -111,7 +125,7 @@ class convert:
         atq['datacqtr'] = pd.to_datetime(atq['datacqtr']) # prepare atq from original db
 
         df = df.filter(['gvkey','fpedats', 'medest','meanest', 'actual'])
-        print(df)
+        # print(df)
         df.columns = ['gvkey','datacqtr', 'medest','meanest','actual'] # filter and rename
 
         df = self.drop_nonseq(df)
@@ -144,8 +158,9 @@ class convert:
     def qoq(self):
         ''' for QTR estimation -> convert to qoq format '''
         print('start qoq')
-        d = self.df[self.num_col].shift(-1) - self.df[self.num_col]
-        self.df[['medest', 'meanest','actual']] = d.apply(lambda x: x.div(self.df['atq'])) # convert to qoq
+        for col in self.num_col:
+            self.df[col] = self.df[col].shift(-1).sub(self.df['actual']).div(self.df['atq']) # convert to qoq
+
         self.df.iloc[self.df.groupby('gvkey').tail(1).index, 2:] = np.nan   # remove effect due to cross gvkey operation
         return self.df
 
@@ -157,10 +172,14 @@ class convert:
         ANN consensus: 2008Y -> 2009Y-2008Y/2008Q4-atq
         QTR actual y from Compustat: 2008Q4 -> 2008Q4 -> (2009Q1..2009Q4) - (2008Q1..2008Q4)/2008Q4-atq
         '''
+        for col in self.num_col:
+            self.df[col] = self.df[col].shift(-4).sub(self.df['actual']).div(self.df['atq']) # convert to qoq
 
-        d = self.df[self.num_col].shift(-4) - self.df[self.num_col]
-        self.df[['medest', 'meanest']] = d.apply(lambda x: x.div(self.df['atq']))
         self.df.iloc[self.df.groupby('gvkey').tail(4).index, 2:] = np.nan
+        # self.df['m'] = [str(x)[5] for x in self.df['datacqtr']]
+        # print(self.df['datacqtr'].dt.strftime('%m'))
+        self.df = self.df.loc[self.df['datacqtr'].dt.strftime('%m')=='12']
+        # print(self.df.head())
         return self.df
 
 def eval(Y_test, Y_test_pred):
@@ -264,7 +283,7 @@ class evaluate:
 
                 testing_period = self.ibes_df.loc[self.ibes_df['datacqtr'] == i]
 
-                print('266', self.y_type)
+                # print('266', self.y_type)
                 cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['cut_bins']
 
                 self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_act'] = testing_period[self.y_type].notnull().sum()
@@ -274,7 +293,7 @@ class evaluate:
 
                 # df_print = testing_period.copy()
 
-                r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
+                # r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
 
                 ''' 1. cut using bins from training set'''
                 for col in [self.y_type, 'medest','meanest','actual']:    # qcut testing period (actual & consensus)
@@ -289,10 +308,10 @@ class evaluate:
                 med_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['medest'])
                 mean_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['meanest'])
 
-        print(pd.DataFrame.from_records(r2, index=[0]).transpose())
+        # print(pd.DataFrame.from_records(r2, index=[0]).transpose())
         df_full = pd.concat([self.dict_to_df(med_records, 'medest'), self.dict_to_df(mean_records, 'meanest')], axis=0)
 
-        pd.DataFrame(self.all_bins[self.y_type]).transpose().to_csv('cutbins_{}_ibes_test_act_est.csv'.format(self.y_type))
+        pd.DataFrame(self.all_bins[self.y_type]).transpose().to_csv('cutbins_{}{}_ibes_test_act_est.csv'.format(self.y_type, self.qcut_q))
 
         return df_full
 
@@ -304,23 +323,23 @@ def main():
     except:
         ann, qtr = filter_date()
 
-    q = 3   # define qcut bins
+    q = 9
 
-    # # convert QTR estimation to qoq and evaluate
+    # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
     df_full = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
     df_full.sort_index().to_csv('consensus_qoq{}_ibes.csv'.format(q))
-    exit(0)
 
     # convert ANN estimation to yoy and evaluate
     ann = convert(ann).yoy()
     df_full_ann = evaluate(ibes_df=ann, y_type='yoyr', q=q).eval_all()
-    # df_full_ann.sort_index().to_csv('consensus_yoyr{}.csv'.format(q))
+    df_full_ann.sort_index().to_csv('consensus_yoyr{}_ibes.csv'.format(q))
 
 if __name__ == '__main__':
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new')
 
-    # check_act()
+    # prepare_act()
+
     # prepare()
     # filter_date()
     main()

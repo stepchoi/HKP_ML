@@ -114,20 +114,25 @@ class load_data_rnn:
 
         # sample for x
         samples = {}
-        samples['x'] = []
-        samples['y'] = []
 
         for k in self.arr_3d_dict.keys():
             if (k>=start) & (k<end):
-                y = pd.cut(self.y_dict[y_type][k], bins=cut_bins, labels=range(self.qcut_q))
-
                 # db = pd.DataFrame(self.y_dict[y_type][k])
-                da = pd.DataFrame(y)
+                # da = pd.DataFrame(y)
                 # print(db.loc[da.isnull()])
                 # print(da.isnull().sum())
+                y_list.append(y)
+                x_list.append(self.arr_3d_dict[k])
 
-                samples['y'].append(y)
-                samples['x'].append(self.arr_3d_dict[k])
+        samples['x'] = pd.concat(x_list)
+        samples['y'] = pd.concat(y_list)
+        print(samples['x'].shape)
+        print(samples['y'].shape)
+
+        from collections import Counter
+        print(Counter(samples['y']))
+
+        samples['y'] = pd.cut(samples['y'], bins=cut_bins, labels=range(self.qcut_q))
 
         # print(len(samples), len(samples['x']), len(samples['y']), len(samples['x'][0]), len(samples['y'][0]))
         return samples
@@ -141,10 +146,11 @@ if __name__ == '__main__':
     # it contains 80 3d_array
     # each 3d_array = (20, companies, variables=165)
 
-    sample_class = load_data_rnn(lag_year=5, sql_version=False)
+    sample_class = load_data_rnn(lag_year=0, sql_version=False)
 
     for i in range(1): # set = 40 if return 40 samples
         samples_set1 = sample_class.sampling(i, y_type='qoq')
+
 
         x = samples_set1['x'][0]
         y = samples_set1['y'][0]
