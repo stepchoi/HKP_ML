@@ -21,10 +21,10 @@ class load_data_rnn:
         main = load_data(lag_year=lag_year, sql_version=sql_version)
 
         scaler = StandardScaler()
-        print('f')
+        # print('f')
         df = pd.DataFrame(scaler.fit_transform(main.iloc[:,2:-4]), columns=main.columns[2:-4])
         main = pd.concat([main.iloc[:,:2], df, main.iloc[:,-4:]], axis=1)
-        print('f')
+        # print('f')
 
         # print(main)
 
@@ -126,14 +126,7 @@ class load_data_rnn:
                 samples['x'] = np.concatenate((samples['x'], self.arr_3d_dict[k]))
                 samples['y'] = np.concatenate((samples['y'], self.y_dict[y_type][k]))
 
-        print(samples['x'].shape)
-        print(samples['y'].shape)
-
-        from collections import Counter
-        print(Counter(samples['y']))
-
         samples['y'] = pd.cut(samples['y'], bins=cut_bins, labels=range(self.qcut_q))
-        print(Counter(samples['y']))
 
         # print(len(samples), len(samples['x']), len(samples['y']), len(samples['x'][0]), len(samples['y'][0]))
         return samples
@@ -147,19 +140,13 @@ if __name__ == '__main__':
     # it contains 80 3d_array
     # each 3d_array = (20, companies, variables=165)
 
-    sample_class = load_data_rnn(lag_year=0, sql_version=False)
+    sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
     for i in range(1): # set = 40 if return 40 samples
         samples_set1 = sample_class.sampling(i, y_type='qoq')
 
-
-        x = samples_set1['x'][0]
-        y = samples_set1['y'][0]
-        print(x.shape)
-
-        for q in range(79):
-            x = np.concatenate((x, samples_set1['x'][q + 1]))
-            y = np.concatenate((y, samples_set1['y'][q + 1]))
+        x = samples_set1['x']
+        y = samples_set1['y']
 
         from collections import Counter
         print(Counter(y))
@@ -167,6 +154,6 @@ if __name__ == '__main__':
         # print(np.isnan(x).sum())
         # print(np.isnan(y).sum())
 
-        # print(x.shape)
-        # print(y.shape)
+        print(x.shape)
+        print(y.shape)
         pass
