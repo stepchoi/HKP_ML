@@ -52,8 +52,8 @@ class load_data_rnn:
             train[col], cut_bins = pd.qcut(train[col], q=self.qcut_q, labels=range(self.qcut_q), retbins=True)
             print(cut_bins)
 
-            cut_bins[0] -= 0.1
-            cut_bins[3] += 0.1
+            cut_bins[0] = -np.inf
+            cut_bins[3] = np.inf
             # print(cut_bins[0])
             bins[end.strftime('%Y-%m-%d')] = cut_bins
         # d = pd.DataFrame.from_dict(bins, orient='index',columns=[0,1,2,3])
@@ -149,8 +149,8 @@ if __name__ == '__main__':
         x = samples_set1['x'][0]
         y = samples_set1['y'][0]
         print(x.shape)
-        print(y.shape)
-        for q in range(39):
+
+        for q in range(79):
             x = np.concatenate((x, samples_set1['x'][q + 1]))
             y = np.concatenate((y, samples_set1['y'][q + 1]))
 
