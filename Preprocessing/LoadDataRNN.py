@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-from Preprocessing.LoadData import load_data
+from Hyperopt_LightGBM.LoadData import load_data
 
 
 class load_data_rnn:
@@ -19,12 +19,13 @@ class load_data_rnn:
         self.all_bins = self.get_all_bins(sql_version)
 
         main = load_data(lag_year=lag_year, sql_version=sql_version)
-        print(main.columns)
 
-        scaler = StandardScaler().fit(main.iloc[:,2:-4])
-        main = pd.concat([main.iloc[:,:2],
-                          pd.DataFrame(scaler.transform(main.iloc[:,2:-4]), columns=main.columns[2:-4]),
-                          main.iloc[:,-4:]], axis=1)
+        scaler = StandardScaler()
+        print('f')
+        df = pd.DataFrame(scaler.fit_transform(main.iloc[:,2:-4]), columns=main.columns[2:-4])
+        main = pd.concat([main.iloc[:,:2], df, main.iloc[:,-4:]], axis=1)
+        print('f')
+
         # print(main)
 
         self.fincol = main.columns[2:156].to_list()
@@ -65,7 +66,12 @@ class load_data_rnn:
             self.niq = pd.read_sql('SELECT * FROM niq_main', engine)
         else:
             self.niq = pd.read_csv('niq_main.csv')
+            exist = pd.read_csv('exist.csv')
 
+        self.niq['k']=self.niq['gvkey'].astype(str) + self.niq['datacqtr'].astype(str)
+        e=exist['gvkey'].astype(str) + exist['datacqtr'].astype(str)
+        self.niq = self.niq.loc[self.niq['k'].isin(e)]
+        print(self.niq.shape)
         self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
         all_bins = {}
         for y in ['qoq', 'yoyr']: # 'yoy',
@@ -129,7 +135,7 @@ class load_data_rnn:
 if __name__ == '__main__':
 
     import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    os.chdir('/home/loratech/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
     # samples_set1 equivalent to the first csv in LightGBM version
     # it contains 80 3d_array
@@ -142,9 +148,14 @@ if __name__ == '__main__':
 
         x = samples_set1['x'][0]
         y = samples_set1['y'][0]
+        print(x.shape)
+        print(y.shape)
         for q in range(39):
             x = np.concatenate((x, samples_set1['x'][q + 1]))
             y = np.concatenate((y, samples_set1['y'][q + 1]))
+
+        from collections import Counter
+        print(Counter(y))
 
         # print(np.isnan(x).sum())
         # print(np.isnan(y).sum())

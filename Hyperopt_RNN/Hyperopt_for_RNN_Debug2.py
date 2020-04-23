@@ -14,7 +14,7 @@ from Preprocessing.LoadDataRNN import load_data_rnn
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(1)), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.75)), # past: [508, 624, 757]
     # number of layers
     'num_GRU_layer': hp.choice('num_GRU_layer', [1]),
     'num_Dense_layer': hp.choice('num_Dense_layer', [1]),
@@ -79,10 +79,10 @@ def RNN(space):
     # split the model - need FUNCTIONAL
     input_shape = (X_train.shape[1], X_train.shape[2])
     input_img = Input(shape=input_shape)
-    gru1 = GRU(4, return_sequences = True) (input_img)
+    gru1 = GRU(8, return_sequences = True) (input_img)
     gru2 = GRU(1, return_sequences=True)(gru1)  #returns the sequence - input is first GRU output - ONE node bc we just want 1X20 output
     gru2 = Flatten()(gru2)
-    gru1 = GRU(4, return_sequences = False)(gru1) #returns the hidden state forecast from first GRU output
+    gru1 = GRU(8, return_sequences = False)(gru1) #returns the hidden state forecast from first GRU output
     comb = Concatenate(axis=1)([gru2, gru1]) #combine the guess (gru1) with the sequence of hidden nodes (gru2)
     comb = Dense(21, activation='tanh')(comb) #that combined vector goes through a Dense layer - "keeps" some time seq
     comb = Dense(3, activation='softmax')(comb) #softmax choose
@@ -95,7 +95,7 @@ def RNN(space):
 
     model.fit(X_train,
               Y_train,
-              epochs=20,
+              epochs=100,
               batch_size=space['batch_size'],
               validation_data=(X_valid, Y_valid),
               verbose=1)
@@ -117,7 +117,7 @@ def f(space):
               #'accuracy_test': accuracy_test,
               'space': space,
               'status': STATUS_OK}
-
+    loss = 1 - accuracy_valid
     print(space)
     print(result)
     #sql_result.update(result)
@@ -129,14 +129,14 @@ def f(space):
     #pd.DataFrame.from_records([sql_result]).to_sql('rnn_results', con=engine, if_exists='append')
 
 
-    return result
+    return loss
 
 
 if __name__ == "__main__":
 
 
     trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=3,
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=20,
                 trials=trials)  # space = space for normal run; max_evals = 50
 
     records = pd.DataFrame()

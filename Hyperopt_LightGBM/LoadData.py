@@ -383,9 +383,12 @@ def final_check():
 
 if __name__ == "__main__":
     import os
-    os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
+    # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
-    main = load_data(lag_year=0, sql_version=False)
+    main = load_data(lag_year=5, sql_version=False)
+    print(main.shape)
+    main[['gvkey','datacqtr']].to_csv('exist.csv', index=False)
+    exit(0)
     a,b,c,d = sample_from_datacqtr(main, y_type='qoq', testing_period=dt.datetime(2008, 3, 31), q=2)
     print(a, b, c, d)
     print(main.isnull().sum().sum())
