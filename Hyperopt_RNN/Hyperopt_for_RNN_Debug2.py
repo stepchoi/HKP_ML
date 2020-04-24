@@ -30,7 +30,7 @@ import os
 
 sql_result = {'time': 1}
 
-sample_class = load_data_rnn(lag_year=5, sql_version=True)
+sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
 for i in range(1):  # set = 40 if return 40 samples
     samples_set1 = sample_class.sampling(i, y_type='qoq')
