@@ -27,20 +27,17 @@ space = {
 
 import os
 #os.chdir('/home/loratech/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
-sample_class = load_data_rnn(lag_year=5, sql_version=True)
 
 # for i in range(1):  # set = n if return 40 samples
-samples_set1 = sample_class.sampling(1, y_type='qoq') # the first sample set -> include 80 quarter's samples -> x(3d), y(categorical)
-
 sql_result = {'time': 1}
 
-x = samples_set1['x'][0]
-y = samples_set1['y'][0]
-# print(x.shape, y.shape)
+sample_class = load_data_rnn(lag_year=5, sql_version=True)
 
-for q in range(39):
-    x = np.concatenate((x, samples_set1['x'][q+1]))
-    y = np.concatenate((y, samples_set1['y'][q+1]))
+for i in range(1):  # set = 40 if return 40 samples
+    samples_set1 = sample_class.sampling(i, y_type='qoq')
+
+x = samples_set1['x']
+y = samples_set1['y']
 print(x.shape, y.shape)
 
 def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method='shuffle'):
