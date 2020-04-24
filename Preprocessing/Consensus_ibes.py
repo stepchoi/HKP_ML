@@ -1,9 +1,8 @@
 import datetime as dt
-import os
-from collections import Counter
-
 import numpy as np
+import os
 import pandas as pd
+from collections import Counter
 from dateutil.relativedelta import relativedelta
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
@@ -215,6 +214,13 @@ class evaluate:
 
         self.niq = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/niq_main.csv',
                                usecols=['gvkey', 'datacqtr', 'qoq', 'yoyr'])  # read actual niq
+        exist = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/exist.csv')
+        self.niq['k']=self.niq['gvkey'].astype(str) + self.niq['datacqtr'].astype(str)
+        e=exist['gvkey'].astype(str) + exist['datacqtr'].astype(str)
+        self.niq = self.niq.loc[self.niq['k'].isin(e)]
+
+        print(self.niq.shape)
+
         self.niq['datacqtr'] = pd.to_datetime(self.niq['datacqtr'])
 
         self.all_bins = self.get_all_bins() # get qcut bins for all rolling period
@@ -240,6 +246,8 @@ class evaluate:
 
             bins[end.strftime('%Y-%m-%d')] = {}
             bins[end.strftime('%Y-%m-%d')]['cut_bins'] = cut_bins
+            print(cut_bins)
+            exit(0)
 
             cut_bins[0] = -np.inf
             cut_bins[-1] = np.inf
@@ -323,7 +331,7 @@ def main():
     except:
         ann, qtr = filter_date()
 
-    q = 9
+    q = 3
 
     # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()

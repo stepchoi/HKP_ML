@@ -1,6 +1,5 @@
 import datetime as dt
 import gc
-
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -64,6 +63,8 @@ class load_data_rnn:
             db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
             engine = create_engine(db_string)
             self.niq = pd.read_sql('SELECT * FROM niq_main', engine)
+            exist = pd.read_sql('SELECT * FROM exist', engine)
+
         else:
             self.niq = pd.read_csv('niq_main.csv')
             exist = pd.read_csv('exist.csv')
