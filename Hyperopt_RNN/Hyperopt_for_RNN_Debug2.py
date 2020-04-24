@@ -28,7 +28,6 @@ space = {
 import os
 #os.chdir('/home/loratech/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')
 
-# for i in range(1):  # set = n if return 40 samples
 sql_result = {'time': 1}
 
 sample_class = load_data_rnn(lag_year=5, sql_version=True)
