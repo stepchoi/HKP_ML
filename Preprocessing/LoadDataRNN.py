@@ -1,5 +1,6 @@
 import datetime as dt
 import gc
+
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -143,11 +144,13 @@ if __name__ == '__main__':
 
     sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
-    for i in range(1): # set = 40 if return 40 samples
+    for i in range(2): # set = 40 if return 40 samples
         samples_set1 = sample_class.sampling(i, y_type='qoq')
 
         x = samples_set1['x']
         y = samples_set1['y']
+
+        pass # PCA, RNN....
 
         from collections import Counter
         print(Counter(y))
@@ -157,4 +160,3 @@ if __name__ == '__main__':
 
         print(x.shape)
         print(y.shape)
-        pass

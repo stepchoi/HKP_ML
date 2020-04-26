@@ -26,7 +26,6 @@ args = parser.parse_args()
 space = {
     # better accuracy
     'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05, dtype='d')),
-    'boosting_type': 'gbdt',  # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'max_bin': hp.choice('max_bin', [127, 255]),
     'num_leaves': hp.choice('num_leaves', np.arange(50, 200, 30, dtype=int)),
 
@@ -45,6 +44,7 @@ space = {
     # multi_error_top_k
 
     # parameters won't change
+    'boosting_type': 'gbdt',  # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'objective': 'multiclass',
     'num_class': 3,
     'verbose': -1,
@@ -60,10 +60,10 @@ def myPCA(n_components, train_x, test_x):
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
-    if feature_importance['return_importance'] == True:
-        pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
-        pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
-        feature_importance['pc_df'] = pc_df
+    # if feature_importance['return_importance'] == True:
+    #     pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
+    #     pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
+    #     feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
 
@@ -207,10 +207,71 @@ def HPOT(space, max_evals):
     print(best)
     sql_result['trial'] += 1
 
+def conditional_accuracy(max_params):
+    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, max_params['y_type'], max_params['testing_period'])\
+        .split_valid(max_params['valid_method'], max_params['valid_no'])
+
+    label_df = main.iloc[:, :2]
+    label_df = label_df.loc[label_df['datacqtr'] == max_params['testing_period']].reset_index(drop=True)
+
+    params = space.copy()
+
+    '''Training'''
+    lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
+    lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
+
+    gbm = lgb.train(params,
+                    lgb_train,
+                    valid_sets=lgb_eval,
+                    num_boost_round=10, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    early_stopping_rounds=150,
+                    )
+
+    '''Evaluation on Test Set'''
+    Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
+    Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
+
+    label_df['actual'] = Y_test
+    label_df['lightgbm_result'] = Y_test_pred
+    label_df['correct'] = label_df['actual']==label_df['lightgbm_result']
+    label_df['y_type'] = max_params['y_type']
+    label_df['qcut'] = max_params['qcut']
+
+    label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append')
+    print('finish:', max_params['testing_period'])
+
 if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
+
+    for qcut_m in [3,6,9]:
+        for y_type_m in ["'qoq'","'yoyr'"]:
+            max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
+                     "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
+                      min_data_in_leaf, min_gain_to_split, num_leaves \
+                        from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
+                               from lightgbm_results\
+                             where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type={}) t\
+                        where accuracy_score_test = max_thing\
+                        Order By testing_period ASC".format(qcut_m, y_type_m)
+
+            db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
+
+            for i in range(len(db_max)):
+                max_params = db_max.iloc[i,:].to_dict()
+                space.update(db_max.iloc[i,6:].to_dict())
+                space.update({'num_class': qcut_m, 'is_unbalance': True})
+                sql_result = max_params
+                main = load_data(lag_year=0, sql_version=args.sql_version)
+                conditional_accuracy(max_params)
+    exit(0)
+
+
+
+
+
+
 
     db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' order by finish_timing desc LIMIT 1".format(args.y_type),
                           engine)  # identify current # trials from past execution
