@@ -246,25 +246,25 @@ if __name__ == "__main__":
     engine = create_engine(db_string)
     main = load_data(lag_year=5, sql_version=args.sql_version)
 
-    qcut_m = int(args.bins)
-    y_type_m = args.y_type
-    max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
-             "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
-              min_data_in_leaf, min_gain_to_split, num_leaves \
-                from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
-                       from lightgbm_results\
-                     where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type='{}') t\
-                where accuracy_score_test = max_thing\
-                Order By testing_period ASC".format(qcut_m, y_type_m)
+    for qcut_m in [3,6,9]:
+        for y_type_m in ['qoq','yoyr']:
+        max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
+                 "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
+                  min_data_in_leaf, min_gain_to_split, num_leaves \
+                    from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
+                           from lightgbm_results\
+                         where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type='{}') t\
+                    where accuracy_score_test = max_thing\
+                    Order By testing_period ASC".format(qcut_m, y_type_m)
 
-    db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
+        db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
 
-    for i in range(len(db_max)):
-        max_params = db_max.iloc[i,:].to_dict()
-        space.update(db_max.iloc[i,6:].to_dict())
-        space.update({'num_class': qcut_m, 'is_unbalance': True})
-        sql_result = max_params
-        conditional_accuracy(max_params)
+        for i in range(len(db_max)):
+            max_params = db_max.iloc[i,:].to_dict()
+            space.update(db_max.iloc[i,6:].to_dict())
+            space.update({'num_class': qcut_m, 'is_unbalance': True})
+            sql_result = max_params
+            conditional_accuracy(max_params)
     exit(0)
 
 
