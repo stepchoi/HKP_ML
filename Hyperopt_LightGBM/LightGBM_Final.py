@@ -244,6 +244,7 @@ if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
+    main = load_data(lag_year=5, sql_version=args.sql_version)
 
     for qcut_m in [3,6,9]:
         for y_type_m in ["'qoq'","'yoyr'"]:
@@ -263,7 +264,6 @@ if __name__ == "__main__":
                 space.update(db_max.iloc[i,6:].to_dict())
                 space.update({'num_class': qcut_m, 'is_unbalance': True})
                 sql_result = max_params
-                main = load_data(lag_year=5, sql_version=args.sql_version)
                 conditional_accuracy(max_params)
     exit(0)
 
