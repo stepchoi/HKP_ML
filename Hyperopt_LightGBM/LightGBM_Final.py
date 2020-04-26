@@ -263,7 +263,7 @@ if __name__ == "__main__":
                 space.update(db_max.iloc[i,6:].to_dict())
                 space.update({'num_class': qcut_m, 'is_unbalance': True})
                 sql_result = max_params
-                main = load_data(lag_year=0, sql_version=args.sql_version)
+                main = load_data(lag_year=5, sql_version=args.sql_version)
                 conditional_accuracy(max_params)
     exit(0)
 
