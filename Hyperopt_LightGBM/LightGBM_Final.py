@@ -223,7 +223,7 @@ def conditional_accuracy(max_params):
     gbm = lgb.train(params,
                     lgb_train,
                     valid_sets=lgb_eval,
-                    num_boost_round=10, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    num_boost_round=1000, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     early_stopping_rounds=150,
                     )
 
