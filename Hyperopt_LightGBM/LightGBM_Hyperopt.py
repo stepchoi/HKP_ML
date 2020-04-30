@@ -54,9 +54,6 @@ def load(q, y_typq):
 
 def Dimension_reduction(reduced_dimensions):
 
-    x, y = load(q=qcut_q, y_typq=y_typq)
-    space['num_class'] = qcut_q
-
     dimension_reduction_method='PCA'
     print('x shape before PCA:', x.shape)
 
@@ -138,7 +135,11 @@ if __name__ == "__main__":
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
-    # 3. HPOT
+    # 3. load data
+    x, y = load(q=qcut_q, y_typq=y_typq)
+    space['num_class'] = qcut_q
+
+    # 4. HPOT
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=30,
                 trials=trials)

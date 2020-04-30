@@ -207,39 +207,41 @@ def HPOT(space, max_evals):
     print(best)
     sql_result['trial'] += 1
 
-def conditional_accuracy(max_params):
+class conditional_accuracy:
 
-    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, max_params['y_type'], max_params['testing_period'])\
-        .split_valid(max_params['valid_method'], max_params['valid_no'])
+    def __init__(self, max_params):
+        X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, max_params['y_type'], max_params['testing_period'])\
+            .split_valid(max_params['valid_method'], max_params['valid_no'])
 
-    label_df = main.iloc[:, :2]
-    label_df = label_df.loc[label_df['datacqtr'] == max_params['testing_period']].reset_index(drop=True)
+        label_df = main.iloc[:, :2]
+        label_df = label_df.loc[label_df['datacqtr'] == max_params['testing_period']].reset_index(drop=True)
 
-    params = space.copy()
+    def rest(self):
+        params = space.copy()
 
-    '''Training'''
-    lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
-    lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
+        '''Training'''
+        lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
+        lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
 
-    gbm = lgb.train(params,
-                    lgb_train,
-                    valid_sets=lgb_eval,
-                    num_boost_round=1000, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    early_stopping_rounds=150,
-                    )
+        gbm = lgb.train(params,
+                        lgb_train,
+                        valid_sets=lgb_eval,
+                        num_boost_round=1000, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        early_stopping_rounds=150,
+                        )
 
-    '''Evaluation on Test Set'''
-    Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
-    Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
+        '''Evaluation on Test Set'''
+        Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
+        Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
 
-    label_df['actual'] = Y_test
-    label_df['lightgbm_result'] = Y_test_pred
-    # label_df['correct'] = label_df['actual']==label_df['lightgbm_result']
-    label_df['y_type'] = max_params['y_type']
-    label_df['qcut'] = max_params['qcut']
+        label_df['actual'] = Y_test
+        label_df['lightgbm_result'] = Y_test_pred
+        # label_df['correct'] = label_df['actual']==label_df['lightgbm_result']
+        label_df['y_type'] = max_params['y_type']
+        label_df['qcut'] = max_params['qcut']
 
-    label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
-    print('finish:', max_params['testing_period'])
+        label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
+        print('finish:', max_params['testing_period'])
 
 if __name__ == "__main__":
 
