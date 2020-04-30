@@ -167,6 +167,7 @@ class clean_set:
             df_train, cut_bins = pd.qcut(df_train, q=q, labels=range(q), retbins=True)
 
         self.qcut={}
+        print('qcut bins: ', cut_bins)
         d=dict(Counter(df_train))
         self.qcut['counts'] = list(d.values())
 
@@ -301,7 +302,7 @@ def sample_from_main(df, y_type, part=5, q=3): # df = big table; y_type = ['yoy'
 
     for i in range(part):
         set = df.iloc[s:(s + part_len)] # extract from big table
-        train_x, test_x, train_y, test_y = train_test_clean(y_type, set, q=q) # here has no test set, only enter each set as training sets
+        train_x, test_x, train_y, test_y, qcut = train_test_clean(y_type, set, q=q) # here has no test set, only enter each set as training sets
         dfs[i] = (train_x, train_y)
         s += part_len
 

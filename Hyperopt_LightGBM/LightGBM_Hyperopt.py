@@ -3,88 +3,83 @@ import datetime as dt
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from Autoencoder_for_LightGBM import AE_fitting, AE_predict
+from LoadData import (load_data, sample_from_main)
+# from Autoencoder_for_LightGBM import AE_fitting, AE_predict
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-
-from Preprocessing.LoadData import load_data, sample_from_main
+from sqlalchemy import create_engine
 
 space = {
     # dimension
-    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.01)), # past: [508, 624, 757]
+    'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.7, 0.75)), # past: [508, 624, 757]
 
     # better accuracy
-    'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05)),
-    'boosting_type': 'gbdt', # past:  hp.choice('boosting_type', ['gbdt', 'dart']
+    'learning_rate': hp.choice('learning_rate', np.arange(0.4, 2, 0.4)),
+    'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']),
     'max_bin': hp.choice('max_bin', [127, 255]),
-    'num_leaves': hp.choice('num_leaves', np.arange(50,200,15,dtype=int)),
+    'num_leaves': hp.choice('num_leaves', np.arange(50,400,50, dtype=int)),
 
     # avoid overfit
-    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(500, 1400, 150, dtype=int)),
-    'feature_fraction': hp.choice('feature_fraction', np.arange(0.3, 0.8, 0.1)),
-    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.4, 0.8, 0.1)),
+    'min_data_in_leaf': hp.choice('min_data_in_leaf', np.arange(100, 500, 100, dtype=int)),
+    'feature_fraction': hp.choice('feature_fraction', np.arange(0.6, 1, 0.1)),
+    'bagging_fraction': hp.choice('bagging_fraction', np.arange(0.6, 1, 0.1)),
     'bagging_freq': hp.choice('bagging_freq', [2,4,8]),
-    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.5, 0.72, 0.02)),
-    'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5)),
-    'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 10)),
+    'min_gain_to_split': hp.choice('min_gain_to_split', np.arange(0.2, 0.8, 0.2)),
+    'lambda_l1': hp.choice('lambda_l1', np.arange(0.1, 1, 0.3)),
+    'lambda_l2': hp.choice('lambda_l2', np.arange(0.1, 401, 100)),
 
     # Voting Parallel
     # 'tree_learner': 'voting'
     # 'top_k': 2
 
     # unbalanced qcut(>6)
-    'is_unbalance':
-    'scale_pos_weight':
+    'is_unbalance': True,
+    # 'scale_pos_weight':
 
     # parameters won't change
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
-    'num_boost_round': 1000,
-    'num_threads': 12  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 6  # for the best speed, set this to the number of real CPU cores
     }
 
-def load(q):
-    main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
+def load(q, y_typq):
+    main = load_data(lag_year=0, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
-    dfs = sample_from_main(main, y_type='yoy', part=1, q=q)  # part=1: i.e. test over entire 150k records
+    dfs = sample_from_main(main, y_type=y_typq, part=1, q=q)  # part=1: i.e. test over entire 150k records
     x, y = dfs[0]
-    return x, y, col
+    return x, y
 
-def Dimension_reduction(reduced_dimensions, dimension_reduction_method='PCA', valid_method = 'shuffle'):
+def Dimension_reduction(reduced_dimensions):
+
+    x, y = load(q=qcut_q, y_typq=y_typq)
+    space['num_class'] = qcut_q
 
     dimension_reduction_method='PCA'
-    
-    if (valid_method == 'shuffle'):
-        x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
+    print('x shape before PCA:', x.shape)
+
+    x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.2)
     
     if (dimension_reduction_method == 'AE'):
         from Autoencoder_for_LightGBM import AE_fitting, AE_predict
         AE_model = AE_fitting(x_train, reduced_dimensions)
         compressed_x_train = AE_predict(x_train, AE_model)
         compressed_x_valid = AE_predict(x_valid, AE_model)
-        compressed_x_test = AE_predict(x_test, AE_model)
 
     elif (dimension_reduction_method == 'PCA'):
         PCA_model = PCA_fitting(x_train, reduced_dimensions)
         compressed_x_train = PCA_predict(x_train, PCA_model)
         compressed_x_valid = PCA_predict(x_valid, PCA_model)
-        compressed_x_test = PCA_predict(x_test, PCA_model)
         print('reduced_dimensions:', reduced_dimensions)
         print('x_train shape after PCA:', compressed_x_train.shape)
 
-    else:
-        compressed_x_train = x_train
-        compressed_x_valid = x_valid
-        compressed_x_test = x_test
-
-    return compressed_x_train, compressed_x_valid, compressed_x_test, y_train, y_valid, y_test
+    return compressed_x_train, compressed_x_valid, y_train, y_valid
 
 def LightGBM(space):
 
-    X_train, X_valid, X_test, Y_train, Y_valid, Y_test = Dimension_reduction(space['reduced_dimension'])
+    X_train, X_valid, Y_train, Y_valid = Dimension_reduction(space['reduced_dimension'])
 
     params = space.copy()
     params.pop('reduced_dimension')
@@ -97,74 +92,57 @@ def LightGBM(space):
                     lgb_train,
                     valid_sets=lgb_valid,
                     verbose_eval=1,
+                    num_boost_round=5,
                     early_stopping_rounds=150)
-
-    # print and save feature importance for model
-    # importance = gbm.feature_importance(importance_type='split')
-    # print(col)
-    # feature_importance = pd.DataFrame({'feature_name': col, 'importance': importance})
-    # print(feature_importance)
-    # feature_importance.to_csv('feature_importance.csv', index=False)
 
     # predict Y
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
     Y_valid_pred_softmax = gbm.predict(X_valid, num_iteration=gbm.best_iteration)
     Y_valid_pred = [list(i).index(max(i)) for i in Y_valid_pred_softmax]
-    Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
-    Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
 
-    return Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred
+    return Y_train, Y_train_pred, Y_valid, Y_valid_pred
 
 def f(space):
 
-    Y_train, Y_train_pred, Y_valid, Y_valid_pred, Y_test, Y_test_pred = LightGBM(space)
+    Y_train, Y_train_pred, Y_valid, Y_valid_pred = LightGBM(space)
 
     result = {'loss': 1 - accuracy_score(Y_valid, Y_valid_pred),
             'accuracy_score_train': accuracy_score(Y_train, Y_train_pred),
             'accuracy_score_valid': accuracy_score(Y_valid, Y_valid_pred),
-            'accuracy_score_test': accuracy_score(Y_test, Y_test_pred),
-            'precision_score_test': precision_score(Y_test, Y_test_pred, average='micro'),
-            'recall_score_test': recall_score(Y_test, Y_test_pred, average='micro'),
-            'f1_score_test': f1_score(Y_test, Y_test_pred, average='micro'),
-            'space': space,
+            # 'accuracy_score_test': accuracy_score(Y_test, Y_test_pred),
+            # 'precision_score_test': precision_score(Y_test, Y_test_pred, average='micro'),
+            # 'recall_score_test': recall_score(Y_test, Y_test_pred, average='micro'),
+            # 'f1_score_test': f1_score(Y_test, Y_test_pred, average='micro'),
+            # 'space': space,
             'status': STATUS_OK}
 
-    print(space)
-    print(result)
+    pt_dict = {'y_typq': y_typq, 'qcut': qcut_q, 'finish_timing': dt.datetime.now()}
+    pt_dict.update(space)
+    pt_dict.update(result)
+
+    pt = pd.DataFrame.from_records([pt_dict], index=[0])
+    print(pt)
+    pt.to_sql('lightgbm_results_hyperopt', con=engine, index=False, if_exists='append')
 
     return result
 
-def main(space, max_evals, name=''):
-    print('-------------------- start hyperopt for lightgbm {} --------------------'.format(name))
-
-    d = dt.datetime.today().strftime('%Y%m%d')
-    save_name = 'records_{}_{}.csv'.format(d, name)
-
-    trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals,
-                trials=trials)  # space = space for normal run; max_evals = 50
-
-    records = pd.DataFrame()
-    row = 0
-    for record in trials.trials:
-        print(record)
-        for i in record['result']['space'].keys():
-            records.loc[row, i] = record['result']['space'][i]
-        record['result'].pop('space')
-        for i in record['result'].keys():
-            records.loc[row, i] = record['result'][i]
-        row = row + 1
-
-    records.to_csv(save_name)
-    print(best)
 
 if __name__ == "__main__":
+
+    # 1. testing subset for HPOT
     qcut_q = 3
-    x, y, col = load(q=qcut_q)
-    space['num_class'] = qcut_q
+    y_typq = 'qoq'
 
-    # main(space=space_check_full, max_evals=1)
-    main(space=space, max_evals=50, name='qcut{}_yoy'.format(qcut_q))
+    # 2. prepare sql location
+    db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
+    engine = create_engine(db_string)
 
-    print('x shape before PCA:', x.shape)
+    # 3. HPOT
+    print('--------------------------- start hyperopt for lightgbm ---------------------------')
+    trials = Trials()
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=1,
+                trials=trials)
+    print(best)
+
+

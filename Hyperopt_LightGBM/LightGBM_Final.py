@@ -208,6 +208,7 @@ def HPOT(space, max_evals):
     sql_result['trial'] += 1
 
 def conditional_accuracy(max_params):
+
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, max_params['y_type'], max_params['testing_period'])\
         .split_valid(max_params['valid_method'], max_params['valid_no'])
 

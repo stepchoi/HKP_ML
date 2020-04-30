@@ -1,8 +1,9 @@
 import datetime as dt
-import numpy as np
 import os
-import pandas as pd
 from collections import Counter
+
+import numpy as np
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
@@ -246,8 +247,7 @@ class evaluate:
 
             bins[end.strftime('%Y-%m-%d')] = {}
             bins[end.strftime('%Y-%m-%d')]['cut_bins'] = cut_bins
-            print(cut_bins)
-            exit(0)
+            # exit(0)
 
             cut_bins[0] = -np.inf
             cut_bins[-1] = np.inf
@@ -285,6 +285,8 @@ class evaluate:
         # print(self.ibes_df)
         # self.y_type = 'actual'
 
+        consensus_details = []
+
         for i in tqdm(set(self.ibes_df['datacqtr'])):  # evaluate all testing period
 
             if (i <= pd.Timestamp(2018, 1, 1, 1)) & (i >= pd.Timestamp(2008, 1, 1, 1)):
@@ -303,11 +305,17 @@ class evaluate:
 
                 # r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
 
+
                 ''' 1. cut using bins from training set'''
                 for col in [self.y_type, 'medest','meanest','actual']:    # qcut testing period (actual & consensus)
                     testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_q))
                     self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_count_{}'.format(col)] = list(
                         dict(Counter(testing_period[col].to_list())).values())
+
+                result_df = testing_period.filter(['gvkey','datacqtr','medest','meanest','actual'])
+                result_df.columns = ['gvkey','datacqtr','medest','meanest','actual_ibes']
+                print(result_df)
+                consensus_details.append(result_df)
 
                 # if i == pd.Timestamp(2017, 9, 30, 0, 0, 0):
                 #     check_print([df_print, testing_period], sort=False)
@@ -316,12 +324,14 @@ class evaluate:
                 med_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['medest'])
                 mean_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['meanest'])
 
+
         # print(pd.DataFrame.from_records(r2, index=[0]).transpose())
         df_full = pd.concat([self.dict_to_df(med_records, 'medest'), self.dict_to_df(mean_records, 'meanest')], axis=0)
+        consensus_details_df = pd.concat(consensus_details, axis=0)
 
         pd.DataFrame(self.all_bins[self.y_type]).transpose().to_csv('cutbins_{}{}_ibes_test_act_est.csv'.format(self.y_type, self.qcut_q))
 
-        return df_full
+        return df_full, consensus_details_df
 
 def main():
     try:
@@ -331,17 +341,27 @@ def main():
     except:
         ann, qtr = filter_date()
 
-    q = 3
+    q = 9
+
 
     # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
-    df_full = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
-    df_full.sort_index().to_csv('consensus_qoq{}_ibes.csv'.format(q))
+    df_full, consensus_details_df = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
+    # df_full.sort_index().to_csv('consensus_qoq{}_ibes.csv'.format(q))
+    consensus_details_df['qcut'] = q
+    consensus_details_df['y_type'] = 'qoq'
+    print(consensus_details_df.shape, consensus_details_df)
+    consensus_details_df.to_csv('consensus_detail_qoq{}_ibes.csv'.format(q), index=False)
+
 
     # convert ANN estimation to yoy and evaluate
     ann = convert(ann).yoy()
-    df_full_ann = evaluate(ibes_df=ann, y_type='yoyr', q=q).eval_all()
-    df_full_ann.sort_index().to_csv('consensus_yoyr{}_ibes.csv'.format(q))
+    df_full_ann, consensus_details_df = evaluate(ibes_df=ann, y_type='yoyr', q=q).eval_all()
+    # df_full_ann.sort_index().to_csv('consensus_yoyr{}_ibes.csv'.format(q))
+    consensus_details_df['qcut'] = q
+    consensus_details_df['y_type'] = 'yoyr'
+    print(consensus_details_df.shape, consensus_details_df)
+    consensus_details_df.to_csv('consensus_detail_yoyr{}_ibes.csv'.format(q), index=False)
 
 if __name__ == '__main__':
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new')

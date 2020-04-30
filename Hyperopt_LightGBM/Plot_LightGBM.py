@@ -6,34 +6,52 @@ from matplotlib import pyplot as plt
 from sklearn.linear_model import LinearRegression
 
 
-def result_boxplot(csv_name, only_test = False):
-    df = pd.read_csv(os.getcwd()+'/records/' + csv_name + '.csv')    # PCA_LightGBM_Hyperopt
-    df_num = df.iloc[:, 1:-8]
+def result_boxplot(qcut, y_type, only_test = False):
 
-    # remove underfit
-    # df = df.loc[df['learning_rate']==0.1]
+    df = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/boxplot/records_full.csv')    # PCA_LightGBM_Hyperopt
+
+    subset_name = '{}{}'.format(y_type, qcut)
+    print('Subset analysed: ', subset_name)
+    df = df.loc[(df['y_type']==y_type) & (df['qcut']==qcut)]
+    print('Result df shape: ', df.shape)
+
+    # df_num = df.iloc[:, 1:-8]
+    # print(df.columns)
+    # print(df.columns)
+    # print(df[''])
+    # exit(0)
 
     option = {}
-    scat = {}
-    for col in df_num:
+    for col in df.columns[5:28]:
+        # print(col)
         if len(set(df[col])) in np.arange(2,20,1):
             option[col] = set(df[col])
-    print(option)
+            # print('success')
 
-    fig = plt.figure(figsize=(20, 16), dpi=120)
-    n = round((len(option.keys())+len(scat.keys()))**0.5,0)+1
+    print('Params to be analysed: ', option.keys())
+
+    n = round((len(option.keys()))/3,0)+1
+    fig = plt.figure(figsize=(4*n,12), dpi=120)
+    fig.suptitle(subset_name, fontsize=14)
+
     k = 1
     for i in option.keys():
-        print(i, option[i])
+        # print(i, option[i])
         data = []
         data2 = []
         label = []
         for name, g in df.groupby([i]):
-            label.append(round(name,2))
+            # print(name)
+            if type(name) == str:
+                label.append(name)
+            else:
+                label.append(round(name,2))
+
             data.append(g['accuracy_score_test'])
             data2.append(g['accuracy_score_train'])
 
-        ax = fig.add_subplot(n, n, k)
+        ax = fig.add_subplot(3, n, k)
+
         def draw_plot(ax, data, label, edge_color, fill_color):
             bp = ax.boxplot(data, labels = label, patch_artist=True)
 
@@ -47,19 +65,11 @@ def result_boxplot(csv_name, only_test = False):
         if only_test == False:
             draw_plot(ax, data2, label, 'blue', 'cyan')
         else:
-            csv_name = csv_name+'_test'
+            subset_name = subset_name+'_test'
         ax.set_title(i)
         k += 1
 
-    for i in scat.keys():
-        ax = fig.add_subplot(n, n, k)
-        ax.scatter(scat[i], df['accuracy_score_test'], df['accuracy_score_train'])
-        ax.set_title(i)
-        k+= 1
-
-
-    fig.suptitle(csv_name, fontsize=14)
-    fig.savefig(os.getcwd()+'/visuals/' + csv_name+'.png')
+    fig.savefig('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/boxplot/{}.png'.format(subset_name))
 
 def eta_accuracy(csv_name):
     df = pd.read_csv(csv_name + '.csv')    # PCA_LightGBM_Hyperopt
@@ -133,12 +143,20 @@ def final_plot(dict_name):
     plt.savefig('{}/final_results/{}/train_acc.png'.format(os.getcwd(), dict_name))
 
 if __name__ == '__main__':
-    df = pd.read_csv('best.csv').drop_duplicates()
-    df['testing_period'] = pd.to_datetime(df['testing_period'])
 
-    # print(df.iloc[0])
-    plt.scatter(df['trial'],df[['accuracy_score_test', 'accuracy_score_valid', 'accuracy_score_train']])
-    plt.show()
+    # 1. analyze full records -> Boxplot
+    result_boxplot(qcut=3, y_type='yoyr',only_test=False)
+
+    # 2.
+
+
+
+    # df = pd.read_csv('best.csv').drop_duplicates()
+    # df['testing_period'] = pd.to_datetime(df['testing_period'])
+    #
+    # # print(df.iloc[0])
+    # plt.scatter(df['trial'],df[['accuracy_score_test', 'accuracy_score_valid', 'accuracy_score_train']])
+    # plt.show()
 
     # for col in ['max_evals','valid_method','valid_no']
     # for col in df.columns:
