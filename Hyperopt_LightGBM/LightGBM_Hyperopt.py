@@ -46,7 +46,7 @@ space = {
     }
 
 def load(q, y_typq):
-    main = load_data(lag_year=0, sql_version = False)    # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
     dfs = sample_from_main(main, y_type=y_typq, part=1, q=q)  # part=1: i.e. test over entire 150k records
     x, y = dfs[0]
@@ -92,7 +92,7 @@ def LightGBM(space):
                     lgb_train,
                     valid_sets=lgb_valid,
                     verbose_eval=1,
-                    num_boost_round=5,
+                    num_boost_round=1000,
                     early_stopping_rounds=150)
 
     # predict Y
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # 3. HPOT
     print('--------------------------- start hyperopt for lightgbm ---------------------------')
     trials = Trials()
-    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=1,
+    best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=30,
                 trials=trials)
     print(best)
 
