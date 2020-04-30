@@ -238,7 +238,7 @@ def conditional_accuracy(max_params):
     label_df['y_type'] = max_params['y_type']
     label_df['qcut'] = max_params['qcut']
 
-    label_df.to_sql('lightgbm_results_bestnew', con=engine, index=False, if_exists='append', dtype=types)
+    label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
     print('finish:', max_params['testing_period'])
 
 if __name__ == "__main__":
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     main = load_data(lag_year=5, sql_version=args.sql_version)
 
     meta = MetaData()
-    table = Table('lightgbm_results_best', meta, autoload=True, autoload_with=engine)
+    table = Table('lightgbm_results_bestnew', meta, autoload=True, autoload_with=engine)
     columns = table.c
     types = {}
     for c in columns:

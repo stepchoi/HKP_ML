@@ -42,7 +42,7 @@ space = {
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
-    'num_threads': 6  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 16  # for the best speed, set this to the number of real CPU cores
     }
 
 def load(q, y_typq):
@@ -91,7 +91,7 @@ def LightGBM(space):
     gbm = lgb.train(params,
                     lgb_train,
                     valid_sets=lgb_valid,
-                    verbose_eval=1,
+                    verbose_eval=-1,
                     num_boost_round=1000,
                     early_stopping_rounds=150)
 
@@ -139,7 +139,6 @@ if __name__ == "__main__":
     engine = create_engine(db_string)
 
     # 3. HPOT
-    print('--------------------------- start hyperopt for lightgbm ---------------------------')
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=30,
                 trials=trials)
