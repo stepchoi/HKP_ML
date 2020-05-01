@@ -137,7 +137,7 @@ if __name__ == "__main__":
     engine = create_engine(db_string)
 
     # 3. load data
-    x, y = load(q=qcut_q, y_typq=y_type)
+    x, y = load(q=qcut_q, y_type=y_type)
     space['num_class'] = qcut_q
 
     # 4. HPOT
