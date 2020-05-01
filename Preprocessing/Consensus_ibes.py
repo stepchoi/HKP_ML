@@ -19,7 +19,7 @@ def prepare_act():
     # ibes = pd.read_csv('ibes_summary.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
     #                                                 'MEANEST','ACTUAL'])  # ibes consensus data
 
-    ibes = pd.read_csv('ibes_actual.csv')
+    ibes = pd.read_csv('ibes_summary3.csv')
     ibes = ibes.dropna(subset=['INT0DATS','CUSIP'])
     ibes['INT0DATS'] =  ibes['INT0DATS'].astype(int)
     print(ibes.describe())
@@ -63,10 +63,10 @@ def prepare():
 
     # read raw tables
     gvkey = pd.read_csv('gvkey_sic', header=None)[0].to_list()  # our gvkey used
-    name_map = pd.read_csv('name_map2.csv', usecols=['gvkey','datadate','cusip']).drop_duplicates()  # use to map cusip to gvkey
+    name_map = pd.read_csv('name_map3.csv', usecols=['gvkey','datadate','cusip']).drop_duplicates()  # use to map cusip to gvkey
     name_map['cusip'] = name_map['cusip'].astype(str).apply(lambda x: x.zfill(9)[:-1])  # convert cusip9 -> cusip8
 
-    ibes = pd.read_csv('ibes_summary.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
+    ibes = pd.read_csv('ibes_summary3.csv', usecols=['CUSIP', 'STATPERS', 'FPEDATS', 'MEASURE', 'FISCALP', 'MEDEST',
                                                     'MEANEST', 'ACTUAL'])  # ibes consensus data
 
     ibes.columns = [x.lower() for x in ibes.columns]
@@ -92,6 +92,7 @@ def filter_date():
         print('local version run - ann, qtr')
     except:
         ann, qtr = prepare()
+        print('filter date (ann, qtr): ', ann.shape, qtr.shape)
         # ann, qtr = prepare_act()
 
     # 1. filter observation date
@@ -346,6 +347,14 @@ def main():
 
     # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
+    print(qtr.describe(), qtr.shape, qtr.columns)
+    qtr.filter(['gvkey','datacqtr','medest','meanest']).dropna(how='any').to_csv('consensus_qtr.csv', index=False)
+
+    ann = convert(ann).yoy()
+    print(ann.describe(), ann.shape,ann.columns)
+    ann.filter(['gvkey','datacqtr','medest','meanest']).dropna(how='any').to_csv('consensus_ann.csv', index=False)
+    exit(0)
+
     df_full, consensus_details_df = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
     # df_full.sort_index().to_csv('consensus_qoq{}_ibes.csv'.format(q))
     consensus_details_df['qcut'] = q

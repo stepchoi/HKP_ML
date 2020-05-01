@@ -18,7 +18,7 @@ space = {
     # better accuracy
     'learning_rate': hp.choice('learning_rate', np.arange(0.4, 2, 0.4)),
     'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']),
-    'max_bin': hp.choice('max_bin', [127, 255]),
+    'max_bin': hp.choice('max_bin', [255, 511]),
     'num_leaves': hp.choice('num_leaves', np.arange(50,400,50, dtype=int)),
 
     # avoid overfit

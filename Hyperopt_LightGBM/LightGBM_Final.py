@@ -12,14 +12,17 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, recall_score, \
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
-from sqlalchemy import create_engine, MetaData, Table
+from sklearn.preprocessing import StandardScaler
+from sqlalchemy import create_engine, MetaData, Table, INTEGER, TIMESTAMP, TEXT, BIGINT
 from tqdm import tqdm
 
 # define parser use for server running
 parser = argparse.ArgumentParser()
 parser.add_argument('--bins', type=int, default=3)
+parser.add_argument('--sample_no', type=int, default=40)
 parser.add_argument('--sql_version', default=False, action='store_true')
 parser.add_argument('--resume', default=False, action='store_true')
+parser.add_argument('--add_ibes', default=False, action='store_true')
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
@@ -49,8 +52,68 @@ space = {
     'num_class': 3,
     'verbose': -1,
     'metric': 'multi_error',
-    'num_threads': 6  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 16  # for the best speed, set this to the number of real CPU cores
 }
+
+def add_ibes_func(): # arr_x_train, arr_x_test
+
+    exist = pd.read_sql('select * from exist', engine)
+
+    # 1。 read ibes from csv/sql
+    if y_type == 'yoyr':
+        try:
+            ibes = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_ann.csv')
+        except:
+            ibes = pd.read_sql('SELECT * FROM consensus_ann', engine)
+    elif y_type == 'qoq':
+        try:
+            ibes = pd.read_csv(
+                '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
+        except:
+            ibse = pd.read_sql('SELECT * FROM consensus_qtr', engine)
+
+    ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'],format='%Y-%m-%d')
+
+    ibes = pd.merge(ibes, label_df, on=['gvkey', 'datacqtr'], how='right')
+    print(ibes.shape)
+    print(ibes.isnull().sum())
+    exit(0)
+
+    print('ibes consensus_{} shape: '.format(y_type), ibes.shape)
+    print('after read: ', ibes.describe())
+
+    # 2. filter date for train/test
+    end = sql_result['testing_period']
+    start = end - relativedelta(years=20) # define training period
+    ibes_train = ibes.loc[(start <= ibes['datacqtr']) & (ibes['datacqtr'] < end)]  # train df = 80 quarters
+    ibes_test = ibes.loc[ibes['datacqtr'] == end]                                # test df = 1 quarter
+
+    # 3. standardize ibes dataframes
+    scaler = StandardScaler().fit(ibes_train.iloc[:,2:])
+    ibes_train = scaler.transform(ibes_train.iloc[:,2:])
+    ibes_test = scaler.transform(ibes_test.iloc[:,2:])  # can work without test set
+    print('after std: ', pd.DataFrame(ibes_train).describe())
+
+    # 4. merge ibes with after pca array
+    x_train = pd.concat([label_df, pd.DataFrame(arr_x_train)])
+    print('original x: ', x_train.describe())
+
+
+    exit(0)
+    x_test = pd.concat([label_df, pd.DataFrame(arr_x_test)])
+    print('x_train, x_test before shape: ', x_train.shape, x_test.shape)
+
+    x_train = pd.merge(x_train, ibes_train, on=['gvkey', 'datacqtr'], how='left').iloc[:,2:].to_numpy()
+    x_test = pd.merge(x_test, ibes_test, on=['gvkey', 'datacqtr'], how='left').iloc[:,2:].to_numpy()
+    print(x_train.describe())
+    print('x_train, x_test after shape: ', x_train.shape, x_test.shape)
+
+    # 5. fillna with -1
+
+    return x_train, x_test
+
+
+
 
 def myPCA(n_components, train_x, test_x):
     ''' PCA for given n_components on train_x, test_x'''
@@ -64,6 +127,8 @@ def myPCA(n_components, train_x, test_x):
     #     pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
     #     pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
     #     feature_importance['pc_df'] = pc_df
+
+    new_train_x, new_test_x = add_ibes_func(new_train_x, new_test_x)
 
     return new_train_x, new_test_x
 
@@ -209,19 +274,53 @@ def HPOT(space, max_evals):
 
 class conditional_accuracy:
 
-    def __init__(self, max_params):
-        X_train, X_valid, X_test, Y_train, Y_valid, Y_test = convert_main(main, max_params['y_type'], max_params['testing_period'])\
-            .split_valid(max_params['valid_method'], max_params['valid_no'])
+    def __init__(self):
+        self.types = {'gvkey': INTEGER(), 'datacqtr': TIMESTAMP(), 'actual': BIGINT(), 'lightgbm_result': BIGINT(),
+                 'y_type': TEXT(), 'qcut': BIGINT()}
 
-        label_df = main.iloc[:, :2]
-        label_df = label_df.loc[label_df['datacqtr'] == max_params['testing_period']].reset_index(drop=True)
+        self.main = load_data(lag_year=5, sql_version=args.sql_version)
+        y_type = args.y_type
 
-    def rest(self):
+        for qcut in [3, 6, 9]:
+            self.dbmax = self.best_iteration(y_type=y_type, qcut=qcut)
+
+            for i in range(len(self.db_max)):
+                sql_result = self.db_max.iloc[i, :].to_dict()
+                space.update(self.db_max.iloc[i, 6:].to_dict())
+                space.update({'num_class': qcut, 'is_unbalance': True})
+
+                self.step_load_data(sql_result)
+                self.step_lightgbm(sql_result)
+
+    def best_iteration(self, qcut, y_type):
+        max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
+                         "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
+                          min_data_in_leaf, min_gain_to_split, num_leaves \
+                            from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
+                                   from lightgbm_results\
+                                 where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type='{}') t\
+                            where accuracy_score_test = max_thing\
+                            Order By testing_period ASC".format(qcut, y_type)
+
+        db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
+        return db_max
+
+    def step_load_data(self, sql_result):
+
+        convert_main_class = convert_main(self.main, sql_result['y_type'], sql_result['testing_period'])
+
+        self.X_train, self.X_valid, self.X_test, self.Y_train, \
+        self.Y_valid, self.Y_test = convert_main_class.split_valid(sql_result['valid_method'], sql_result['valid_no'])
+
+        label_df = self.main.iloc[:, :2]
+        self.label_df = label_df.loc[label_df['datacqtr'] == sql_result['testing_period']].reset_index(drop=True)
+
+    def step_lightgbm(self, sql_result):
         params = space.copy()
 
         '''Training'''
-        lgb_train = lgb.Dataset(X_train, label=Y_train, free_raw_data=False)
-        lgb_eval = lgb.Dataset(X_valid, label=Y_valid, reference=lgb_train, free_raw_data=False)
+        lgb_train = lgb.Dataset(self.X_train, label=self.Y_train, free_raw_data=False)
+        lgb_eval = lgb.Dataset(self.X_valid, label=self.Y_valid, reference=lgb_train, free_raw_data=False)
 
         gbm = lgb.train(params,
                         lgb_train,
@@ -231,83 +330,60 @@ class conditional_accuracy:
                         )
 
         '''Evaluation on Test Set'''
-        Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
+        Y_test_pred_softmax = gbm.predict(self.X_test, num_iteration=gbm.best_iteration)
         Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
 
-        label_df['actual'] = Y_test
-        label_df['lightgbm_result'] = Y_test_pred
-        # label_df['correct'] = label_df['actual']==label_df['lightgbm_result']
-        label_df['y_type'] = max_params['y_type']
-        label_df['qcut'] = max_params['qcut']
+        self.label_df['actual'] = self.Y_test
+        self.label_df['lightgbm_result'] = Y_test_pred
+        self.label_df['y_type'] = sql_result['y_type']
+        self.label_df['qcut'] = sql_result['qcut']
 
-        label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
-        print('finish:', max_params['testing_period'])
+        self.label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
+        print('finish:', sql_result['testing_period'])
 
 if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
-    main = load_data(lag_year=5, sql_version=args.sql_version)
+    sql_result = {}
 
-    meta = MetaData()
-    table = Table('lightgbm_results_bestnew', meta, autoload=True, autoload_with=engine)
-    columns = table.c
-    types = {}
-    for c in columns:
-        types[c.name] = c.type
+    # option 1: conditional accuracy
+    # conditional_accuracy()
 
-    y_type_m = args.y_type
-    for qcut_m in [3,6,9]:
-
-        max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
-                 "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
-                  min_data_in_leaf, min_gain_to_split, num_leaves \
-                    from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
-                           from lightgbm_results\
-                         where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type='{}') t\
-                    where accuracy_score_test = max_thing\
-                    Order By testing_period ASC".format(qcut_m, y_type_m)
-
-        db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
-
-        for i in range(len(db_max)):
-            max_params = db_max.iloc[i,:].to_dict()
-            space.update(db_max.iloc[i,6:].to_dict())
-            space.update({'num_class': qcut_m, 'is_unbalance': True})
-            sql_result = max_params
-            conditional_accuracy(max_params)
-    exit(0)
-
-
-
-
-
-
-
-    db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' order by finish_timing desc LIMIT 1".format(args.y_type),
-                          engine)  # identify current # trials from past execution
-    db_last_klass = db_last[['y_type', 'valid_method', 'valid_no', 'testing_period', 'reduced_dimension']].to_dict(
-        'records')[0]
+    # option 2: full accuracy
+    db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' "
+                          "order by finish_timing desc LIMIT 1".format(args.y_type), engine)  # identify current # trials from past execution
+    db_last_klass = db_last[['y_type', 'valid_method',
+                             'valid_no', 'testing_period', 'reduced_dimension']].to_dict('records')[0]
     print(args)
-    # print(db_last.dtypes)
 
-    # define columns for each python
-    meta = MetaData()
-    table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
-    columns = table.c
-    types = {}
-    for c in columns:
-        types[c.name] = c.type
-    types.pop('early_stopping_rounds')
-    types.pop('num_boost_round')
+    # define columns types for db
+    def identify_types():
+        meta = MetaData()
+        table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
+        columns = table.c
+        types = {}
+        for c in columns:
+            types[c.name] = c.type
+        types.pop('early_stopping_rounds')
+        types.pop('num_boost_round')
+        return types
+    types = identify_types()
 
     # parser
-    sample_no = 40
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
+    resume = args.resume
+    sample_no = args.sample_no
+    add_ibes = args.add_ibes
 
     # load data for entire period
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # main = entire dataset before standardization/qcut
+    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    label_df = main.iloc[:,:2]
+    print('label_df for main shape: ', label_df.shape)
+    label_df.to_sql('exist', con=engine, index=False, if_exists='replace')
+    add_ibes_func() # CHANGE FOR DEBUG
+    exit(0)
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
@@ -320,7 +396,6 @@ if __name__ == "__main__":
     feature_importance['return_importance'] = False
     feature_importance['orginal_columns'] = main.columns[2:-3]
 
-    resume = args.resume
 
     # roll over each round
     period_1 = dt.datetime(2008, 3, 31)  # 2008
@@ -336,7 +411,8 @@ if __name__ == "__main__":
                 sql_result['reduced_dimension'] = reduced_dimension
 
                 for valid_method in ['shuffle', 'chron']:  # 'chron'
-                    for valid_no in [10, 20]:  # 1,5
+
+                    for valid_no in [5, 10, 20]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,

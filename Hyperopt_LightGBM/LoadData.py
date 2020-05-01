@@ -204,7 +204,6 @@ class clean_set:
 
         return df_train, df_test, self.qcut
 
-
 def load_data(lag_year = 5, sql_version = False):
 
     '''This def consolidate steps 1 & 2 -> return big table with max(row) * max(col)'''
@@ -244,7 +243,6 @@ def load_data(lag_year = 5, sql_version = False):
     main_lag = merge_dep_macro(main_lag, sql_version) # i.e. big table
 
     return main_lag.reset_index(drop=True) # i.e. big table
-
 
 def train_test_clean(y_type, train, test = None, q=3): # y_type = ['yoy','qoq']; train, test(optional) are dataframes
 

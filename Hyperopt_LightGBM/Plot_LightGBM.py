@@ -145,7 +145,9 @@ def final_plot(dict_name):
 if __name__ == '__main__':
 
     # 1. analyze full records -> Boxplot
-    result_boxplot(qcut=3, y_type='yoyr',only_test=False)
+    for i in [6,9]:
+        for k in [True, False]:
+            result_boxplot(qcut=i, y_type='qoq',only_test=k)
 
     # 2.
 
