@@ -382,6 +382,7 @@ if __name__ == "__main__":
     label_df = main.iloc[:,:2]
     print('label_df for main shape: ', label_df.shape)
     label_df.to_sql('exist', con=engine, index=False, if_exists='replace')
+    print('finish writing label_df to sql')
     add_ibes_func() # CHANGE FOR DEBUG
     exit(0)
 
