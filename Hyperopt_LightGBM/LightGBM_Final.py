@@ -57,7 +57,7 @@ space = {
 
 def add_ibes_func(): # arr_x_train, arr_x_test
 
-    exist = pd.read_sql('select * from exist', engine)
+    exist = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/exist.csv')  # CHANGE FOR DEBUG -> write sql
 
     # 1。 read ibes from csv/sql
     if y_type == 'yoyr':
@@ -70,13 +70,22 @@ def add_ibes_func(): # arr_x_train, arr_x_test
             ibes = pd.read_csv(
                 '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
         except:
-            ibse = pd.read_sql('SELECT * FROM consensus_qtr', engine)
+            ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
+
 
     ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'],format='%Y-%m-%d')
+    exist['datacqtr'] = pd.to_datetime(exist['datacqtr'],format='%Y-%m-%d')
 
-    ibes = pd.merge(ibes, label_df, on=['gvkey', 'datacqtr'], how='right')
-    print(ibes.shape)
-    print(ibes.isnull().sum())
+    ibes = pd.merge(ibes, exist, on=['gvkey', 'datacqtr'], how='right')
+    ibes['year'] = ibes['datacqtr'].dt.strftime('%Y')
+
+    ibes_ms={}
+    for name, g in ibes.groupby(['year']):
+        ibes_ms[name] = g.isnull().sum()/len(g)
+
+    df = pd.DataFrame.from_dict(ibes_ms).transpose()
+    df.to_csv('IBES_missing_rate.csv')
+    print(df)
     exit(0)
 
     print('ibes consensus_{} shape: '.format(y_type), ibes.shape)
@@ -377,14 +386,13 @@ if __name__ == "__main__":
     sample_no = args.sample_no
     add_ibes = args.add_ibes
 
+    add_ibes_func() # CHANGE FOR DEBUG
+    exit(0)
+
     # load data for entire period
     main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
-    print('label_df for main shape: ', label_df.shape)
-    label_df.to_sql('exist', con=engine, index=False, if_exists='replace')
-    print('finish writing label_df to sql')
-    add_ibes_func() # CHANGE FOR DEBUG
-    exit(0)
+
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True

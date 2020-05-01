@@ -3,7 +3,7 @@ import datetime as dt
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from LoadData import (load_data, sample_from_main)
+from LoadData import (load_data, sample_from_datacqtr)
 # from Autoencoder_for_LightGBM import AE_fitting, AE_predict
 from PCA_for_LightGBM import PCA_fitting, PCA_predict
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
@@ -45,11 +45,12 @@ space = {
     'num_threads': 16  # for the best speed, set this to the number of real CPU cores
     }
 
-def load(q, y_typq):
+def load(q, y_type):
     main = load_data(lag_year=5, sql_version = False)    # main = entire dataset before standardization/qcut
     col = main.columns[2:-2]
-    dfs = sample_from_main(main, y_type=y_typq, part=1, q=q)  # part=1: i.e. test over entire 150k records
-    x, y = dfs[0]
+    # dfs = sample_from_main(main, y_type=y_type, part=1, q=q)  # part=1: i.e. test over entire 150k records
+    # x, y = dfs[0]
+    x, X_test, y, Y_test = sample_from_datacqtr(main, y_type=y_type, testing_period=dt.datetime(2008, 3, 31), q=q)
     return x, y
 
 def Dimension_reduction(reduced_dimensions):
@@ -114,13 +115,13 @@ def f(space):
             # 'space': space,
             'status': STATUS_OK}
 
-    pt_dict = {'y_typq': y_typq, 'qcut': qcut_q, 'finish_timing': dt.datetime.now()}
+    pt_dict = {'y_type': y_type, 'qcut': qcut_q, 'finish_timing': dt.datetime.now()}
     pt_dict.update(space)
     pt_dict.update(result)
 
     pt = pd.DataFrame.from_records([pt_dict], index=[0])
     print(pt)
-    pt.to_sql('lightgbm_results_hyperopt', con=engine, index=False, if_exists='append')
+    pt.to_sql('lightgbm_results_hyperopt_sample1', con=engine, index=False, if_exists='append')
 
     return result
 
@@ -129,14 +130,14 @@ if __name__ == "__main__":
 
     # 1. testing subset for HPOT
     qcut_q = 3
-    y_typq = 'qoq'
+    y_type = 'qoq'
 
     # 2. prepare sql location
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
 
     # 3. load data
-    x, y = load(q=qcut_q, y_typq=y_typq)
+    x, y = load(q=qcut_q, y_typq=y_type)
     space['num_class'] = qcut_q
 
     # 4. HPOT
