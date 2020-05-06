@@ -138,21 +138,31 @@ class convert_main:
         # print('2:', ibes_train.shape, ibes_train)
 
         # 4. merge ibes with after pca array
+
+        # 4.1. label ibes
         ibes_train = pd.concat([label_df_ibes, pd.DataFrame(ibes_train)], axis=1)
         ibes_test = pd.concat([label_df_test_ibes, pd.DataFrame(ibes_test)], axis=1)
         # print('4: ', ibes_train.shape, ibes_train)
 
-
+        # 4.2. label original X after PCA
         x_train = pd.concat([self.label_df, pd.DataFrame(self.X_train_valid_PCA)], axis=1)
         x_test = pd.concat([self.label_df_test, pd.DataFrame(self.X_test_PCA)], axis=1)
         # print('4.2 test: ', x_test.shape, x_test)
         # print(x_train)
 
+        # 4.3. add ibes to X
         self.X_train_valid_PCA = pd.merge(x_train, ibes_train, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
         self.X_test_PCA = pd.merge(x_test, ibes_test, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
-
         print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
         # print(x_train.describe())
+
+        # 4.4. label original Y
+        y_train = pd.concat([self.label_df, pd.DataFrame(self.Y_train_valid)], axis=1)
+        y_test = pd.concat([self.label_df_test, pd.DataFrame(self.Y_test)], axis=1)
+        print(y_train)
+        self.Y_train_valid = pd.merge(y_train, label_df_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+        self.Y_test = pd.merge(y_test, label_df_test_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+        print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
 
 
     def split_chron(self, df, valid_no):  # chron split of valid set
@@ -195,7 +205,7 @@ def myLightGBM(space, valid_method, valid_no):
     gbm = lgb.train(params,
                     lgb_train,
                     valid_sets=lgb_eval,
-                    num_boost_round=1000,
+                    num_boost_round=1000, # CHANGE FOR DEBUG
                     early_stopping_rounds=150,
                     )
 
@@ -394,7 +404,7 @@ if __name__ == "__main__":
 
         # PCA dimension
 
-        for max_evals in [30]:  # 40, 50
+        for max_evals in [30]:  # 40, 50  # CHANGE FOR DEBUG
 
             for reduced_dimension in [0.75]:  # 0.66, 0.7
                 sql_result['reduced_dimension'] = reduced_dimension
