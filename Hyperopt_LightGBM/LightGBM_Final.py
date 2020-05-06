@@ -134,10 +134,10 @@ class convert_main:
         scaler = StandardScaler().fit(ibes_train.iloc[:, 2:4])
         ibes_train_x = scaler.transform(ibes_train.iloc[:, 2:4])
         ibes_test_x = scaler.transform(ibes_test.iloc[:, 2:4])
+        print(ibes_train)
 
-        y_train, cut_bins = pd.qcut(ibes_train[:,4], q=args.bins, labels=range(args.bins), retbins=True)
-        y_test = pd.cut(ibes_test.iloc[:, 4], bins=cut_bins, labels=range(args.bins))  # can work without test set
-        print(ibes_test.iloc[:, 4])
+        y_train, cut_bins = pd.qcut(ibes_train['actual'], q=args.bins, labels=range(args.bins), retbins=True)
+        y_test = pd.cut(ibes_test['actual'], bins=cut_bins, labels=range(args.bins))  # can work without test set
         print(y_train)
 
         # 4. merge ibes with after pca array
