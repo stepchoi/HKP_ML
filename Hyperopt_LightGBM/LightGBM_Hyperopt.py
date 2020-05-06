@@ -42,6 +42,7 @@ space = {
     'objective': 'multiclass',
     'num_class': 3,
     'metric': 'multi_error',
+    'verbose': -1,
     'num_threads': 16  # for the best speed, set this to the number of real CPU cores
     }
 
@@ -89,7 +90,6 @@ def LightGBM(space):
     gbm = lgb.train(params,
                     lgb_train,
                     valid_sets=lgb_valid,
-                    verbose_eval=-1,
                     num_boost_round=1000,
                     early_stopping_rounds=150)
 

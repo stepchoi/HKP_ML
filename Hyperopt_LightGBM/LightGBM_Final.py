@@ -55,75 +55,6 @@ space = {
     'num_threads': 16  # for the best speed, set this to the number of real CPU cores
 }
 
-def add_ibes_func(): # arr_x_train, arr_x_test
-
-    exist = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM/exist.csv')  # CHANGE FOR DEBUG -> write sql
-
-    # 1。 read ibes from csv/sql
-    if y_type == 'yoyr':
-        try:
-            ibes = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_ann.csv')
-        except:
-            ibes = pd.read_sql('SELECT * FROM consensus_ann', engine)
-    elif y_type == 'qoq':
-        try:
-            ibes = pd.read_csv(
-                '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
-        except:
-            ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
-
-
-    ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'],format='%Y-%m-%d')
-    exist['datacqtr'] = pd.to_datetime(exist['datacqtr'],format='%Y-%m-%d')
-
-    ibes = pd.merge(ibes, exist, on=['gvkey', 'datacqtr'], how='right')
-    ibes['year'] = ibes['datacqtr'].dt.strftime('%Y')
-
-    ibes_ms={}
-    for name, g in ibes.groupby(['year']):
-        ibes_ms[name] = g.isnull().sum()/len(g)
-
-    df = pd.DataFrame.from_dict(ibes_ms).transpose()
-    df.to_csv('IBES_missing_rate.csv')
-    print(df)
-    exit(0)
-
-    print('ibes consensus_{} shape: '.format(y_type), ibes.shape)
-    print('after read: ', ibes.describe())
-
-    # 2. filter date for train/test
-    end = sql_result['testing_period']
-    start = end - relativedelta(years=20) # define training period
-    ibes_train = ibes.loc[(start <= ibes['datacqtr']) & (ibes['datacqtr'] < end)]  # train df = 80 quarters
-    ibes_test = ibes.loc[ibes['datacqtr'] == end]                                # test df = 1 quarter
-
-    # 3. standardize ibes dataframes
-    scaler = StandardScaler().fit(ibes_train.iloc[:,2:])
-    ibes_train = scaler.transform(ibes_train.iloc[:,2:])
-    ibes_test = scaler.transform(ibes_test.iloc[:,2:])  # can work without test set
-    print('after std: ', pd.DataFrame(ibes_train).describe())
-
-    # 4. merge ibes with after pca array
-    x_train = pd.concat([label_df, pd.DataFrame(arr_x_train)])
-    print('original x: ', x_train.describe())
-
-
-    exit(0)
-    x_test = pd.concat([label_df, pd.DataFrame(arr_x_test)])
-    print('x_train, x_test before shape: ', x_train.shape, x_test.shape)
-
-    x_train = pd.merge(x_train, ibes_train, on=['gvkey', 'datacqtr'], how='left').iloc[:,2:].to_numpy()
-    x_test = pd.merge(x_test, ibes_test, on=['gvkey', 'datacqtr'], how='left').iloc[:,2:].to_numpy()
-    print(x_train.describe())
-    print('x_train, x_test after shape: ', x_train.shape, x_test.shape)
-
-    # 5. fillna with -1
-
-    return x_train, x_test
-
-
-
-
 def myPCA(n_components, train_x, test_x):
     ''' PCA for given n_components on train_x, test_x'''
 
@@ -136,8 +67,6 @@ def myPCA(n_components, train_x, test_x):
     #     pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
     #     pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
     #     feature_importance['pc_df'] = pc_df
-
-    new_train_x, new_test_x = add_ibes_func(new_train_x, new_test_x)
 
     return new_train_x, new_test_x
 
@@ -156,22 +85,75 @@ class convert_main:
         label_df = main.iloc[:, :2]
         self.label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)].reset_index(
             drop=True)
+        self.label_df_test = label_df.loc[label_df['datacqtr']==end].reset_index(drop=True)
 
         # 3. extract array for X, Y for given y_type, testing_period
         X_train_valid, X_test, self.Y_train_valid, self.Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                                       testing_period=testing_period,
                                                                                       q=space['num_class'])
+
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
         # 4. use PCA on X arrays
         self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
                                                         train_x=X_train_valid, test_x=X_test)
+        print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-        # # 4.1. use AE on X arrays
-        # from Autoencoder_for_LightGBM import AE_fitting, AE_predict
-        # AE_model = AE_fitting(X_train_valid, 310)
-        # self.X_train_valid_PCA = AE_predict(X_train_valid, AE_model)
-        # self.X_test_PCA = AE_predict(X_test, AE_model)
+        self.add_ibes_func()
+        print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+
+    def add_ibes_func(self):  # arr_x_train, arr_x_test
+
+        # 1. read ibes from csv/sql
+        if y_type == 'yoyr':
+            try:
+                ibes = pd.read_csv(
+                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_ann.csv')
+            except:
+                ibes = pd.read_sql('SELECT * FROM consensus_ann', engine)
+        elif y_type == 'qoq':
+            try:
+                ibes = pd.read_csv(
+                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
+            except:
+                ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
+
+        # 1.1. change datacqtr to datetime
+        ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'], format='%Y-%m-%d')
+
+        # 1.2. select used datacqtr samples
+        ibes_train = pd.merge(ibes, self.label_df, on=['gvkey', 'datacqtr'], how='inner')
+        ibes_test = pd.merge(ibes, self.label_df_test, on=['gvkey', 'datacqtr'], how='inner')
+        label_df_ibes = ibes_train.iloc[:,:2]
+        # print('label shape', label_df_ibes.shape)
+        label_df_test_ibes = ibes_test.iloc[:,:2]
+        # print('ibes consensus_{} shape(train, test): '.format(y_type), ibes_train.shape, ibes_test.shape)
+        # print('after read: ', ibes.describe())
+
+        # 2. standardize ibes dataframes
+        scaler = StandardScaler().fit(ibes_train.iloc[:, 2:])
+        ibes_train = scaler.transform(ibes_train.iloc[:, 2:])
+        ibes_test = scaler.transform(ibes_test.iloc[:, 2:])  # can work without test set
+        # print('after std: ', pd.DataFrame(ibes_train).describe())
+        # print('2:', ibes_train.shape, ibes_train)
+
+        # 4. merge ibes with after pca array
+        ibes_train = pd.concat([label_df_ibes, pd.DataFrame(ibes_train)], axis=1)
+        ibes_test = pd.concat([label_df_test_ibes, pd.DataFrame(ibes_test)], axis=1)
+        # print('4: ', ibes_train.shape, ibes_train)
+
+
+        x_train = pd.concat([self.label_df, pd.DataFrame(self.X_train_valid_PCA)], axis=1)
+        x_test = pd.concat([self.label_df_test, pd.DataFrame(self.X_test_PCA)], axis=1)
+        # print('4.2 test: ', x_test.shape, x_test)
+        # print(x_train)
+
+        self.X_train_valid_PCA = pd.merge(x_train, ibes_train, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
+        self.X_test_PCA = pd.merge(x_test, ibes_test, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
+
+        print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+        # print(x_train.describe())
+
 
     def split_chron(self, df, valid_no):  # chron split of valid set
         date_df = pd.concat([self.label_df, pd.DataFrame(df)], axis=1)
@@ -202,6 +184,7 @@ def myLightGBM(space, valid_method, valid_no):
     '''
 
     X_train, X_valid, X_test, Y_train, Y_valid, Y_test = converted_main.split_valid(valid_method, valid_no)
+
 
     params = space.copy()
 
@@ -386,13 +369,10 @@ if __name__ == "__main__":
     sample_no = args.sample_no
     add_ibes = args.add_ibes
 
-    add_ibes_func() # CHANGE FOR DEBUG
-    exit(0)
 
     # load data for entire period
     main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
-
 
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
@@ -407,7 +387,7 @@ if __name__ == "__main__":
 
 
     # roll over each round
-    period_1 = dt.datetime(2008, 3, 31)  # 2008
+    period_1 = dt.datetime(2017, 12, 31)  # CHANGE FOR DEBUG
 
     for i in tqdm(range(sample_no)):  # divide sets and return
         testing_period = period_1 + i * relativedelta(months=3)  # set sets in chronological order
@@ -416,12 +396,12 @@ if __name__ == "__main__":
 
         for max_evals in [30]:  # 40, 50
 
-            for reduced_dimension in [0.66, 0.75]:  # 0.66, 0.7
+            for reduced_dimension in [0.75]:  # 0.66, 0.7
                 sql_result['reduced_dimension'] = reduced_dimension
 
-                for valid_method in ['shuffle', 'chron']:  # 'chron'
+                for valid_method in ['shuffle']:  # 'chron'
 
-                    for valid_no in [5, 10, 20]:  # 1,5
+                    for valid_no in [10]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,

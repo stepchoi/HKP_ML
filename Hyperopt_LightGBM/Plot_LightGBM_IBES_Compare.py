@@ -46,9 +46,6 @@ def lightgbm_result_max():
 
 # organize part accuracy result
 
-
-
-
 class part_accuracy:
 
     def __init__(self, consensus_qoq, lightgbm_qoq):
@@ -129,41 +126,100 @@ def main_part_accuracy():
         print(result_df_csv)
         result_df_csv.to_csv('conditional_accuracy_result{}_{}.csv'.format(q, consensus), index=False)
 
-def label_industry():
-    result = pd.read_csv('comb_results_qoq3.csv')
-    info = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/raw.csv',
-                       usecols=['gvkey', 'datacqtr', 'sic'])
+def label_industry(csv_name):
+    # raw = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/raw.csv')
+    # print(raw.columns)
+    # print(raw.columns.to_list())
+    # exit(0)
 
-    print(result['datacqtr'])
-    df = pd.merge(result, info, on=['gvkey', 'datacqtr'])
-    print(df)
-    ########################################################### TBD
-    pass
+    lgb = pd.read_csv('comb_results_{}.csv'.format(csv_name))
+    ibes = pd.read_csv('consensus_detail_{}_ibes.csv'.format(csv_name))
+    df = pd.merge(lgb, ibes, on=['gvkey', 'datacqtr']).filter(['gvkey', 'datacqtr', 'actual', 'lightgbm_result',
+                                                               'medest', 'meanest', 'actual_ibes'])
+    df['datacqtr'] = pd.to_datetime(df['datacqtr'],format='%Y-%m-%d')
+
+    info = pd.read_csv('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/raw.csv',
+                       usecols=['gvkey', 'datadate', 'sic', 'conm'])
+
+    gvkey_comn = info[['gvkey', 'conm']].drop_duplicates()
+    # print(gvkey_comn)
+
+    # print(info['datadate'])
+    info.columns = ['gvkey', 'datacqtr', 'conm','sic']
+
+    info['datacqtr'] = pd.to_datetime(info['datacqtr'],format='%Y%m%d')
+
+    # print(info['datacqtr'])
+    df = pd.merge(df, info, on=['gvkey', 'datacqtr'])
+    df['year'] = df['datacqtr'].dt.strftime('%Y')
+    df['month'] = df['datacqtr'].dt.strftime('%m')
+
+    def accu_calculation(df):
+        cd_accu = {}
+        cd_accu['consensus_accuracy'] = accuracy_score(df['medest'], df['actual_ibes'])
+        cd_accu['lightgbm_accuracy'] = accuracy_score(df['lightgbm_result'], df['actual'])
+        cd_accu['length'] = len(df)
+        return cd_accu
+
+    df['sic'] = df['sic'].astype(int)
+    sic_name = pd.read_csv('sic_name1.csv')
+    df = pd.merge(df, sic_name, on=['sic'], how='left')
+
+    total_accuracy = {}
+
+    for name, g in df.groupby(['division']):
+        total_accuracy[name] = accu_calculation(g)
+    total_accuracy['total'] = accu_calculation(df)
+
+
+    df_result = pd.DataFrame.from_dict(total_accuracy).transpose().reset_index(drop=False)
+    # df_result.columns = ['sic','consensus_accuracy','lightgbm_accuracy','length']
+    df_result['diff'] = df_result['lightgbm_accuracy'] - df_result['consensus_accuracy']
+    # df_result = df_result.sort_values(by='diff',ascending=False)
+    df_result.to_csv('result_by_type_{}_sicd.csv'.format(csv_name), index=False)
+
+    # conm_accuracy = {}
+    # for name, g in df.groupby('gvkey'):
+    #     conm_accuracy[name] = accu_calculation(g)
+    #
+    # df_result_conm = pd.DataFrame.from_dict(conm_accuracy).transpose().reset_index(drop=False)
+    # df_result_conm.columns = ['gvkey','consensus_accuracy','lightgbm_accuracy','length']
+    # df_result_conm = pd.merge(df_result_conm, gvkey_comn, on=['gvkey'], how='left')
+    # df_result_conm['diff'] = df_result_conm['lightgbm_accuracy'] - df_result_conm['consensus_accuracy']
+    # df_result_conm = df_result_conm.sort_values(by='diff',ascending=False)
+    # df_result_conm.to_csv('result_by_type_{}_conm.csv'.format(csv_name), index=False)
 
 if __name__ == '__main__':
+
     os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/details')
 
-    # lbs
+    for i in ['qoq3','qoq6','qoq9','yoyr3','yoyr6','yoyr9']:
+        print(i)
+        label_industry(i)
 
-    q = 3
 
-    lightgbm_details = pd.read_csv('lightgbm_details_{}.csv'.format(q))
-    consensus_qoq = pd.read_csv('consensus_detail_qoq{}_ibes.csv'.format(q))
-    consensus_yoyr = pd.read_csv('consensus_detail_yoyr{}_ibes.csv'.format(q))
-    print(lightgbm_details.shape, consensus_qoq.shape, consensus_yoyr.shape)
 
-    lightgbm_qoq = lightgbm_details.loc[lightgbm_details['y_type']=='qoq']
-    lightgbm_yoyr = lightgbm_details.loc[lightgbm_details['y_type']=='yoyr']
-
-    # lightgbm_qoq.to_csv('comb_results_qoq{}.csv'.format(q), index=False)
-    # lightgbm_yoyr.to_csv('comb_results_yoyr{}.csv'.format(q), index=False)
-
-    for consensus in ['medest', 'meanest']:
-        result_df = []
-        result_df.append(part_accuracy(consensus_qoq, lightgbm_qoq).eval_all_qtr())
-        result_df.append(part_accuracy(consensus_yoyr, lightgbm_yoyr).eval_all_qtr())
-        result_df_csv = pd.concat(result_df, axis=0)
-        print(result_df_csv)
-        result_df_csv.to_csv('conditional_date_result{}_{}.csv'.format(q, consensus), index=False)
+    # # lbs
+    #
+    # q = 3
+    #
+    # lightgbm_details = pd.read_csv('lightgbm_details_{}.csv'.format(q))
+    # consensus_qoq = pd.read_csv('consensus_detail_qoq{}_ibes.csv'.format(q))
+    # consensus_yoyr = pd.read_csv('consensus_detail_yoyr{}_ibes.csv'.format(q))
+    # print(lightgbm_details.shape, consensus_qoq.shape, consensus_yoyr.shape)
+    #
+    # lightgbm_qoq = lightgbm_details.loc[lightgbm_details['y_type']=='qoq']
+    # lightgbm_yoyr = lightgbm_details.loc[lightgbm_details['y_type']=='yoyr']
+    #
+    # # lightgbm_qoq.to_csv('comb_results_qoq{}.csv'.format(q), index=False)
+    # # lightgbm_yoyr.to_csv('comb_results_yoyr{}.csv'.format(q), index=False)
+    #
+    # for consensus in ['medest', 'meanest']:
+    #     result_df = []
+    #     result_df.append(part_accuracy(consensus_qoq, lightgbm_qoq).eval_all_qtr())
+    #     result_df.append(part_accuracy(consensus_yoyr, lightgbm_yoyr).eval_all_qtr())
+    #     result_df_csv = pd.concat(result_df, axis=0)
+    #     print(result_df_csv)
+    #     result_df_csv.to_csv('conditional_date_result{}_{}.csv'.format(q, consensus), index=False)
 
 

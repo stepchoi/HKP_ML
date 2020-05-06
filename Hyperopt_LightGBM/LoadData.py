@@ -336,50 +336,6 @@ def trial_main():
         print(type(y))
         print(y)
 
-def final_check():
-    # read and return x, y from 150k (entire space)
-    main = load_data(lag_year=5)
-    x, y = sample_from_main(main, y_type='yoy', part=1)[0]  # change to 'qoq' and run again !!
-    x_qoq, y_qoq = sample_from_main(main, y_type='qoq', part=1)[0]  # change to 'qoq' and run again !!
-
-    col = main.columns
-    #
-    # print('1. check chronological sequence ')
-    # print(len(main))
-    # from PrepareDatabase import drop_nonseq
-    # drop_nonseq(main)
-    # print(len(main))
-    # del main['datacqtr_no']
-    #
-    # print(main.groupby(['gvkey', 'datacqtr']).filter(lambda x: len(x) > 1))
-    #
-    # df_1 = main.filter(['gvkey', 'datacqtr'])
-    # print(len(set(main['gvkey'])))
-    # df_1['exist'] = 1
-    # df = df_1.pivot(index='gvkey', columns='datacqtr', values='exist')
-    # df.to_csv('check_chron.csv')
-    #
-    # k = 0
-    # for i, row in df.iterrows():
-    #     l = row.to_list()
-    # print(len(df), k)
-    #
-    # print('check columns in main')
-    # print(col)
-    # print(main.info())
-    #
-    # print('2. check NaN in main')
-    # print(main.isnull().sum().sum())
-    #
-    # print('3. check standardize in main')
-    # print(x == x_qoq)
-    # pd.DataFrame(x).describe().to_csv('describe_main.csv')
-    #
-    # print('4. check # of [0,1,2] in y')
-    # from collections import Counter
-    # print(type(y), Counter(y))
-    # print(type(y_qoq), Counter(y_qoq))
-
 if __name__ == "__main__":
     import os
     # os.chdir('/Users/Clair/PycharmProjects/HKP_ML_DL/Hyperopt_LightGBM')

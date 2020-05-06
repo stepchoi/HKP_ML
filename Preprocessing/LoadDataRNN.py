@@ -20,13 +20,10 @@ class load_data_rnn:
 
         main = load_data(lag_year=lag_year, sql_version=sql_version)
 
-        scaler = StandardScaler()
+        scaler = StandardScaler() # Possible Problem
         # print('f')
         df = pd.DataFrame(scaler.fit_transform(main.iloc[:,2:-4]), columns=main.columns[2:-4])
         main = pd.concat([main.iloc[:,:2], df, main.iloc[:,-4:]], axis=1)
-        # print('f')
-
-        # print(main)
 
         self.fincol = main.columns[2:156].to_list()
         self.ecocol = main.columns[-15:-4].to_list()
@@ -96,6 +93,7 @@ class load_data_rnn:
                 x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] + self.ecocol
                 arr.append(period[x_col].values)
             arr_3d_dict[qtr] = np.array(arr)
+            print()
 
             # (20, company, v) -> (company, 20, v)
             arr_3d_dict[qtr] = np.rot90(arr_3d_dict[qtr], axes=(0, 1))
