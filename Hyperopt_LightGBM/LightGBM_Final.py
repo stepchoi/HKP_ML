@@ -378,7 +378,7 @@ if __name__ == "__main__":
     space['is_unbalance'] = True
 
     sql_result = {'qcut': qcut_q}
-    sql_result['name'] = 'after update y to /atq'
+    sql_result['name'] = 'try add ibes as X'
     sql_result['trial'] = db_last['trial'] + 1
 
     feature_importance = {}
