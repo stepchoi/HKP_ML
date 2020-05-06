@@ -22,8 +22,8 @@ parser.add_argument('--bins', type=int, default=3)
 parser.add_argument('--sample_no', type=int, default=40)
 parser.add_argument('--sql_version', default=False, action='store_true')
 parser.add_argument('--resume', default=False, action='store_true')
-parser.add_argument('--add_ibes', default=False, action='store_true')
-parser.add_argument('--non_gaap', default=False, action='store_true')
+parser.add_argument('--add_ibes', default=False, action='store_true') # CHANGE FOR DEBUG
+parser.add_argument('--non_gaap', default=False, action='store_true') # CHANGE FOR DEBUG
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
@@ -85,8 +85,7 @@ class convert_main:
 
         # 2. split [gvkey, datacqtr] columns in given the training period for later chronological split of valid set
         label_df = main.iloc[:, :2]
-        self.label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)].reset_index(
-            drop=True)
+        self.label_df = label_df.loc[(start <= label_df['datacqtr']) & (label_df['datacqtr'] < end)].reset_index(drop=True)
         self.label_df_test = label_df.loc[label_df['datacqtr']==end].reset_index(drop=True)
 
         # 3. extract array for X, Y for given y_type, testing_period
@@ -100,9 +99,10 @@ class convert_main:
                                                         train_x=X_train_valid, test_x=X_test)
         print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-        if args.add_ibes == True:
-            self.add_ibes_func()
-            print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+
+        # if args.add_ibes == True: # CHANGE FOR DEBUG
+        self.add_ibes_func()
+        print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
     def add_ibes_func(self):  # arr_x_train, arr_x_test
 
@@ -121,7 +121,6 @@ class convert_main:
                 ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
 
         # 1.1. change datacqtr to datetime
-        print(ibes)
         ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'], format='%Y-%m-%d')
 
         # 1.2. select used datacqtr samples
@@ -134,15 +133,11 @@ class convert_main:
         scaler = StandardScaler().fit(ibes_train.iloc[:, 2:4])
         ibes_train_x = scaler.transform(ibes_train.iloc[:, 2:4])
         ibes_test_x = scaler.transform(ibes_test.iloc[:, 2:4])
-        print(ibes_train)
-
         y_train, cut_bins = pd.qcut(ibes_train['actual'], q=args.bins, labels=range(args.bins), retbins=True)
         y_test = pd.cut(ibes_test['actual'], bins=cut_bins, labels=range(args.bins))  # can work without test set
-        print(y_train)
 
         # 4. merge ibes with after pca array
         # 4.1. label ibes
-
         ibes_train.iloc[:,2:4] = ibes_train_x
         ibes_train.iloc[:, 4] = y_train
         ibes_test.iloc[:,2:4] = ibes_test_x
@@ -167,13 +162,14 @@ class convert_main:
         # print(y_train)
 
         # 4.5. label original Y
-        if args.non_gaap == True:
+        if args.non_gaap == True: # CHANGE FOR DEBUG
             self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, ibes_test[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+            print(self.Y_train_valid)
         else:
             self.Y_train_valid = pd.merge(y_train, label_df_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, label_df_test_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
-        # print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
+            print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
 
 
     def split_chron(self, df, valid_no):  # chron split of valid set
@@ -388,11 +384,12 @@ if __name__ == "__main__":
     y_type = args.y_type  # 'yoyr','qoq','yoy'
     resume = args.resume
     sample_no = args.sample_no
-    add_ibes = args.add_ibes
+    # non_gaap = args.non_gaap
+    # add_ibes = args.add_ibes
 
 
     # load data for entire period
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
