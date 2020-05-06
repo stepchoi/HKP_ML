@@ -23,12 +23,14 @@ parser.add_argument('--sample_no', type=int, default=40)
 parser.add_argument('--sql_version', default=False, action='store_true')
 parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--add_ibes', default=False, action='store_true')
+parser.add_argument('--non_gaap', default=False, action='store_true')
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
 space = {
     # better accuracy
     'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05, dtype='d')),
+    # 'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart']), # CHANGE FOR IBES
     'max_bin': hp.choice('max_bin', [127, 255]),
     'num_leaves': hp.choice('num_leaves', np.arange(50, 200, 30, dtype=int)),
 
@@ -91,7 +93,6 @@ class convert_main:
         X_train_valid, X_test, self.Y_train_valid, self.Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                                       testing_period=testing_period,
                                                                                       q=space['num_class'])
-
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
         # 4. use PCA on X arrays
@@ -99,8 +100,9 @@ class convert_main:
                                                         train_x=X_train_valid, test_x=X_test)
         print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-        self.add_ibes_func()
-        print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+        if args.add_ibes == True:
+            self.add_ibes_func()
+            print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
     def add_ibes_func(self):  # arr_x_train, arr_x_test
 
@@ -119,30 +121,33 @@ class convert_main:
                 ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
 
         # 1.1. change datacqtr to datetime
+        print(ibes)
         ibes['datacqtr'] = pd.to_datetime(ibes['datacqtr'], format='%Y-%m-%d')
 
         # 1.2. select used datacqtr samples
         ibes_train = pd.merge(ibes, self.label_df, on=['gvkey', 'datacqtr'], how='inner')
         ibes_test = pd.merge(ibes, self.label_df_test, on=['gvkey', 'datacqtr'], how='inner')
         label_df_ibes = ibes_train.iloc[:,:2]
-        # print('label shape', label_df_ibes.shape)
         label_df_test_ibes = ibes_test.iloc[:,:2]
-        # print('ibes consensus_{} shape(train, test): '.format(y_type), ibes_train.shape, ibes_test.shape)
-        # print('after read: ', ibes.describe())
 
-        # 2. standardize ibes dataframes
-        scaler = StandardScaler().fit(ibes_train.iloc[:, 2:])
-        ibes_train = scaler.transform(ibes_train.iloc[:, 2:])
-        ibes_test = scaler.transform(ibes_test.iloc[:, 2:])  # can work without test set
-        # print('after std: ', pd.DataFrame(ibes_train).describe())
-        # print('2:', ibes_train.shape, ibes_train)
+        # 2. standardize + qcut ibes dataframes
+        scaler = StandardScaler().fit(ibes_train.iloc[:, 2:4])
+        ibes_train_x = scaler.transform(ibes_train.iloc[:, 2:4])
+        ibes_test_x = scaler.transform(ibes_test.iloc[:, 2:4])
+
+        y_train, cut_bins = pd.qcut(ibes_train[:,4], q=args.bins, labels=range(args.bins), retbins=True)
+        y_test = pd.cut(ibes_test.iloc[:, 4], bins=cut_bins, labels=range(args.bins))  # can work without test set
+        print(ibes_test.iloc[:, 4])
+        print(y_train)
 
         # 4. merge ibes with after pca array
-
         # 4.1. label ibes
-        ibes_train = pd.concat([label_df_ibes, pd.DataFrame(ibes_train)], axis=1)
-        ibes_test = pd.concat([label_df_test_ibes, pd.DataFrame(ibes_test)], axis=1)
-        # print('4: ', ibes_train.shape, ibes_train)
+
+        ibes_train.iloc[:,2:4] = ibes_train_x
+        ibes_train.iloc[:, 4] = y_train
+        ibes_test.iloc[:,2:4] = ibes_test_x
+        ibes_test.iloc[:, 4] = y_test
+        print('4: ', ibes_train.shape, ibes_train)
 
         # 4.2. label original X after PCA
         x_train = pd.concat([self.label_df, pd.DataFrame(self.X_train_valid_PCA)], axis=1)
@@ -151,18 +156,24 @@ class convert_main:
         # print(x_train)
 
         # 4.3. add ibes to X
-        self.X_train_valid_PCA = pd.merge(x_train, ibes_train, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
-        self.X_test_PCA = pd.merge(x_test, ibes_test, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
-        print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+        self.X_train_valid_PCA = pd.merge(x_train, ibes_train[['gvkey', 'datacqtr','medest','meanest']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
+        self.X_test_PCA = pd.merge(x_test, ibes_test[['gvkey', 'datacqtr','medest','meanest']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
+        # print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
         # print(x_train.describe())
 
         # 4.4. label original Y
         y_train = pd.concat([self.label_df, pd.DataFrame(self.Y_train_valid)], axis=1)
         y_test = pd.concat([self.label_df_test, pd.DataFrame(self.Y_test)], axis=1)
-        print(y_train)
-        self.Y_train_valid = pd.merge(y_train, label_df_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
-        self.Y_test = pd.merge(y_test, label_df_test_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
-        print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
+        # print(y_train)
+
+        # 4.5. label original Y
+        if args.non_gaap == True:
+            self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+            self.Y_test = pd.merge(y_test, ibes_test[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+        else:
+            self.Y_train_valid = pd.merge(y_train, label_df_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+            self.Y_test = pd.merge(y_test, label_df_test_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
+        # print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
 
 
     def split_chron(self, df, valid_no):  # chron split of valid set
@@ -381,7 +392,7 @@ if __name__ == "__main__":
 
 
     # load data for entire period
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
@@ -409,9 +420,9 @@ if __name__ == "__main__":
             for reduced_dimension in [0.75]:  # 0.66, 0.7
                 sql_result['reduced_dimension'] = reduced_dimension
 
-                for valid_method in ['shuffle']:  # 'chron'
+                for valid_method in ['shuffle','chron']:  # 'chron'
 
-                    for valid_no in [10]:  # 1,5
+                    for valid_no in [1,5]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,

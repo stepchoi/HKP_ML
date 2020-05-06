@@ -348,11 +348,11 @@ def main():
     # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
     print(qtr.describe(), qtr.shape, qtr.columns)
-    qtr.filter(['gvkey','datacqtr','medest','meanest']).dropna(how='any').to_csv('consensus_qtr.csv', index=False)
+    qtr.filter(['gvkey','datacqtr','medest','meanest','actual']).dropna(how='any').to_csv('consensus_qtr.csv', index=False)
 
     ann = convert(ann).yoy()
     print(ann.describe(), ann.shape,ann.columns)
-    ann.filter(['gvkey','datacqtr','medest','meanest']).dropna(how='any').to_csv('consensus_ann.csv', index=False)
+    ann.filter(['gvkey','datacqtr','medest','meanest','actual']).dropna(how='any').to_csv('consensus_ann.csv', index=False)
     exit(0)
 
     df_full, consensus_details_df = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
