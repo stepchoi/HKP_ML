@@ -109,14 +109,12 @@ class convert_main:
         # 1. read ibes from csv/sql
         if y_type == 'yoyr':
             try:
-                ibes = pd.read_csv(
-                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_ann.csv')
+                ibes = pd.read_csv('consensus_ann.csv')
             except:
                 ibes = pd.read_sql('SELECT * FROM consensus_ann', engine)
         elif y_type == 'qoq':
             try:
-                ibes = pd.read_csv(
-                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
+                ibes = pd.read_csv('consensus_qtr.csv')
             except:
                 ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
 
