@@ -166,13 +166,9 @@ if __name__ == '__main__':
 
     main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
 
-    explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
-
-    # 4.2. for loop -> roll over all time period from main dataset
     period_1 = dt.datetime(2008, 3, 31)
 
     for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
 
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
-
         train_x, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'qoq', testing_period=testing_period, q=3)
