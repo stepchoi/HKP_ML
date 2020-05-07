@@ -13,6 +13,7 @@ import time  # 2.1 import modules used in PCA codes
 
 import numpy as np
 import pandas as pd
+from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
 from sklearn.decomposition import PCA
 from sqlalchemy import create_engine
@@ -42,7 +43,6 @@ if __name__ == '__main__':
     # import 'LoadData.py' module from Local Finder 'Preprocessing'
     # import load_data, clean_set function from 'LoadData.py' module
     # this need update on GitHub -> Update Project from VCS (Command + T on MacBook)
-    from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 
     y_type = 'qoq'
 
