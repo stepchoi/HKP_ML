@@ -4,6 +4,7 @@ import datetime as dt
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import shap
 # from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
@@ -109,12 +110,14 @@ class convert_main:
         # 1. read ibes from csv/sql
         if y_type == 'yoyr':
             try:
-                ibes = pd.read_csv('consensus_ann.csv')
+                ibes = pd.read_csv(
+                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_ann.csv')
             except:
                 ibes = pd.read_sql('SELECT * FROM consensus_ann', engine)
         elif y_type == 'qoq':
             try:
-                ibes = pd.read_csv('consensus_qtr.csv')
+                ibes = pd.read_csv(
+                    '/Users/Clair/PycharmProjects/HKP_ML_DL/Preprocessing/raw/ibes/ibes_new/consensus_qtr.csv')
             except:
                 ibes = pd.read_sql('SELECT * FROM consensus_qtr', engine)
 
@@ -281,7 +284,7 @@ def HPOT(space, max_evals):
     print(best)
     sql_result['trial'] += 1
 
-class conditional_accuracy:
+class best_model_rerun:
 
     def __init__(self):
         self.types = {'gvkey': INTEGER(), 'datacqtr': TIMESTAMP(), 'actual': BIGINT(), 'lightgbm_result': BIGINT(),
@@ -338,6 +341,11 @@ class conditional_accuracy:
                         early_stopping_rounds=150,
                         )
 
+        shap_values = shap.TreeExplainer(gbm).shap_values(self.X_valid)
+        shap.summary_plot(shap_values, self.X_valid)
+        gbm.save_model('model.txt')
+        exit(0)
+
         '''Evaluation on Test Set'''
         Y_test_pred_softmax = gbm.predict(self.X_test, num_iteration=gbm.best_iteration)
         Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
@@ -384,12 +392,10 @@ if __name__ == "__main__":
     y_type = args.y_type  # 'yoyr','qoq','yoy'
     resume = args.resume
     sample_no = args.sample_no
-    # non_gaap = args.non_gaap
-    # add_ibes = args.add_ibes
 
 
     # load data for entire period
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
