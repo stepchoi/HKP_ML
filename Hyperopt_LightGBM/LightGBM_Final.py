@@ -349,10 +349,11 @@ class best_model_rerun:
                         early_stopping_rounds=150,
                         )
 
-        shap_values = shap.TreeExplainer(gbm).shap_values(self.X_valid)
-        shap.summary_plot(shap_values, self.X_valid)
-        print(shap.summary_plot(shap_values, self.X_valid))
+        f = plt.figure()
+        shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
+        shap.summary_plot(shap_values, X_valid)
         gbm.save_model('model.txt')
+        f.savefig("summary_plot.png", bbox_inches='tight', dpi=600)
         exit(0)
 
         '''Evaluation on Test Set'''
