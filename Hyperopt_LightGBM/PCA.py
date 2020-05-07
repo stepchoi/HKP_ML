@@ -27,6 +27,11 @@ def myPCA(X_std): # run PCA with no predetermined No. of components
     pca = PCA()
     pca.fit(X_std)
     ratio = pca.explained_variance_ratio_
+
+    pc_df = pd.DataFrame(pca.components_, columns=main.columns[2:-3])
+
+    feature_importance['pc_df'] = pc_df
+
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 
 
@@ -65,14 +70,13 @@ if __name__ == '__main__':
         # train_x_1, test_x, train_y, test_y = sample_from_datacqtr(main, y_type = 'yoyr', testing_period=testing_period, q=3)
         # print(train_x==train_x_1)
 
-
         explanation_ratio_dict[i] = myPCA(train_x)  # write explained_variance_ratio_ to dictionary
 
         del train_x, test_x, train_y, test_y  # delete this train_x and collect garbage -> release memory
         gc.collect()
 
     # convert dictionary to csv and save to local
-    pd.DataFrame.from_dict(explanation_ratio_dict).to_sql('PCA_results', engine)
+    # pd.DataFrame.from_dict(explanation_ratio_dict).to_sql('PCA_results', engine)
 
     end = time.time() # timing function to record total running time
     print('PCA total running time: {}'.format(end - start))

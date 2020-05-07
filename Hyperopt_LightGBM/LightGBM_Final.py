@@ -2,6 +2,7 @@ import argparse
 import datetime as dt
 
 import lightgbm as lgb
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
@@ -219,6 +220,13 @@ def myLightGBM(space, valid_method, valid_no):
                     early_stopping_rounds=150,
                     )
 
+    f = plt.figure()
+    shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
+    shap.summary_plot(shap_values, X_valid)
+    gbm.save_model('model.txt')
+    f.savefig("summary_plot.png", bbox_inches='tight', dpi=600)
+    exit(0)
+
     '''print and save feature importance for model'''
     if feature_importance['return_importance'] == True:
         importance = gbm.feature_importance(importance_type='split')
@@ -343,6 +351,7 @@ class best_model_rerun:
 
         shap_values = shap.TreeExplainer(gbm).shap_values(self.X_valid)
         shap.summary_plot(shap_values, self.X_valid)
+        print(shap.summary_plot(shap_values, self.X_valid))
         gbm.save_model('model.txt')
         exit(0)
 
@@ -396,6 +405,8 @@ if __name__ == "__main__":
 
     # load data for entire period
     main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    print(main.columns.to_list())
+    exit(0)
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
