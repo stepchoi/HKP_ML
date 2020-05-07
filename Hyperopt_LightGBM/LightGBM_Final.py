@@ -352,9 +352,9 @@ class best_model_rerun:
         f = plt.figure()
         shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
         shap.summary_plot(shap_values, X_valid)
-        gbm.save_model('model.txt')
-        f.savefig("summary_plot.png", bbox_inches='tight', dpi=600)
-        exit(0)
+        file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut']))
+        gbm.save_model('model{}.txt'.format(file_name))
+        f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=600)
 
         '''Evaluation on Test Set'''
         Y_test_pred_softmax = gbm.predict(self.X_test, num_iteration=gbm.best_iteration)
@@ -421,6 +421,7 @@ if __name__ == "__main__":
     feature_importance['return_importance'] = False
     feature_importance['orginal_columns'] = main.columns[2:-3]
 
+    best_model_rerun()
 
     # roll over each round
     period_1 = dt.datetime(2017, 12, 31)  # CHANGE FOR DEBUG
