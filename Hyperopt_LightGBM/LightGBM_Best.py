@@ -113,8 +113,8 @@ class best_model_rerun:
         self.label_df['y_type'] = sql_result['y_type']
         self.label_df['qcut'] = sql_result['qcut']
 
-        self.label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
-        print('finish:', sql_result['testing_period'])
+        # self.label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
+        # print('finish:', sql_result['testing_period'])
 
 if __name__ == "__main__":
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     sample_no = args.sample_no
 
     # load data for entire period
-    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
