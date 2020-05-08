@@ -92,6 +92,7 @@ class convert_main:
 
         # args.add_ibes = True  # CHANGE FOR DEBUG
         if args.add_ibes == True:
+            print(' ------------------------------ add_ibes ------------------------------ ')
             self.add_ibes_func()
             print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
@@ -156,6 +157,7 @@ class convert_main:
         # 4.5. label original Y
         # args.non_gaap = True # CHANGE FOR DEBUG
         if args.non_gaap == True:
+            print(' ------------------------------ non_gaap ------------------------------ ')
             self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, ibes_test[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             print(self.Y_train_valid)
