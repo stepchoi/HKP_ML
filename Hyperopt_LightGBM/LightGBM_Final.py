@@ -2,10 +2,8 @@ import argparse
 import datetime as dt
 
 import lightgbm as lgb
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import shap
 from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
@@ -148,9 +146,6 @@ class convert_main:
         x_train = pd.concat([self.label_df, pd.DataFrame(self.X_train_valid_PCA)], axis=1)
         x_test = pd.concat([self.label_df_test, pd.DataFrame(self.X_test_PCA)], axis=1)
 
-        # print('4.2 test: ', x_test.shape, x_test)
-        # print(x_train)
-
         # 4.3. add ibes to X
         self.X_train_valid_PCA = pd.merge(x_train, ibes_train[['gvkey', 'datacqtr','medest','meanest']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
         self.X_test_PCA = pd.merge(x_test, ibes_test[['gvkey', 'datacqtr','medest','meanest']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
@@ -254,14 +249,13 @@ def f(space):
               "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro'),
               'status': STATUS_OK}
 
-    if result['accuracy_score_test'] > best_model_acc:
-        f = plt.figure()
-        shap_values = shap.TreeExplainer(gbm).shap_values(X_train)
-        shap.summary_plot(shap_values, X_train)
-        file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut'])
-        gbm.save_model('model{}.txt'.format(file_name))
-        f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=300)
-        best_model_acc = result['accuracy_score_test']
+    # f = plt.figure()
+    # shap_values = shap.TreeExplainer(gbm).shap_values(X_train)
+    # shap.summary_plot(shap_values, X_train)
+    # file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut'])
+    # gbm.save_model('model{}.txt'.format(file_name))
+    # f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=300)
+    # best_model_acc = result['accuracy_score_test']
 
     sql_result.update(space)
     sql_result.update(result)
@@ -307,7 +301,6 @@ if __name__ == "__main__":
     y_type = args.y_type  # 'yoyr','qoq','yoy'
     resume = args.resume
     sample_no = args.sample_no
-    best_model_acc = 0
 
     # load data for entire period
     main = load_data(lag_year=args.lag, sql_version=args.sql_version)  # CHANGE FOR DEBUG
