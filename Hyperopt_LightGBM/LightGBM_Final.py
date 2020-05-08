@@ -264,7 +264,6 @@ def f(space):
 
     pt = pd.DataFrame.from_records([sql_result], index=[0])
 
-    pt['trial'] = pt['trial'].astype(int)
     pt = pt.astype(str)
     print('sql_result_before writing: ', sql_result)
 
@@ -277,7 +276,6 @@ def HPOT(space, max_evals):
     trials = Trials()
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
     print(best)
-    sql_result['trial'] += 1
 
 if __name__ == "__main__":
 
