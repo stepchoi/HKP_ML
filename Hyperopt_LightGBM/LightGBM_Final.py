@@ -324,7 +324,7 @@ if __name__ == "__main__":
 
                 for valid_method in ['shuffle','chron']:  # 'chron'
 
-                    for valid_no in [1, 5]:  # 1,5
+                    for valid_no in [10,5]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,
