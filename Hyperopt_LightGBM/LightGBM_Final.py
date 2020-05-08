@@ -257,7 +257,7 @@ def f(space):
     sql_result['add_ibes'] = args.add_ibes
     print('sql_result_before writing: ', sql_result)
 
-    pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append', dtype=types)
+    pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append') #, dtype=types)
 
     return result
 
