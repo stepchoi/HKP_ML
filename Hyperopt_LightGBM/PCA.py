@@ -56,7 +56,7 @@ if __name__ == '__main__':
     engine = create_engine(db_string)
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(lag_year=0, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
     col = main.columns[2:-4].to_list()
     # print(len(col), col)
 
