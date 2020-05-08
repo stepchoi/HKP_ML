@@ -2,8 +2,10 @@ import argparse
 import datetime as dt
 
 import lightgbm as lgb
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import shap
 from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
@@ -12,7 +14,7 @@ from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, re
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy import create_engine, BINARY, TIMESTAMP, TEXT, BIGINT, DECIMAL
 from tqdm import tqdm
 
 # define parser use for server running
@@ -126,8 +128,12 @@ class convert_main:
         ibes_train_x = scaler.transform(ibes_train.iloc[:, 2:4])
         ibes_test_x = scaler.transform(ibes_test.iloc[:, 2:4])
         print(ibes_test['actual'])
+
         y_train, cut_bins = pd.qcut(ibes_train['actual'], q=qcut_q, labels=range(qcut_q), retbins=True)
         y_test = pd.cut(ibes_test['actual'], bins=cut_bins, labels=range(qcut_q))  # can work without test set
+
+        from collections import Counter # CHANGE FOR DEBUG
+        print(Counter(y_train))
 
         # 4. merge ibes with after pca array
         # 4.1. label ibes
@@ -140,6 +146,7 @@ class convert_main:
         # 4.2. label original X after PCA
         x_train = pd.concat([self.label_df, pd.DataFrame(self.X_train_valid_PCA)], axis=1)
         x_test = pd.concat([self.label_df_test, pd.DataFrame(self.X_test_PCA)], axis=1)
+
         # print('4.2 test: ', x_test.shape, x_test)
         # print(x_train)
 
@@ -148,6 +155,8 @@ class convert_main:
         self.X_test_PCA = pd.merge(x_test, ibes_test[['gvkey', 'datacqtr','medest','meanest']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2:].to_numpy()
         # print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
         # print(x_train.describe())
+
+        print('x_train shape: ', self.X_train_valid_PCA.shape, self.X_train_valid_PCA.columns.to_list())
 
         # 4.4. label original Y
         y_train = pd.concat([self.label_df, pd.DataFrame(self.Y_train_valid)], axis=1)
@@ -221,12 +230,12 @@ def myLightGBM(space, valid_method, valid_no):
     Y_test_pred_softmax = gbm.predict(X_test, num_iteration=gbm.best_iteration)
     Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
 
-    return Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred
+    return Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred, gbm, X_train
 
 def f(space):
     ''' train & evaluate LightGBM on given space by hyperopt trails '''
 
-    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred = myLightGBM(space, sql_result['valid_method'],
+    Y_train, Y_valid, Y_test, Y_train_pred, Y_valid_pred, Y_test_pred, gbm, X_train = myLightGBM(space, sql_result['valid_method'],
                                                                                    sql_result['valid_no'])
 
     result = {'loss': 1 - accuracy_score(Y_valid, Y_valid_pred),
@@ -243,6 +252,15 @@ def f(space):
               "hamming_loss": hamming_loss(Y_test, Y_test_pred),
               "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro'),
               'status': STATUS_OK}
+
+    if result['accuracy_score_test'] > best_model_acc:
+        f = plt.figure()
+        shap_values = shap.TreeExplainer(gbm).shap_values(X_train)
+        shap.summary_plot(shap_values, X_train)
+        file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut'])
+        gbm.save_model('model{}.txt'.format(file_name))
+        f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=300)
+        best_model_acc = result['accuracy_score_test']
 
     sql_result.update(space)
     sql_result.update(result)
@@ -281,26 +299,17 @@ if __name__ == "__main__":
     print(args)
 
     # define columns types for db
-    def identify_types():
-        meta = MetaData()
-        table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
-        columns = table.c
-        types = {}
-        for c in columns:
-            types[c.name] = c.type
-        # types.pop('early_stopping_rounds')
-        # types.pop('num_boost_round')
-        return types
-    types = identify_types()
+    types = {'non_gaap': BINARY(), 'add_ibes': BINARY(), 'trial': BIGINT(), 'qcut': BIGINT(), 'name': TEXT(), 'max_evals': BIGINT(), 'y_type': TEXT(), 'valid_method': TEXT(), 'valid_no': BIGINT(), 'testing_period': TIMESTAMP(), 'train_valid_length': BIGINT(), 'pca_components': BIGINT(), 'bagging_fraction': DECIMAL(11,8), 'bagging_freq': BIGINT(), 'boosting_type': TEXT(), 'early_stopping_rounds': BIGINT(), 'feature_fraction': DECIMAL(11,8), 'lambda_l1': BIGINT(), 'lambda_l2': BIGINT(), 'learning_rate': DECIMAL(11,8), 'max_bin': BIGINT(), 'metric': TEXT(), 'min_data_in_leaf': BIGINT(), 'min_gain_to_split': DECIMAL(11,8), 'num_boost_round': BIGINT(), 'num_class': BIGINT(), 'num_leaves': BIGINT(), 'num_threads': BIGINT(), 'objective': TEXT(), 'reduced_dimension': DECIMAL(11,8), 'verbose': BIGINT(), 'loss': DECIMAL(11,8), 'accuracy_score_train': DECIMAL(11,8), 'accuracy_score_valid': DECIMAL(11,8), 'accuracy_score_test': DECIMAL(11,8), 'precision_score_test': DECIMAL(11,8), 'recall_score_test': DECIMAL(11,8), 'f1_score_test': DECIMAL(11,8), 'f0.5_score_test': DECIMAL(11,8), 'f2_score_test': DECIMAL(11,8), 'r2_score_test': DECIMAL(11,8), 'cohen_kappa_score': DECIMAL(11,8), 'hamming_loss': DECIMAL(11,8), 'jaccard_score': DECIMAL(11,8), 'status': TEXT(), 'finish_timing': TIMESTAMP()}
 
     # parser
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
     resume = args.resume
     sample_no = args.sample_no
+    best_model_acc = 0
 
     # load data for entire period
-    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q

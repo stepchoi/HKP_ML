@@ -79,6 +79,17 @@ def whole_print(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         print(df)
 
+def identify_types():
+    meta = MetaData()
+    table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
+    columns = table.c
+    types = {}
+    for c in columns:
+        types[c.name] = c.type
+    # types.pop('early_stopping_rounds')
+    # types.pop('num_boost_round')
+    return types
+
 def eda_hist(df, name='temp'):
     from matplotlib import pyplot as plt
     import math

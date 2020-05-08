@@ -290,45 +290,49 @@ class evaluate:
 
         for i in tqdm(set(self.ibes_df['datacqtr'])):  # evaluate all testing period
 
-            if (i <= pd.Timestamp(2018, 1, 1, 1)) & (i >= pd.Timestamp(2008, 1, 1, 1)):
+            # if (i <= pd.Timestamp(2018, 1, 1, 1)) & (i >= pd.Timestamp(2008, 1, 1, 1)):
 
-                testing_period = self.ibes_df.loc[self.ibes_df['datacqtr'] == i]
+            testing_period = self.ibes_df.loc[self.ibes_df['datacqtr'] == i]
 
-                # print('266', self.y_type)
-                cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['cut_bins']
+            # print('266', self.y_type)
+            cut_bins = self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['cut_bins']
 
-                self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_act'] = testing_period[self.y_type].notnull().sum()
-                self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_est'] = testing_period['medest'].notnull().sum()
+            self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_act'] = testing_period[self.y_type].notnull().sum()
+            self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_len_est'] = testing_period['medest'].notnull().sum()
 
-                testing_period = testing_period.dropna(how='any')
+            testing_period = testing_period.dropna(how='any')
 
-                # df_print = testing_period.copy()
+            # df_print = testing_period.copy()
 
-                # r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
+            # r2[i] = r2_score(testing_period[self.y_type], testing_period['medest'])
 
 
-                ''' 1. cut using bins from training set'''
-                for col in [self.y_type, 'medest','meanest','actual']:    # qcut testing period (actual & consensus)
-                    testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_q))
-                    self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_count_{}'.format(col)] = list(
-                        dict(Counter(testing_period[col].to_list())).values())
+            ''' 1. cut using bins from training set'''
+            for col in [self.y_type, 'medest','meanest','actual']:    # qcut testing period (actual & consensus)
+                testing_period[col] = pd.cut(testing_period[col], bins=cut_bins, labels=range(self.qcut_q))
+                self.all_bins[self.y_type][i.strftime('%Y-%m-%d')]['test_count_{}'.format(col)] = list(
+                    dict(Counter(testing_period[col].to_list())).values())
 
-                result_df = testing_period.filter(['gvkey','datacqtr','medest','meanest','actual'])
-                result_df.columns = ['gvkey','datacqtr','medest','meanest','actual_ibes']
-                print(result_df)
-                consensus_details.append(result_df)
+            result_df = testing_period.filter(['gvkey','datacqtr','medest','meanest','actual'])
+            result_df.columns = ['gvkey','datacqtr','medest','meanest','actual_ibes']
 
-                # if i == pd.Timestamp(2017, 9, 30, 0, 0, 0):
-                #     check_print([df_print, testing_period], sort=False)
+            consensus_details.append(result_df)
 
-                ''' 2. evaluation for medest and meanest -> accuracy score...'''
-                med_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['medest'])
-                mean_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['meanest'])
+            # if i == pd.Timestamp(2017, 9, 30, 0, 0, 0):
+            #     check_print([df_print, testing_period], sort=False)
 
+            ''' 2. evaluation for medest and meanest -> accuracy score...'''
+            med_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['medest'])
+            mean_records[i.strftime('%Y-%m-%d')] = eval(testing_period['actual'], testing_period['meanest'])
 
         # print(pd.DataFrame.from_records(r2, index=[0]).transpose())
         df_full = pd.concat([self.dict_to_df(med_records, 'medest'), self.dict_to_df(mean_records, 'meanest')], axis=0)
         consensus_details_df = pd.concat(consensus_details, axis=0)
+        print(df_full)
+
+        consensus_details_df.to_csv('ibes_qcut_qoq.csv', index=False)
+        print(consensus_details_df)
+        exit(0)
 
         pd.DataFrame(self.all_bins[self.y_type]).transpose().to_csv('cutbins_{}{}_ibes_test_act_est.csv'.format(self.y_type, self.qcut_q))
 
@@ -342,13 +346,12 @@ def main():
     except:
         ann, qtr = filter_date()
 
-    q = 9
-
+    q = 3
 
     # convert QTR estimation to qoq and evaluate
     qtr = convert(qtr).qoq()
     print(qtr.describe(), qtr.shape, qtr.columns)
-    qtr.filter(['gvkey','datacqtr','medest','meanest','actual']).dropna(how='any').to_csv('consensus_qtr.csv', index=False)
+    df_full, consensus_details_df = evaluate(ibes_df=qtr, y_type='qoq', q=q).eval_all()
 
     ann = convert(ann).yoy()
     print(ann.describe(), ann.shape,ann.columns)
