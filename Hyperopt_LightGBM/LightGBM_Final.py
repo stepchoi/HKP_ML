@@ -160,10 +160,12 @@ class convert_main:
             self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, ibes_test[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             print(self.Y_train_valid)
+            print('non_gaap')
         else:
             self.Y_train_valid = pd.merge(y_train, label_df_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, label_df_test_ibes, on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
-            print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
+
+        print('y_train, y_test after add ibes: ', len(self.Y_train_valid), len(self.Y_test), type(self.Y_train_valid))
 
 
     def split_chron(self, df, valid_no):  # chron split of valid set

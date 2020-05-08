@@ -24,13 +24,16 @@ from tqdm import tqdm
 # 2.2 create def related to PCA
 def myPCA(X_std): # run PCA with no predetermined No. of components
 
-    pca = PCA()
+    pca = PCA(n_components=348)
     pca.fit(X_std)
     ratio = pca.explained_variance_ratio_
 
     pc_df = pd.DataFrame(pca.components_, columns=col)
-    pc_df['testing_period'] = testing_period
     pc_df['explained_variance'] = ratio
+    pc_df = pc_df.transpose()
+    pc_df['testing_period'] = testing_period
+    print(pc_df)
+
     pc_df.to_sql('PCA_components', engine, if_exists='append')
 
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
