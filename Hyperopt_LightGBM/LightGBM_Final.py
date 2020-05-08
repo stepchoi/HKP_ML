@@ -266,11 +266,9 @@ def f(space):
 
     pt['trial'] = pt['trial'].astype(int)
     pt = pt.astype(str)
-    sql_result['early_stopping_rounds'] = args.non_gaap
-    sql_result['num_boost_round'] = args.add_ibes
     print('sql_result_before writing: ', sql_result)
 
-    pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append') #, dtype=types)
+    pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append', dtype=types)
 
     return result
 
@@ -309,9 +307,9 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
 
-    sql_result = {'qcut': qcut_q}
-    sql_result['name'] = 'try add ibes as X'
-    sql_result['trial'] = db_last['trial'] + 1
+    sql_result = {'qcut': qcut_q, 'non_gaap': args.non_gaap, 'add_ibes': args.add_ibes}
+    # sql_result['name'] = 'try add ibes as X'
+    # sql_result['trial'] = db_last['trial'] + 1
 
     # roll over each round
     period_1 = dt.datetime(2017, 12, 31)  # CHANGE FOR DEBUG
