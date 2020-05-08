@@ -124,6 +124,7 @@ class clean_set:
             return df.iloc[:, 2:-4].values, df.iloc[:, -4].values, df.iloc[:, -3].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
         self.train_x, self.train_niq, self.train_qoq, self.train_yoy, self.train_yoyr = divide_set(train)
+        print('train_x size before PCA: ', self.train_x.shape)
 
         try:
             self.test_x, self.test_niq, self.test_qoq, self.test_yoy, self.test_yoyr = divide_set(test) # can work without test set
@@ -135,6 +136,7 @@ class clean_set:
     def standardize_x(self): # standardize x with train_x fit
         scaler = StandardScaler().fit(self.train_x)
         self.train_x = scaler.transform(self.train_x)
+
         try:
             self.test_x = scaler.transform(self.test_x) # can work without test set
         except:

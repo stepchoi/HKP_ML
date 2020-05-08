@@ -121,7 +121,7 @@ class clean_set:
     def __init__(self, train, test):
 
         def divide_set(df): # this funtion cut main df into df for x_variables, y_yoy, y_qoq by columns position
-            return df.iloc[:, 2:-3].values, df.iloc[:, -4].values, df.iloc[:, -3].values, df.iloc[:, -2].values, df.iloc[:, -1].values
+            return df.iloc[:, 2:-4].values, df.iloc[:, -4].values, df.iloc[:, -3].values, df.iloc[:, -2].values, df.iloc[:, -1].values
 
         self.train_x, self.train_niq, self.train_qoq, self.train_yoy, self.train_yoyr = divide_set(train)
 

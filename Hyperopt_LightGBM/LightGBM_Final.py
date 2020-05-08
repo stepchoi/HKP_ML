@@ -15,7 +15,7 @@ from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, re
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sqlalchemy import create_engine, MetaData, Table, INTEGER, TIMESTAMP, TEXT, BIGINT
+from sqlalchemy import create_engine, MetaData, Table
 from tqdm import tqdm
 
 # define parser use for server running
@@ -67,6 +67,8 @@ def myPCA(n_components, train_x, test_x):
     new_train_x = pca.transform(train_x)
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
+    print('train_x size after PCA {}: '.format(n_components), train_x.shape)
+
     # if feature_importance['return_importance'] == True:
     #     pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
     #     pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
@@ -291,82 +293,6 @@ def HPOT(space, max_evals):
     best = fmin(fn=f, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
     print(best)
     sql_result['trial'] += 1
-
-class best_model_rerun:
-
-    def __init__(self):
-        self.types = {'gvkey': INTEGER(), 'datacqtr': TIMESTAMP(), 'actual': BIGINT(), 'lightgbm_result': BIGINT(),
-                 'y_type': TEXT(), 'qcut': BIGINT()}
-
-        self.main = load_data(lag_year=5, sql_version=args.sql_version)
-        y_type = args.y_type
-
-        for qcut in [3, 6, 9]:
-            self.dbmax = self.best_iteration(y_type=y_type, qcut=qcut)
-
-            for i in range(len(self.db_max)):
-                sql_result = self.db_max.iloc[i, :].to_dict()
-                space.update(self.db_max.iloc[i, 6:].to_dict())
-                space.update({'num_class': qcut, 'is_unbalance': True})
-
-                self.step_load_data(sql_result)
-                self.step_lightgbm(sql_result)
-
-    def best_iteration(self, qcut, y_type):
-        max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
-                         "bagging_fraction, bagging_freq, feature_fraction, lambda_l1, lambda_l2, learning_rate, max_bin,\
-                          min_data_in_leaf, min_gain_to_split, num_leaves \
-                            from ( select *, max(accuracy_score_test) over (partition by testing_period) as max_thing\
-                                   from lightgbm_results\
-                                 where (trial IS NOT NULL) AND name='after update y to /atq' AND qcut={} AND y_type='{}') t\
-                            where accuracy_score_test = max_thing\
-                            Order By testing_period ASC".format(qcut, y_type)
-
-        db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
-        return db_max
-
-    def step_load_data(self, sql_result):
-
-        convert_main_class = convert_main(self.main, sql_result['y_type'], sql_result['testing_period'])
-
-        self.X_train, self.X_valid, self.X_test, self.Y_train, \
-        self.Y_valid, self.Y_test = convert_main_class.split_valid(sql_result['valid_method'], sql_result['valid_no'])
-
-        label_df = self.main.iloc[:, :2]
-        self.label_df = label_df.loc[label_df['datacqtr'] == sql_result['testing_period']].reset_index(drop=True)
-
-    def step_lightgbm(self, sql_result):
-        params = space.copy()
-
-        '''Training'''
-        lgb_train = lgb.Dataset(self.X_train, label=self.Y_train, free_raw_data=False)
-        lgb_eval = lgb.Dataset(self.X_valid, label=self.Y_valid, reference=lgb_train, free_raw_data=False)
-
-        gbm = lgb.train(params,
-                        lgb_train,
-                        valid_sets=lgb_eval,
-                        num_boost_round=1000, # change to 1000!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        early_stopping_rounds=150,
-                        )
-
-        f = plt.figure()
-        shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
-        shap.summary_plot(shap_values, X_valid)
-        file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut']))
-        gbm.save_model('model{}.txt'.format(file_name))
-        f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=600)
-
-        '''Evaluation on Test Set'''
-        Y_test_pred_softmax = gbm.predict(self.X_test, num_iteration=gbm.best_iteration)
-        Y_test_pred = [list(i).index(max(i)) for i in Y_test_pred_softmax]
-
-        self.label_df['actual'] = self.Y_test
-        self.label_df['lightgbm_result'] = Y_test_pred
-        self.label_df['y_type'] = sql_result['y_type']
-        self.label_df['qcut'] = sql_result['qcut']
-
-        self.label_df.to_sql('lightgbm_results_best', con=engine, index=False, if_exists='append', dtype=types)
-        print('finish:', sql_result['testing_period'])
 
 if __name__ == "__main__":
 
