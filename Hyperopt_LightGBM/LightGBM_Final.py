@@ -299,7 +299,6 @@ if __name__ == "__main__":
 
     # load data for entire period
     main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
-    print(main.columns.to_list())
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
