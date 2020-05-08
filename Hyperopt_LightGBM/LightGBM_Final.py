@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score, r2_score, fbeta_score, precision_score, re
     accuracy_score, cohen_kappa_score, hamming_loss, jaccard_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sqlalchemy import create_engine, Boolean, TIMESTAMP, TEXT, BIGINT, NUMERIC
+from sqlalchemy import create_engine, TIMESTAMP, TEXT, BIGINT, NUMERIC
 from tqdm import tqdm
 
 # define parser use for server running
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     print(args)
 
     # define columns types for db
-    types = {'non_gaap': Boolean(), 'add_ibes': Boolean(), 'trial': BIGINT(), 'qcut': BIGINT(), 'name': TEXT(), 'max_evals': BIGINT(), 'y_type': TEXT(), 'valid_method': TEXT(), 'valid_no': BIGINT(), 'testing_period': TIMESTAMP(), 'train_valid_length': BIGINT(), 'pca_components': BIGINT(), 'bagging_fraction': NUMERIC(), 'bagging_freq': BIGINT(), 'boosting_type': TEXT(), 'early_stopping_rounds': BIGINT(), 'feature_fraction': NUMERIC(), 'lambda_l1': BIGINT(), 'lambda_l2': BIGINT(), 'learning_rate': NUMERIC(), 'max_bin': BIGINT(), 'metric': TEXT(), 'min_data_in_leaf': BIGINT(), 'min_gain_to_split': NUMERIC(), 'num_boost_round': BIGINT(), 'num_class': BIGINT(), 'num_leaves': BIGINT(), 'num_threads': BIGINT(), 'objective': TEXT(), 'reduced_dimension': NUMERIC(), 'verbose': BIGINT(), 'loss': NUMERIC(), 'accuracy_score_train': NUMERIC(), 'accuracy_score_valid': NUMERIC(), 'accuracy_score_test': NUMERIC(), 'precision_score_test': NUMERIC(), 'recall_score_test': NUMERIC(), 'f1_score_test': NUMERIC(), 'f0.5_score_test': NUMERIC(), 'f2_score_test': NUMERIC(), 'r2_score_test': NUMERIC(), 'cohen_kappa_score': NUMERIC(), 'hamming_loss': NUMERIC(), 'jaccard_score': NUMERIC(), 'status': TEXT(), 'finish_timing': TIMESTAMP()}
+    types = {'non_gaap': TEXT(), 'add_ibes': TEXT(), 'trial': BIGINT(), 'qcut': BIGINT(), 'name': TEXT(), 'max_evals': BIGINT(), 'y_type': TEXT(), 'valid_method': TEXT(), 'valid_no': BIGINT(), 'testing_period': TIMESTAMP(), 'train_valid_length': BIGINT(), 'pca_components': BIGINT(), 'bagging_fraction': NUMERIC(), 'bagging_freq': BIGINT(), 'boosting_type': TEXT(), 'early_stopping_rounds': BIGINT(), 'feature_fraction': NUMERIC(), 'lambda_l1': BIGINT(), 'lambda_l2': BIGINT(), 'learning_rate': NUMERIC(), 'max_bin': BIGINT(), 'metric': TEXT(), 'min_data_in_leaf': BIGINT(), 'min_gain_to_split': NUMERIC(), 'num_boost_round': BIGINT(), 'num_class': BIGINT(), 'num_leaves': BIGINT(), 'num_threads': BIGINT(), 'objective': TEXT(), 'reduced_dimension': NUMERIC(), 'verbose': BIGINT(), 'loss': NUMERIC(), 'accuracy_score_train': NUMERIC(), 'accuracy_score_valid': NUMERIC(), 'accuracy_score_test': NUMERIC(), 'precision_score_test': NUMERIC(), 'recall_score_test': NUMERIC(), 'f1_score_test': NUMERIC(), 'f0.5_score_test': NUMERIC(), 'f2_score_test': NUMERIC(), 'r2_score_test': NUMERIC(), 'cohen_kappa_score': NUMERIC(), 'hamming_loss': NUMERIC(), 'jaccard_score': NUMERIC(), 'status': TEXT(), 'finish_timing': TIMESTAMP()}
 
     # parser
     qcut_q = int(args.bins)
