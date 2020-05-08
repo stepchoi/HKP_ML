@@ -32,7 +32,7 @@ def myPCA(X_std): # run PCA with no predetermined No. of components
     pc_df['explained_variance'] = ratio
     pc_df = pc_df.transpose()
     pc_df['testing_period'] = testing_period
-    pc_df.to_sql('PCA_components', engine, if_exists='append')
+    pc_df.to_sql('PCA_components_lastQ', engine, if_exists='append')
 
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 
@@ -64,9 +64,9 @@ if __name__ == '__main__':
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
     # 4.2. for loop -> roll over all time period from main dataset
-    period_1 = dt.datetime(2008, 3, 31)
+    period_1 = dt.datetime(2017, 12, 31)
 
-    for i in tqdm(range(40)): # change to 40 for full 40 sets, change to False to stop saving csv
+    for i in tqdm(range(1)): # change to 40 for full 40 sets, change to False to stop saving csv
 
         testing_period = period_1 + i * relativedelta(months=3)  # define testing period
 
