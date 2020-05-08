@@ -253,8 +253,8 @@ def f(space):
 
     pt['trial'] = pt['trial'].astype(int)
     pt = pt.astype(str)
-    sql_result['non_gaap'] = args.non_gaap
-    sql_result['add_ibes'] = args.add_ibes
+    sql_result['early_stopping_rounds'] = args.non_gaap
+    sql_result['num_boost_round'] = args.add_ibes
     print('sql_result_before writing: ', sql_result)
 
     pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append') #, dtype=types)
@@ -288,8 +288,8 @@ if __name__ == "__main__":
         types = {}
         for c in columns:
             types[c.name] = c.type
-        types.pop('early_stopping_rounds')
-        types.pop('num_boost_round')
+        # types.pop('early_stopping_rounds')
+        # types.pop('num_boost_round')
         return types
     types = identify_types()
 
@@ -325,7 +325,7 @@ if __name__ == "__main__":
 
                 for valid_method in ['shuffle','chron']:  # 'chron'
 
-                    for valid_no in [1,5]:  # 1,5
+                    for valid_no in [1, 5]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,
