@@ -2,11 +2,8 @@ import argparse
 import datetime as dt
 
 import lightgbm as lgb
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import shap
-# from Preprocessing.LoadData import (load_data, sample_from_datacqtr)
 from LoadData import (load_data, sample_from_datacqtr)
 from dateutil.relativedelta import relativedelta
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
@@ -45,11 +42,6 @@ space = {
     'lambda_l1': hp.choice('lambda_l1', np.arange(1, 20, 5, dtype=int)),
     'lambda_l2': hp.choice('lambda_l2', np.arange(350, 450, 20, dtype=int)),
 
-    # Voting Parallel
-    # 'tree_learner': 'voting'
-    # 'top_k': 2
-    # multi_error_top_k
-
     # parameters won't change
     'boosting_type': 'gbdt',  # past:  hp.choice('boosting_type', ['gbdt', 'dart']
     'objective': 'multiclass',
@@ -68,11 +60,6 @@ def myPCA(n_components, train_x, test_x):
     new_test_x = pca.transform(test_x)
     sql_result['pca_components'] = new_train_x.shape[1]
     print('train_x size after PCA {}: '.format(n_components), train_x.shape)
-
-    # if feature_importance['return_importance'] == True:
-    #     pc_df = pd.DataFrame(pca.components_, columns=feature_importance['orginal_columns'])
-    #     pc_df['explained_variance_ratio_'] = pca.explained_variance_ratio_
-    #     feature_importance['pc_df'] = pc_df
 
     return new_train_x, new_test_x
 
@@ -103,10 +90,10 @@ class convert_main:
                                                         train_x=X_train_valid, test_x=X_test)
         print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-
-        # if args.add_ibes == True: # CHANGE FOR DEBUG
-        self.add_ibes_func()
-        print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
+        args.add_ibes = True  # CHANGE FOR DEBUG
+        if args.add_ibes == True:
+            self.add_ibes_func()
+            print('x_with ibes shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
     def add_ibes_func(self):  # arr_x_train, arr_x_test
 
@@ -137,7 +124,6 @@ class convert_main:
         scaler = StandardScaler().fit(ibes_train.iloc[:, 2:4])
         ibes_train_x = scaler.transform(ibes_train.iloc[:, 2:4])
         ibes_test_x = scaler.transform(ibes_test.iloc[:, 2:4])
-
         print(ibes_test['actual'])
         y_train, cut_bins = pd.qcut(ibes_train['actual'], q=qcut_q, labels=range(qcut_q), retbins=True)
         y_test = pd.cut(ibes_test['actual'], bins=cut_bins, labels=range(qcut_q))  # can work without test set
@@ -168,7 +154,9 @@ class convert_main:
         # print(y_train)
 
         # 4.5. label original Y
-        if args.non_gaap == True: # CHANGE FOR DEBUG
+
+        args.non_gaap = True # CHANGE FOR DEBUG
+        if args.non_gaap == True:
             self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             self.Y_test = pd.merge(y_test, ibes_test[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
             print(self.Y_train_valid)
@@ -222,24 +210,7 @@ def myLightGBM(space, valid_method, valid_no):
                     early_stopping_rounds=150,
                     )
 
-    f = plt.figure()
-    shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
-    shap.summary_plot(shap_values, X_valid)
-    gbm.save_model('model.txt')
-    f.savefig("summary_plot.png", bbox_inches='tight', dpi=600)
-    exit(0)
-
-    '''print and save feature importance for model'''
-    if feature_importance['return_importance'] == True:
-        importance = gbm.feature_importance(importance_type='split')
-        name = gbm.feature_name()
-        feature_importance_df = pd.DataFrame({'feature_name': name, 'importance': importance}).set_index('feature_name')
-        feature_importance['pc_df']['lightgbm_importance'] = feature_importance_df['importance'].to_list()
-        feature_importance['pc_df']['testing_period'] = sql_result['testing_period']
-        print(feature_importance['pc_df'])
-
     '''Evaluation on Test Set'''
-
     Y_train_pred_softmax = gbm.predict(X_train, num_iteration=gbm.best_iteration)
     Y_train_pred = [list(i).index(max(i)) for i in Y_train_pred_softmax]
     Y_valid_pred_softmax = gbm.predict(X_valid, num_iteration=gbm.best_iteration)
@@ -270,10 +241,6 @@ def f(space):
               "jaccard_score": jaccard_score(Y_test, Y_test_pred, labels=None, average='macro'),
               'status': STATUS_OK}
 
-    if feature_importance['return_importance'] == True:
-        print(feature_importance['pc_df'].info())
-        feature_importance['pc_df'].to_csv('lightgbm_feature_importance.csv')
-
     sql_result.update(space)
     sql_result.update(result)
     sql_result.pop('is_unbalance')
@@ -283,7 +250,10 @@ def f(space):
 
     pt['trial'] = pt['trial'].astype(int)
     pt = pt.astype(str)
-    pt.to_sql('lightgbm_results', con=engine, index=False, if_exists='append', dtype=types)
+    sql_result['non_gaap'] = args.non_gaap
+    sql_result['add_ibes'] = args.add_ibes
+    print(sql_result)
+    pt.to_sql('lightgbm_results_ibes', con=engine, index=False, if_exists='append', dtype=types)
 
     return result
 
@@ -300,10 +270,6 @@ if __name__ == "__main__":
     engine = create_engine(db_string)
     sql_result = {}
 
-    # option 1: conditional accuracy
-    # conditional_accuracy()
-
-    # option 2: full accuracy
     db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' "
                           "order by finish_timing desc LIMIT 1".format(args.y_type), engine)  # identify current # trials from past execution
     db_last_klass = db_last[['y_type', 'valid_method',
@@ -329,11 +295,9 @@ if __name__ == "__main__":
     resume = args.resume
     sample_no = args.sample_no
 
-
     # load data for entire period
-    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     print(main.columns.to_list())
-    exit(0)
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
@@ -342,12 +306,6 @@ if __name__ == "__main__":
     sql_result = {'qcut': qcut_q}
     sql_result['name'] = 'try add ibes as X'
     sql_result['trial'] = db_last['trial'] + 1
-
-    feature_importance = {}
-    feature_importance['return_importance'] = False
-    feature_importance['orginal_columns'] = main.columns[2:-3]
-
-    best_model_rerun()
 
     # roll over each round
     period_1 = dt.datetime(2017, 12, 31)  # CHANGE FOR DEBUG

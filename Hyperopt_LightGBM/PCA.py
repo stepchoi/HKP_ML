@@ -31,9 +31,7 @@ def myPCA(X_std): # run PCA with no predetermined No. of components
     pc_df = pd.DataFrame(pca.components_, columns=col)
     pc_df['testing_period'] = testing_period
     pc_df['explained_variance'] = ratio
-    print(pc_df)
     pc_df.to_sql('PCA_components', engine, if_exists='append')
-    exit(0)
 
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 

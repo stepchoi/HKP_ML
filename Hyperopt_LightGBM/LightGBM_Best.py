@@ -15,9 +15,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--bins', type=int, default=3)
 parser.add_argument('--sample_no', type=int, default=40)
 parser.add_argument('--sql_version', default=False, action='store_true')
-parser.add_argument('--resume', default=False, action='store_true')
-parser.add_argument('--add_ibes', default=False, action='store_true') # CHANGE FOR DEBUG
-parser.add_argument('--non_gaap', default=False, action='store_true') # CHANGE FOR DEBUG
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
