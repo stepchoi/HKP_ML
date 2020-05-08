@@ -89,7 +89,7 @@ class load_data_rnn:
 
             arr.append(period[self.fincol + self.ecocol].values)
             for lag in range(self.lag_year * 4 - 1):  # when lag_year is 5, here loop over past 19 quarter
-                x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] + self.ecocol
+                x_col = ['{}_lag{}'.format(k, str(lag + 1).zfill(2)) for k in self.fincol] # + self.ecocol
                 arr.append(period[x_col].values)
             arr_3d_dict[qtr] = np.array(arr)
 

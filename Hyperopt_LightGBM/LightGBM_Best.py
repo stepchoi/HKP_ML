@@ -8,7 +8,7 @@ import shap
 from LightGBM_Final import convert_main
 from LoadData import (load_data)
 from hyperopt import hp
-from sqlalchemy import create_engine, MetaData, Table, INTEGER, TIMESTAMP, TEXT, BIGINT
+from sqlalchemy import create_engine, INTEGER, TIMESTAMP, TEXT, BIGINT
 
 # define parser use for server running
 parser = argparse.ArgumentParser()
@@ -52,11 +52,8 @@ class best_model_rerun:
         self.types = {'gvkey': INTEGER(), 'datacqtr': TIMESTAMP(), 'actual': BIGINT(), 'lightgbm_result': BIGINT(),
                  'y_type': TEXT(), 'qcut': BIGINT()}
 
-        self.main = load_data(lag_year=5, sql_version=args.sql_version)
-        y_type = args.y_type
-
         for qcut in [3, 6, 9]:
-            self.dbmax = self.best_iteration(y_type=y_type, qcut=qcut)
+            self.dbmax = self.best_iteration(y_type=args.y_type, qcut=qcut)
 
             for i in range(len(self.db_max)):
                 sql_result = self.db_max.iloc[i, :].to_dict()
@@ -104,8 +101,8 @@ class best_model_rerun:
                         )
 
         f = plt.figure()
-        shap_values = shap.TreeExplainer(gbm).shap_values(X_valid)
-        shap.summary_plot(shap_values, X_valid)
+        shap_values = shap.TreeExplainer(gbm).shap_values(self.X_train)
+        shap.summary_plot(shap_values, self.X_train)
         file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut'])
         gbm.save_model('model{}.txt'.format(file_name))
         f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=600)
@@ -128,47 +125,24 @@ if __name__ == "__main__":
     engine = create_engine(db_string)
     sql_result = {}
 
-    db_last = pd.read_sql("SELECT * FROM lightgbm_results WHERE y_type='{}' "
-                          "order by finish_timing desc LIMIT 1".format(args.y_type), engine)  # identify current # trials from past execution
-    db_last_klass = db_last[['y_type', 'valid_method',
-                             'valid_no', 'testing_period', 'reduced_dimension']].to_dict('records')[0]
-    print(args)
-
-    # define columns types for db
-    def identify_types():
-        meta = MetaData()
-        table = Table('lightgbm_results', meta, autoload=True, autoload_with=engine)
-        columns = table.c
-        types = {}
-        for c in columns:
-            types[c.name] = c.type
-        types.pop('early_stopping_rounds')
-        types.pop('num_boost_round')
-        return types
-    types = identify_types()
-
     # parser
+    print(args)
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
     resume = args.resume
     sample_no = args.sample_no
 
-
     # load data for entire period
     main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
-    print(main.columns.to_list())
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
-    space['is_unbalance'] = True
-
-    sql_result = {'qcut': qcut_q}
-    sql_result['name'] = 'try add ibes as X'
-    sql_result['trial'] = db_last['trial'] + 1
+    if qcut_q ==2:
+        space['is_unbalance'] = True
 
     feature_importance = {}
-    feature_importance['return_importance'] = False
-    feature_importance['orginal_columns'] = main.columns[2:-3]
+    feature_importance = True
+    feature_importance['orginal_columns'] = main.columns[2:-4]
 
     best_model_rerun() # run best model
 

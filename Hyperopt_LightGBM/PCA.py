@@ -28,9 +28,12 @@ def myPCA(X_std): # run PCA with no predetermined No. of components
     pca.fit(X_std)
     ratio = pca.explained_variance_ratio_
 
-    pc_df = pd.DataFrame(pca.components_, columns=main.columns[2:-3])
-
-    feature_importance['pc_df'] = pc_df
+    pc_df = pd.DataFrame(pca.components_, columns=col)
+    pc_df['testing_period'] = testing_period
+    pc_df['explained_variance'] = ratio
+    print(pc_df)
+    pc_df.to_sql('PCA_components', engine, if_exists='append')
+    exit(0)
 
     return np.cumsum(ratio) # return cummulative sum of explained_variance_ratio
 
@@ -55,7 +58,9 @@ if __name__ == '__main__':
     engine = create_engine(db_string)
 
     # 4.1. run load data -> return entire dataframe (153667, 3174) for all datacqtr (period)
-    main = load_data(lag_year=5, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    main = load_data(lag_year=0, sql_version=False)  # change sql_version -> True if trying to run this code through Postgres Database
+    col = main.columns[2:-4].to_list()
+    # print(len(col), col)
 
     explanation_ratio_dict = {}  # create dictionary contains explained_variance_ratio for all 40 sets
 
