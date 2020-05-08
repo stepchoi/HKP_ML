@@ -21,6 +21,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser()
 parser.add_argument('--bins', type=int, default=3)
 parser.add_argument('--sample_no', type=int, default=40)
+parser.add_argument('--lag', type=int, default=5)
 parser.add_argument('--sql_version', default=False, action='store_true')
 parser.add_argument('--resume', default=False, action='store_true')
 parser.add_argument('--add_ibes', default=False, action='store_true') # CHANGE FOR DEBUG
@@ -309,7 +310,7 @@ if __name__ == "__main__":
     best_model_acc = 0
 
     # load data for entire period
-    main = load_data(lag_year=0, sql_version=args.sql_version)  # CHANGE FOR DEBUG
+    main = load_data(lag_year=args.lag, sql_version=args.sql_version)  # CHANGE FOR DEBUG
     label_df = main.iloc[:,:2]
 
     space['num_class'] = qcut_q
