@@ -152,7 +152,7 @@ class convert_main:
         # print('x_train, x_test after add ibes: ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
         # print(x_train.describe())
 
-        print('x_train shape: ', self.X_train_valid_PCA.shape, self.X_train_valid_PCA.columns.to_list())
+        print('x_train shape: ', self.X_train_valid_PCA.shape, x_train.columns.to_list())
 
         # 4.4. label original Y
         y_train = pd.concat([self.label_df, pd.DataFrame(self.Y_train_valid)], axis=1)
