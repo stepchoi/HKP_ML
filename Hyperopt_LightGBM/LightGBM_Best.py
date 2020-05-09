@@ -50,15 +50,15 @@ class best_model_rerun:
                  'y_type': TEXT(), 'qcut': BIGINT()}
 
         for qcut in [3, 6, 9]:
-            self.dbmax = self.best_iteration(y_type=args.y_type, qcut=qcut)
+            self.db_max = self.best_iteration(y_type=args.y_type, qcut=qcut)
 
             for i in range(len(self.db_max)):
-                sql_result = self.db_max.iloc[i, :].to_dict()
+                sql_result.update(self.db_max.iloc[i, :].to_dict())
                 space.update(self.db_max.iloc[i, 6:].to_dict())
                 space.update({'num_class': qcut, 'is_unbalance': True})
-
-                self.step_load_data(sql_result)
-                self.step_lightgbm(sql_result)
+                print('sql_result1: ', sql_result)
+                self.step_load_data()
+                self.step_lightgbm()
 
     def best_iteration(self, qcut, y_type):
         max_sql_string = "select y_type, testing_period, qcut, reduced_dimension, valid_method, valid_no, " \
@@ -73,17 +73,18 @@ class best_model_rerun:
         db_max = pd.read_sql(max_sql_string, engine).drop_duplicates(subset=['testing_period'], keep='first')
         return db_max
 
-    def step_load_data(self, sql_result):
+    def step_load_data(self):
 
-        convert_main_class = convert_main(self.main, sql_result['y_type'], sql_result['testing_period'])
+
+        convert_main_class = convert_main(main, sql_result['y_type'], sql_result['testing_period'], sql_result)
 
         self.X_train, self.X_valid, self.X_test, self.Y_train, \
         self.Y_valid, self.Y_test = convert_main_class.split_valid(sql_result['valid_method'], sql_result['valid_no'])
 
-        label_df = self.main.iloc[:, :2]
+        label_df = main.iloc[:, :2]
         self.label_df = label_df.loc[label_df['datacqtr'] == sql_result['testing_period']].reset_index(drop=True)
 
-    def step_lightgbm(self, sql_result):
+    def step_lightgbm(self):
         params = space.copy()
 
         '''Training'''
@@ -120,14 +121,13 @@ if __name__ == "__main__":
 
     db_string = 'postgres://postgres:DLvalue123@hkpolyu.cgqhw7rofrpo.ap-northeast-2.rds.amazonaws.com:5432/postgres'
     engine = create_engine(db_string)
-    sql_result = {}
 
     # parser
     print(args)
     qcut_q = int(args.bins)
     y_type = args.y_type  # 'yoyr','qoq','yoy'
-    resume = args.resume
-    sample_no = args.sample_no
+
+    sql_result = {'qcut': qcut_q, 'y_type': y_type}
 
     # load data for entire period
     main = load_data(lag_year=5, sql_version=args.sql_version)  # CHANGE FOR DEBUG
@@ -136,10 +136,6 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
     if qcut_q ==2:
         space['is_unbalance'] = True
-
-    feature_importance = {}
-    feature_importance = True
-    feature_importance['orginal_columns'] = main.columns[2:-4]
 
     best_model_rerun() # run best model
 

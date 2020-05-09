@@ -52,7 +52,7 @@ space = {
     'num_threads': 16  # for the best speed, set this to the number of real CPU cores
 }
 
-def myPCA(n_components, train_x, test_x):
+def myPCA(n_components, train_x, test_x, sql_result):
     ''' PCA for given n_components on train_x, test_x'''
 
     pca = PCA(n_components=n_components)  # Threshold for dimension reduction, float or integer
@@ -68,7 +68,7 @@ class convert_main:
     ''' split train, valid, test from main dataframe
         for given testing_period, y_type, valid_method, valid_no '''
 
-    def __init__(self, main, y_type, testing_period):
+    def __init__(self, main, y_type, testing_period, sql_result):
         self.testing_period = testing_period
 
         # 1. define end, start of training period
@@ -84,14 +84,15 @@ class convert_main:
         X_train_valid, X_test, self.Y_train_valid, self.Y_test = sample_from_datacqtr(main, y_type=y_type,
                                                                                       testing_period=testing_period,
                                                                                       q=space['num_class'])
+        print('sql_result2: ', sql_result)
         sql_result.update({'train_valid_length': len(X_train_valid)})
 
         # 4. use PCA on X arrays
         self.X_train_valid_PCA, self.X_test_PCA = myPCA(n_components=sql_result['reduced_dimension'],
-                                                        train_x=X_train_valid, test_x=X_test)
+                                                        train_x=X_train_valid, test_x=X_test, sql_result=sql_result)
         print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-        # args.add_ibes = True  # CHANGE FOR DEBUG
+        args.add_ibes = True  # CHANGE FOR DEBUG
         if args.add_ibes == True:
             print(' ------------------------------ add_ibes ------------------------------ ')
             self.add_ibes_func()
@@ -160,7 +161,7 @@ class convert_main:
         # print(y_train)
 
         # 4.5. label original Y
-        # args.non_gaap = True # CHANGE FOR DEBUG
+        args.non_gaap = True # CHANGE FOR DEBUG
         if args.non_gaap == True:
             print(' ------------------------------ non_gaap ------------------------------ ')
             self.Y_train_valid = pd.merge(y_train, ibes_train[['gvkey', 'datacqtr', 'actual']], on=['gvkey', 'datacqtr'], how='inner').iloc[:, 2]
@@ -294,7 +295,10 @@ if __name__ == "__main__":
 
     # parser
     qcut_q = int(args.bins)
+    qcut_q = 9 # CHANGE FOR REMOTE PC
+
     y_type = args.y_type  # 'yoyr','qoq','yoy'
+    y_type = 'qoq'
     resume = args.resume
     sample_no = args.sample_no
 
@@ -322,9 +326,9 @@ if __name__ == "__main__":
             for reduced_dimension in [0.75]:  # 0.66, 0.7
                 sql_result['reduced_dimension'] = reduced_dimension
 
-                for valid_method in ['shuffle','chron']:  # 'chron'
+                for valid_method in ['shuffle']:  # 'chron'
 
-                    for valid_no in [10,5]:  # 1,5
+                    for valid_no in [10]:  # 1,5
 
                         klass = {'y_type': y_type,
                                  'valid_method': valid_method,
@@ -345,7 +349,7 @@ if __name__ == "__main__":
                         sql_result.update({'max_evals': max_evals})
                         sql_result.update(klass)
 
-                        converted_main = convert_main(main, y_type, testing_period)
+                        converted_main = convert_main(main, y_type, testing_period, sql_result)
 
                         HPOT(space, max_evals=max_evals)
 

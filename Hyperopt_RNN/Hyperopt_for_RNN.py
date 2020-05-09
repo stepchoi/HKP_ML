@@ -11,6 +11,8 @@ from sqlalchemy import create_engine
 
 from Preprocessing.LoadDataRNN import load_data_rnn
 
+
+
 space = {
     # dimension
     'reduced_dimension' : hp.choice('reduced_dimension', np.arange(0.66, 0.75, 0.85)), # past: [508, 624, 757]
@@ -92,9 +94,19 @@ def RNN(space):
     model.summary()
 
     reduce_lr = callbacks.ReduceLROnPlateau(monitor='train_loss', factor=0.2,
-                                            patience=3, min_lr=0.001)
+                                            patience=3, min_lr=0.0001)
 
-    model.compile(optimizer='adam',
+    model.compile(optimizer='adam',records = pd.DataFrame()
+    row = 0
+    for record in trials.trials:
+        print(record)
+        for i in record['result']['space'].keys():
+            records.loc[row, i] = record['result']['space'][i]
+        record['result'].pop('space')
+        for i in record['result'].keys():
+            records.loc[row, i] = record['result'][i]
+        row = row + 1
+    records.to_csv('records.csv')
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
 
