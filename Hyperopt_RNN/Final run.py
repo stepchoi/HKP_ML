@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     sample_class = load_data_rnn(lag_year=5, sql_version=False)
 
-    for i in range(1, 39):  # set = 40 if return 40 samples
+    for i in range(13, 39):  # set = 40 if return 40 samples
         samples_set_train = sample_class.sampling(i, y_type='qoq')
         samples_set_test = sample_class.sampling(i+20, y_type='qoq')
         x_train = samples_set_train['x']
@@ -122,5 +122,5 @@ if __name__ == "__main__":
         x_train = rounding(x_train)
         x_test = rounding(x_test)
         records.loc[i, 'accuracy_train'], records.loc[i, 'accuracy_valid'], records.loc[i, 'accuracy_test'] = RNN(x_train, x_test, y_train, y_test)
-        records.to_csv('final record fantasy2.csv')
+        records.to_csv('final record fantasy3.csv')
 
