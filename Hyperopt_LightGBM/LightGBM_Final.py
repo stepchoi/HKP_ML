@@ -49,7 +49,7 @@ space = {
     'num_class': 3,
     'verbose': -1,
     'metric': 'multi_error',
-    'num_threads': 16  # for the best speed, set this to the number of real CPU cores
+    'num_threads': 12  # for the best speed, set this to the number of real CPU cores #CHANGE FOR HKPC
 }
 
 def myPCA(n_components, train_x, test_x, sql_result):
@@ -92,7 +92,7 @@ class convert_main:
                                                         train_x=X_train_valid, test_x=X_test, sql_result=sql_result)
         print('x_after_PCA shape(train, test): ', self.X_train_valid_PCA.shape, self.X_test_PCA.shape)
 
-        args.add_ibes = True  # CHANGE FOR DEBUG
+        # args.add_ibes = True  # CHANGE FOR DEBUG
         if args.add_ibes == True:
             print(' ------------------------------ add_ibes ------------------------------ ')
             self.add_ibes_func()
@@ -260,6 +260,7 @@ def f(space):
 
     sql_result.update(space)
     sql_result.update(result)
+    sql_result.update({'non_gaap': args.non_gaap, 'add_ibes': args.add_ibes})
     sql_result.pop('is_unbalance')
     sql_result['finish_timing'] = dt.datetime.now()
 
@@ -294,6 +295,7 @@ if __name__ == "__main__":
     types = {'non_gaap': TEXT(), 'add_ibes': TEXT(), 'trial': BIGINT(), 'qcut': BIGINT(), 'name': TEXT(), 'max_evals': BIGINT(), 'y_type': TEXT(), 'valid_method': TEXT(), 'valid_no': BIGINT(), 'testing_period': TIMESTAMP(), 'train_valid_length': BIGINT(), 'pca_components': BIGINT(), 'bagging_fraction': NUMERIC(), 'bagging_freq': BIGINT(), 'boosting_type': TEXT(), 'early_stopping_rounds': BIGINT(), 'feature_fraction': NUMERIC(), 'lambda_l1': BIGINT(), 'lambda_l2': BIGINT(), 'learning_rate': NUMERIC(), 'max_bin': BIGINT(), 'metric': TEXT(), 'min_data_in_leaf': BIGINT(), 'min_gain_to_split': NUMERIC(), 'num_boost_round': BIGINT(), 'num_class': BIGINT(), 'num_leaves': BIGINT(), 'num_threads': BIGINT(), 'objective': TEXT(), 'reduced_dimension': NUMERIC(), 'verbose': BIGINT(), 'loss': NUMERIC(), 'accuracy_score_train': NUMERIC(), 'accuracy_score_valid': NUMERIC(), 'accuracy_score_test': NUMERIC(), 'precision_score_test': NUMERIC(), 'recall_score_test': NUMERIC(), 'f1_score_test': NUMERIC(), 'f0.5_score_test': NUMERIC(), 'f2_score_test': NUMERIC(), 'r2_score_test': NUMERIC(), 'cohen_kappa_score': NUMERIC(), 'hamming_loss': NUMERIC(), 'jaccard_score': NUMERIC(), 'status': TEXT(), 'finish_timing': TIMESTAMP()}
 
     # parser
+
     qcut_q = int(args.bins)
     qcut_q = 9 # CHANGE FOR REMOTE PC
 
@@ -301,6 +303,7 @@ if __name__ == "__main__":
     y_type = 'qoq'
     resume = args.resume
     sample_no = args.sample_no
+    sample_no = 1 # CHANGE FOR HKPC
 
     # load data for entire period
     main = load_data(lag_year=args.lag, sql_version=args.sql_version)  # CHANGE FOR DEBUG
@@ -309,7 +312,7 @@ if __name__ == "__main__":
     space['num_class'] = qcut_q
     space['is_unbalance'] = True
 
-    sql_result = {'qcut': qcut_q, 'non_gaap': args.non_gaap, 'add_ibes': args.add_ibes}
+    sql_result = {'qcut': qcut_q}
     # sql_result['name'] = 'try add ibes as X'
     # sql_result['trial'] = db_last['trial'] + 1
 

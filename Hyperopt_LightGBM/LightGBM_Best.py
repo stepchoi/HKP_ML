@@ -18,6 +18,8 @@ parser.add_argument('--sql_version', default=False, action='store_true')
 parser.add_argument('--y_type', default='qoq')
 args = parser.parse_args()
 
+# args.y_type = 'yoyr'  # CHANGE FOR HKPC
+
 space = {
     # better accuracy
     'learning_rate': hp.choice('learning_rate', np.arange(0.6, 1.0, 0.05, dtype='d')),
@@ -49,10 +51,10 @@ class best_model_rerun:
         self.types = {'gvkey': INTEGER(), 'datacqtr': TIMESTAMP(), 'actual': BIGINT(), 'lightgbm_result': BIGINT(),
                  'y_type': TEXT(), 'qcut': BIGINT()}
 
-        for qcut in [3, 6, 9]:
+        for qcut in [3]: # , 6, 9
             self.db_max = self.best_iteration(y_type=args.y_type, qcut=qcut)
 
-            for i in range(len(self.db_max)):
+            for i in [39]: #range(len(self.db_max))
                 sql_result.update(self.db_max.iloc[i, :].to_dict())
                 space.update(self.db_max.iloc[i, 6:].to_dict())
                 space.update({'num_class': qcut, 'is_unbalance': True})
@@ -102,8 +104,8 @@ class best_model_rerun:
         shap_values = shap.TreeExplainer(gbm).shap_values(self.X_train)
         shap.summary_plot(shap_values, self.X_train)
         file_name = '{}{}{}'.format(sql_result['testing_period'], sql_result['y_type'], sql_result['qcut'])
-        gbm.save_model('model{}.txt'.format(file_name))
-        f.savefig("summary_plot_{}.png".format(file_name), bbox_inches='tight', dpi=600)
+        # gbm.save_model('model{}.txt'.format(file_name))
+        f.savefig("summary_plot_{}1.png".format(file_name), bbox_inches='tight', dpi=600)
 
         '''Evaluation on Test Set'''
         Y_test_pred_softmax = gbm.predict(self.X_test, num_iteration=gbm.best_iteration)
